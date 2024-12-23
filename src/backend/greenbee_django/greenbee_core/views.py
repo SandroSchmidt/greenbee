@@ -1,14 +1,8 @@
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LogoutView
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth import login
 from greenbee_core.forms import EmailRegistrationForm
-
-
-@login_required
-def landing_page(request):
-    return render(request, 'greenbee_core/landing_page.html')
 
 
 def register(request):

@@ -19,5 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('greenbee_core.urls'))
+    path('', include('greenbee_core.urls')),
+    path('', include('game.urls'))
 ]
