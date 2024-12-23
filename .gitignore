@@ -1,0 +1,121 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.env/
+.venv/
+env/
+venv/
+ENV/
+venv.bak/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.eggs/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.tox/
+.nox/
+.cache/
+pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# pytype
+.pytype/
+
+# C extensions
+*.so
+
+# Environments
+.env
+.env.*
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+
+# Flask
+instance/
+.webassets-cache
+
+# Scrapy
+.scrapy
+
+# Sphinx
+docs/_build/
+*.pot
+*.po
+
+# Pytest
+.pytest_cache/
+.cache
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Static file directories (e.g., Django collectstatic)
+staticfiles/
+static/
+
+# Editor backups and IDE files
+*.swp
+*.swo
+*.swn
+*~
+*.bak
+*.tmp
+*.orig
+*.rej
+
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows files
+Thumbs.db
+Desktop.ini
+
+# Node.js (if using npm/yarn in a Python project)
+node_modules/
+
+# Logs
+*.log
+
+# Local dev configurations
+*.envrc
