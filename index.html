@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Green Bee - Ver 0.1</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="./d3.min.js"></script>
     <style>
         body {
             display: flex;
@@ -120,7 +120,12 @@
 </head>
 <body>
 
+    <div class="below" >
+        <p class="modern-button">Green Bee (tm) - ver 0.1</p>
+      </div>
+    
     <div class="container">
+        
         <div class="left" id="leftdiv">Left Content
 
            <div id="nochndiv"></div>
@@ -135,10 +140,22 @@
     </div>
 
     <div class="below">
+    
+    <button class="modern-button" onclick="next_turn()">get a tip</button>
     <button class="modern-button" onclick="next_turn()">next turn</button>
+
 </div>
 
 <script>
+/*
+ TODO
+
+ werbung schalten, bus, social media, zeitung
+
+
+*/
+
+
 
     buchstaben = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O"]
     total_interest =[0,0,0]
@@ -149,7 +166,7 @@
         ticketsales = [0,5000]
         // Add prices for objects
         const objekte = {
-            leer: { farbe: "white", preis: 0, einnahmen: 0 },
+         //   leer: { farbe: "lightblue", preis: 0, einnahmen: 0 },
             parkplatz: { farbe: "grey", preis: 5, einnahmen: 1 },
             rasen: { farbe: "green", preis: 2, einnahmen: 0,icon:"./icons/iso_gras.png" },
             see: { farbe: "blue", preis: 8, einnahmen: 0 ,icon:"./icons/iso_pool.png",interest:[0,10,0]},
@@ -180,7 +197,7 @@
         ursprung = [50,220]
 
         for (let row = 1; row <= rows; row++) {
-            for (let col = cols; col >= 0; col--) {
+            for (let col = cols-1; col >= 0; col--) {
              //  mitte =[ursprung[0]+(hexform[0]*row),ursprung[1]+(hexform[1]*col)]
              // die zeile macht ein volles rechteck von romboiden und nicht eine isometrische
              
@@ -332,7 +349,6 @@ function loadGame() {
 function feld_ausgewaehlt(welches){
 
     const selectedSquare = welches
-
     const currentObject = spielfeld_arr[selectedSquare]; // Get the current object
 
     // Clear existing content in the buy menu
@@ -368,7 +384,7 @@ function feld_ausgewaehlt(welches){
                 // Clear the sell menu
                 d3.select('#buydiv').selectAll('*').remove();
             });
-    }
+    }else{
 
     // Add a list of objects to buy
     Object.keys(objekte).forEach(objKey => {
@@ -406,7 +422,7 @@ function feld_ausgewaehlt(welches){
                         .remove();
                 }
             });
-    });
+    });}
 }
 
 function triforce(){
