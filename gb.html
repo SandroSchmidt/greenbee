@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Bee - Ver 0.1</title>
+    <script src="./d3.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            background: linear-gradient(135deg, #4A90E2, #2c4194);
+        }
+
+.modern-button {
+    background: linear-gradient(135deg, #4A90E2, #2c4194);
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    padding: 12px 30px;
+    cursor: pointer;
+    outline: none;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.modern-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #FFFFFF33, #00000033);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+}
+
+.modern-button:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modern-button:hover::before {
+    opacity: 1;
+}
+
+.modern-button:active {
+    transform: translateY(2px);
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+}
+        .container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .left, .right {
+            width: 20%;
+            height: 400px;
+            background-color: #f0f0f0;
+            display: flex;
+            align-items: center;
+            flex-direction: column; /* Add this line */
+            justify-content: center;
+            margin: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .center {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            margin: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .below {
+            width: 100%;
+            height: 100px;
+            background-color: #eaeaea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        svg {
+            display: block;
+        }
+        .feldicon {
+    outline: none; /* No visible outline by default */
+    transform-origin: center;
+    transition: outline 0.3s ease; /* Smooth transition */
+}
+
+/* Define hover state for the image */
+.feldicon:hover {
+    transform: scale(2); /* Increase size by 20% */
+    cursor: pointer; /* Show pointer cursor */
+}
+    </style>
+</head>
+<body>
+
+    <div class="below" >
+        <p class="modern-button">Green Bee (tm) - ver 0.1</p>
+      </div>
+    
+    <div class="container">
+        
+        <div class="left" id="leftdiv">Left Content
+
+           <div id="nochndiv"></div>
+        </div>
+        <div class="center">
+            <svg id="mySvg" width="600" height="400"></svg>
+        </div>
+        <div class="right">
+            <p class="modern-button" id="turn_p">Turn 0</p> 
+            <div id="buydiv"></div>
+        </div>
+    </div>
+
+    <div class="below">
+    
+    <button class="modern-button" onclick="alert('get better at the game!')">get a tip</button>
+    <button class="modern-button" onclick="next_turn()">next turn</button>
+
+</div>
+
+<script>
+/*
+ TODO
+
+ werbung schalten, bus, social media, zeitung
+
+
+*/
+
+
+
+    buchstaben = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O"]
+    total_interest =[0,0,0]
+        spielfeldgroesse = 5
+        turn = 0
+        let playerBudget = 100; // Starting budget
+        const shopIncome = 10;  // Income per shop per turn
+        ticketsales = [0,5000]
+        // Add prices for objects
+        const objekte = {
+         //   leer: { farbe: "lightblue", preis: 0, einnahmen: 0 },
+            parkplatz: { farbe: "grey", preis: 5, einnahmen: 1 },
+            rasen: { farbe: "green", preis: 2, einnahmen: 0,icon:"./icons/iso_gras.png" },
+            see: { farbe: "blue", preis: 8, einnahmen: 0 ,icon:"./icons/iso_pool.png",interest:[0,10,0]},
+            shop: { farbe: "orange", preis: 15, einnahmen: 10,icon:"./icons/iso_shop.png",interest:[10,5,0] },
+            bank:{farbe:"grey",preis:3,einnahmen:0,icon:"./icons/iso_bench.png", interest:[0,5,10]},
+            playground:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/iso_play.png", interest:[0,10,0]},
+            stage:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/stage.png", interest:[0,10,0]}
+        };
+
+        
+        // Display the budget in the `.left` div
+        d3.select('.left').html(`<p><strong>Budget:</strong> €<span id="budget">${playerBudget}</span></p>`);
+        d3.select('.left').html(`<p><strong>Ticketsales:</strong> €<span id="budget">${ticketsales[0]}"</span></p>`);
+     
+                spielfeld_arr ={
+                    A1:"parkplatz",
+                    A2:"rasen",
+                B3:"see",
+                    C3:"shop",
+                            }
+    updateLeftPanel();
+        const svg = d3.select("#mySvg");
+
+        
+        feldmittelpunkte ={}
+        const rows = spielfeldgroesse;
+        const cols = spielfeldgroesse;
+        hexform =[100,50]
+        ursprung = [50,220]
+
+        for (let row = 1; row <= rows; row++) {
+            for (let col = cols-1; col >= 0; col--) {
+             //  mitte =[ursprung[0]+(hexform[0]*row),ursprung[1]+(hexform[1]*col)]
+             // die zeile macht ein volles rechteck von romboiden und nicht eine isometrische
+             
+             mitte = [
+                     ursprung[0] + (hexform[0]*(0.5*(col+row))),
+                     ursprung[1] - (hexform[1]*(0.5*(col-row)))
+             ]
+
+    feldmittelpunkte[buchstaben[col] +row] = mitte 
+
+            let gridsquare = svg.append('g').attr('id',"gfeld"+buchstaben[col] +row)
+            gridsquare.append("polygon").attr('id',"feld"+buchstaben[col] +row  )
+            .attr("points", mitte[0]-(0.5*hexform[0])+","    +mitte[1]+" "+
+                            mitte[0]+","                     +(mitte[1]+(0.5*hexform[1]))+" "+
+                            (mitte[0]+(hexform[0]*0.5))+","  +mitte[1]+" "+
+                            mitte[0]+","                     +(mitte[1]-0.5*hexform[1])
+                        )
+                        
+   
+            .attr("fill", "lightblue")
+            .attr("stroke", "black")
+            .attr("stroke-width", 1)
+            .on("mouseover", function() { d3.select(this).style("stroke-width", "5px")})//.style("fill","blue"); })
+            .on("mouseout", function() { d3.select(this).style("stroke-width", "1px")})//.style("fill","lightblue"); })
+
+            gridsquare.append("text").attr("x",mitte[0]).attr('y',mitte[1]).attr('text',"dksahdfk").text(buchstaben[col] +row ) .attr("text-anchor", "middle")
+  .attr("dominant-baseline", "middle").style("font-size", "0px").on('mouseover', function (){d3.select(this).style("font-size", "10px")})//.on('mouseout', function (){d3.select(this).style("font-size", "0px")})
+
+
+            // Update the onClick handler for gridsquare
+            let feldertemp = buchstaben[col] + row
+            gridsquare.on('click', function(){console.log("dsfsdf"); feld_ausgewaehlt(feldertemp)});
+
+    gridsquare.style("cursor","pointer")
+            ;
+            }
+        }
+// End turn logic
+
+loadGame()
+function next_turn() {
+    turn++;
+    
+    // Calculate income from all objects
+    const income = calculateIncome();
+
+    // Add income to budget
+    playerBudget += income;
+
+    saveGame()
+    // Update the left panel to reflect new budget and next income
+    updateLeftPanel();
+
+    // Repaint the grid
+    spielfeld_malen();
+
+
+// Repaint the grid
+}
+function calculateIncome() {
+    let income = 0;
+    Object.values(spielfeld_arr).forEach(type => {
+        if (objekte[type]) {
+            income += objekte[type].einnahmen;
+        }
+    });
+    return income;
+}
+function updateLeftPanel() {
+    const income = calculateIncome();
+    d3.select('.left').html(`
+        <p><strong>Budget:</strong> €<span id="budget">${playerBudget}</span></p>
+        <p><strong>Income Next Turn:</strong> €<span id="income">${income}</span></p>
+    `);
+    d3.select('#leftdiv').append('div').attr('id','nochndiv')
+    d3.select('#leftdiv').append('img').attr("src","./icons/inet.jpg").style("width","100%")
+
+}
+function spielfeld_malen() {
+    total_interest =[0,0,0]
+    Object.keys(spielfeld_arr).forEach(key => {
+        const polygon = d3.select('#feld' + key);
+if (objekte[spielfeld_arr[key]].interest != undefined)
+{ console.log("met")
+    total_interest = total_interest.map((value, index) => value + objekte[spielfeld_arr[key]].interest[index]);}
+    
+// Update the fill color
+        polygon.style('fill', objekte[spielfeld_arr[key]].farbe);
+
+        // Remove any existing image for this grid square
+        d3.select(`#icon-${key}`).remove();
+
+        // Add the icon if the object has one
+        const iconPath =  objekte[spielfeld_arr[key]].icon;
+        if (iconPath) {
+            console.log(key + " icon gemalt " + iconPath)
+            bbox = {x:feldmittelpunkte[key][0],y:feldmittelpunkte[key][1]}; // Get the bounding box of the polygon
+            d3.select('#gfeld'+key)
+                .append('image')
+             //   .attr('class', 'feldicon') // Add the class to the image
+                .attr('id', `icon-${key}`)
+                .attr('href', iconPath)
+                .attr('x', bbox.x - hexform[0])
+                .attr('y', bbox.y -  hexform[1])
+                .attr('width', hexform[0]*2)
+                .attr('height', hexform[1]*2)
+                .on('click',function(){feld_ausgewaehlt(key)})
+                .style('cursor','pointer')
+                
+        }
+           
+    });
+//triforce() 
+    d3.select('#turn_p').text("Turn " + turn);
+}
+function saveGame() {
+    const gameState = {
+        spielfeld: spielfeld_arr,
+        budget: playerBudget,
+        turns: turn
+    };
+
+    // Save the game state as a JSON string in local storage
+    localStorage.setItem('gameState', JSON.stringify(gameState));
+
+    // Confirm to the user
+    console.log("Game saved successfully!");
+    infobox("Game saved successfully!");
+}
+function loadGame() {
+    const savedState = localStorage.getItem('gameState');
+    if (savedState) {
+        const gameState = JSON.parse(savedState);
+
+        // Restore the game state
+        spielfeld_arr = gameState.spielfeld || {};
+        playerBudget = gameState.budget || 0;
+        turn = gameState.turns || 0;
+
+        // Update the UI
+        updateLeftPanel();
+        spielfeld_malen();
+
+        console.log("Game loaded successfully!");
+        infobox("Game loaded successfully!");
+    } else {
+        console.log("No saved game found.");
+        infobox("No saved game found.");
+    }
+}
+function feld_ausgewaehlt(welches){
+
+    const selectedSquare = welches
+    const currentObject = spielfeld_arr[selectedSquare]; // Get the current object
+
+    // Clear existing content in the buy menu
+    d3.select('#buydiv').selectAll('*').remove();
+    d3.select('#feld'+welches).style('stroke-width',5)
+
+    // Add title showing the selected grid square
+    d3.select('#buydiv')
+        .append('p')
+        .style('font-weight', 'bold')
+        .text(`Selected Square: ${selectedSquare}`);
+
+    // If an object is already placed, offer the option to sell
+    if (currentObject && currentObject !== "leer") {
+        const sellPrice = Math.floor(objekte[currentObject].preis / 2); // Half price
+        d3.select('#buydiv')
+            .append('button')
+            .attr('class', 'modern-button')
+            .style('margin', '5px 0')
+            .text(`Sell ${currentObject} (€+${sellPrice})`)
+            .on('click', function () {
+                // Refund half the price
+                playerBudget += sellPrice;
+                d3.select('#budget').text(playerBudget);
+
+                // Set the square to 'leer'
+                spielfeld_arr[selectedSquare] = "leer";
+
+                // Repaint the grid and update the panel
+                spielfeld_malen();
+                updateLeftPanel();
+
+                // Clear the sell menu
+                d3.select('#buydiv').selectAll('*').remove();
+            });
+    }else{
+
+    // Add a list of objects to buy
+    Object.keys(objekte).forEach(objKey => {
+        d3.select('#buydiv')
+            .append('button')
+            .attr('class', 'modern-button')
+            .style('margin', '5px 0')
+            .style("font-size","smaller")
+            .text(`Buy ${objKey} (€${objekte[objKey].preis})`)
+            .on('click', function () {
+                const objectPrice = objekte[objKey].preis;
+
+                // Check if the player has enough budget
+                if (playerBudget >= objectPrice) {
+                    // Deduct the price and update the budget
+                    playerBudget -= objectPrice;
+                    d3.select('#budget').text(playerBudget);
+
+                    // Set the grid square to the selected object
+                    spielfeld_arr[selectedSquare] = objKey;
+
+                    // Repaint the grid to reflect changes
+                    spielfeld_malen();
+
+                    // Update the income display
+                    updateLeftPanel();
+                } else {
+                    // Show an error message
+                    d3.select('#buydiv')
+                        .append('p')
+                        .style('color', 'red')
+                        .text("Not enough budget!")
+                        .transition()
+                        .duration(2000)
+                        .style('opacity', 0)
+                        .remove();
+                }
+            });
+    });}
+}
+
+function triforce(){
+    const width = 300;
+        const height = 300;
+        const centerX = 250;
+        const centerY = 250;
+    ndiv = d3.select('#nochndiv')
+    ndiv.selectAll('*').remove() 
+    svg2 = ndiv.append('svg').attr("width",width).attr("height",height)
+
+
+ 
+
+     
+
+        // Draw the triangle
+        svg2.append("polygon")
+            .attr("points", "0,0 150,300 300,0")
+            //.attr("points", "10,10 20,0 180,0 190,10 140,190 160,140")
+            .attr("class", "triangle");
+
+         console.log(total_interest)
+            sum = total_interest[0]+ total_interest[1]+ total_interest[2]
+           interest_scale =[    (total_interest[0]/sum),
+                                (total_interest[1]/sum),
+                                (total_interest[2]/sum)]
+            console.log(total_interest)
+            svg2.selectAll(".dot").remove(); // Remove existing dot
+            svg2.append("circle")
+
+                .attr("cx", 150 + interest_scale[0]*150 - interest_scale[2]*150 )//((interest_scale[0]/(interest_scale[0]+interest_scale[1]))*300 ))
+                .attr("cy", 110 - (interest_scale[0]*150 + interest_scale[2]*150)/2 + interest_scale[1]*110)// (total_interest[0]+ (total_interest[0]+total_interest[1]/2)    *150 ))
+                .attr("r", 10)
+                .style("fill","blue")
+        
+
+     
+
+
+}
+function infobox(text){
+}
+    </script>
+
+</body>
+</html>
