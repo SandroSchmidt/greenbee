@@ -141,7 +141,7 @@
 
     <div class="below">
     
-    <button class="modern-button" onclick="next_turn()">get a tip</button>
+    <button class="modern-button" onclick="alert('get better at the game!')">get a tip</button>
     <button class="modern-button" onclick="next_turn()">next turn</button>
 
 </div>
@@ -172,7 +172,8 @@
             see: { farbe: "blue", preis: 8, einnahmen: 0 ,icon:"./icons/iso_pool.png",interest:[0,10,0]},
             shop: { farbe: "orange", preis: 15, einnahmen: 10,icon:"./icons/iso_shop.png",interest:[10,5,0] },
             bank:{farbe:"grey",preis:3,einnahmen:0,icon:"./icons/iso_bench.png", interest:[0,5,10]},
-            playground:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/iso_play.png", interest:[0,10,0]}
+            playground:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/iso_play.png", interest:[0,10,0]},
+            stage:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/stage.png", interest:[0,10,0]}
         };
 
         
@@ -273,6 +274,8 @@ function updateLeftPanel() {
         <p><strong>Income Next Turn:</strong> €<span id="income">${income}</span></p>
     `);
     d3.select('#leftdiv').append('div').attr('id','nochndiv')
+    d3.select('#leftdiv').append('img').attr("src","./icons/inet.jpg").style("width","100%")
+
 }
 function spielfeld_malen() {
     total_interest =[0,0,0]
@@ -308,7 +311,7 @@ if (objekte[spielfeld_arr[key]].interest != undefined)
         }
            
     });
-triforce() 
+//triforce() 
     d3.select('#turn_p').text("Turn " + turn);
 }
 function saveGame() {
@@ -392,6 +395,7 @@ function feld_ausgewaehlt(welches){
             .append('button')
             .attr('class', 'modern-button')
             .style('margin', '5px 0')
+            .style("font-size","smaller")
             .text(`Buy ${objKey} (€${objekte[objKey].preis})`)
             .on('click', function () {
                 const objectPrice = objekte[objKey].preis;
