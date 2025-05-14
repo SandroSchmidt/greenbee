@@ -121,7 +121,7 @@
 <body>
 
     <div class="below" >
-        <p class="modern-button">Green Bee (tm) - ver 0.1</p>
+        <p class="modern-button">Green Bee™ - ver 0.1</p>
       </div>
     
     <div class="container">
@@ -133,14 +133,15 @@
         <div class="center">
             <svg id="mySvg" width="600" height="400"></svg>
         </div>
+        
         <div class="right">
             <p class="modern-button" id="turn_p">Turn 0</p> 
             <div id="buydiv"></div>
         </div>
     </div>
-
+    <div id="chartdiv" class="center"></div>
     <div class="below">
-    
+        <button class="modern-button" onclick="restart()">restart</button>
     <button class="modern-button" onclick="alert('get better at the game!')">get a tip</button>
     <button class="modern-button" onclick="next_turn()">next turn</button>
 
@@ -247,16 +248,28 @@ function next_turn() {
 
     // Add income to budget
     playerBudget += income;
-
+    budgetHistory[turn]=playerBudget;
     saveGame()
     // Update the left panel to reflect new budget and next income
     updateLeftPanel();
 
     // Repaint the grid
     spielfeld_malen();
-
+    renderBudgetChart();
 
 // Repaint the grid
+}
+
+function restart(){
+
+    spielfeld_arr =  {};
+        playerBudget = 200;
+        turn =  0;
+        budgetHistory = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    saveGame()
+    updateLeftPanel();
+    spielfeld_malen();
+    renderBudgetChart();
 }
 function calculateIncome() {
     let income = 0;
@@ -318,7 +331,8 @@ function saveGame() {
     const gameState = {
         spielfeld: spielfeld_arr,
         budget: playerBudget,
-        turns: turn
+        turns: turn,
+        budgetHistory: budgetHistory
     };
 
     // Save the game state as a JSON string in local storage
@@ -330,6 +344,7 @@ function saveGame() {
 }
 function loadGame() {
     const savedState = localStorage.getItem('gameState');
+    console.log(savedState)
     if (savedState) {
         const gameState = JSON.parse(savedState);
 
@@ -337,6 +352,7 @@ function loadGame() {
         spielfeld_arr = gameState.spielfeld || {};
         playerBudget = gameState.budget || 0;
         turn = gameState.turns || 0;
+        budgetHistory = gameState.budgetHistory ||[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
         // Update the UI
         updateLeftPanel();
@@ -404,6 +420,7 @@ function feld_ausgewaehlt(welches){
                 if (playerBudget >= objectPrice) {
                     // Deduct the price and update the budget
                     playerBudget -= objectPrice;
+                    budgetHistory[turn+1]= playerBudget
                     d3.select('#budget').text(playerBudget);
 
                     // Set the grid square to the selected object
@@ -428,7 +445,64 @@ function feld_ausgewaehlt(welches){
             });
     });}
 }
+function renderBudgetChart() {
+    const data = budgetHistory.map((val, i) => ({ index: i, budget: val }));
 
+    // Dimensions
+    const width = 800;
+    const height = 200;
+    const margin = { top: 20, right: 30, bottom: 30, left: 50 };
+
+    // Remove old chart if it exists
+    d3.select("#budget-chart").remove();
+
+    // Create new chart container
+    const chart = d3.select("#chartdiv")
+        .append("div")
+        .attr("id", "budget-chart")
+        .style("width", "80%")
+        .style("margin", "10px auto")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    // Scales
+    const x = d3.scaleLinear()
+        .domain([0, 19]) // Always 20 entries
+        .range([margin.left, width - margin.right]);
+
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.budget) * 1.1])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+    // Line generator
+    const line = d3.line()
+        .x(d => x(d.index))
+        .y(d => y(d.budget));
+
+    // X Axis
+    chart.append("g")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x).ticks(20).tickFormat(d => `${d }`));
+
+    // Y Axis
+    chart.append("g")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y));
+
+    // Line path
+    chart.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "limegreen")
+        .attr("stroke-width", 2)
+        .attr("d", line);
+}
+
+setInterval(() => {
+    renderBudgetChart()
+}, 1000);
 function triforce(){
     const width = 300;
         const height = 300;
