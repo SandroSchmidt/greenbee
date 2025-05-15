@@ -1,151 +1,174 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Green Bee - Ver 0.1</title>
-    <script src="./d3.min.js"></script>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            height: 100vh;
-            background: linear-gradient(135deg, #4A90E2, #2c4194);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Green Bee - Ver 0.1</title>
+  <script src="./d3.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
 
-.modern-button {
-    background: linear-gradient(135deg, #4A90E2, #2c4194);
-    color: white;
-    font-size: 1.2rem;
-    font-weight: bold;
-    border: none;
-    border-radius: 50px;
-    padding: 12px 30px;
-    cursor: pointer;
-    outline: none;
-    position: relative;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-}
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background: linear-gradient(135deg, #4A90E2, #2c4194);
+    }
 
-.modern-button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 50px;
-    background: linear-gradient(135deg, #FFFFFF33, #00000033);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: -1;
-}
+    .below {
+      height: 10vh;
+      background-color: #eaeaea;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
 
-.modern-button:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
-}
+    .container {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
 
-.modern-button:hover::before {
-    opacity: 1;
-}
+    .container-top {
+      height: 60vh;
+    }
 
-.modern-button:active {
-    transform: translateY(2px);
-    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
-}
-        .container {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            max-width: 1200px;
-        }
+    .container-bottom {
+      height: 30vh;
+    }
 
-        .left, .right {
-            width: 20%;
-            height: 400px;
-            background-color: #f0f0f0;
-            display: flex;
-            align-items: center;
-            flex-direction: column; /* Add this line */
-            justify-content: center;
-            margin: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+    .left, .right, .center {
+      margin: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
 
-        .center {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            margin: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+    .left, .right {
+      width: 20%;
+      background-color: #f0f0f0;
+      overflow-y: auto;
+    }
 
-        .below {
-            width: 100%;
-            height: 100px;
-            background-color: #eaeaea;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+    .center {
+      flex: 1;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      overflow: hidden;
+    }
 
-        svg {
-            display: block;
-        }
-        .feldicon {
-    outline: none; /* No visible outline by default */
-    transform-origin: center;
-    transition: outline 0.3s ease; /* Smooth transition */
-}
+    svg {
+      display: block;
+    }
 
-/* Define hover state for the image */
-.feldicon:hover {
-    transform: scale(2); /* Increase size by 20% */
-    cursor: pointer; /* Show pointer cursor */
-}
-    </style>
+    .modern-button {
+      background: linear-gradient(135deg, #4A90E2, #2c4194);
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 30px;
+      cursor: pointer;
+      outline: none;
+      position: relative;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .modern-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #FFFFFF33, #00000033);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: -1;
+    }
+
+    .modern-button:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modern-button:hover::before {
+      opacity: 1;
+    }
+
+    .modern-button:active {
+      transform: translateY(2px);
+      box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .feldicon {
+      outline: none;
+      transform-origin: center;
+      transition: outline 0.3s ease;
+    }
+
+    .feldicon:hover {
+      transform: scale(2);
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="below" >
-        <p class="modern-button">Green Bee™ - ver 0.1</p>
-      </div>
-    
-    <div class="container">
-        
-        <div class="left" id="leftdiv">Left Content
+  <!-- Header -->
+  <div class="below">
+    <p class="modern-button">Green Bee™ - ver 0.1</p>
+  </div>
 
-           <div id="nochndiv"></div>
-        </div>
-        <div class="center">
-            <svg id="mySvg" width="600" height="400"></svg>
-        </div>
-        
-        <div class="right">
-            <p class="modern-button" id="turn_p">Turn 0</p> 
-            <div id="buydiv"></div>
-        </div>
+  <!-- Spielfeld & Menü -->
+  <div class="container container-top">
+    <div class="left" id="leftdiv">
+      <div id="budget-info"></div>
+      <div id="nochndiv"></div>
     </div>
+
+    <div class="center">
+      <svg id="mySvg" width="600" height="400"></svg>
+    </div>
+
+    <div class="right">
+      <p class="modern-button" id="turn_p">Turn 0</p>
+      <div id="buydiv"></div>
+    </div>
+  </div>
+
+  <!-- Chart und Zusatzinfos -->
+  <div class="container container-bottom">
+    <div class="left" id="ulidiv">interest: </div>
     <div id="chartdiv" class="center"></div>
-    <div class="below">
-        <button class="modern-button" onclick="restart()">restart</button>
+    <div class="right">ticket-sales:</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="below">
+    <button class="modern-button" onclick="restart()">restart</button>
     <button class="modern-button" onclick="alert('get better at the game!')">get a tip</button>
     <button class="modern-button" onclick="next_turn()">next turn</button>
+  </div>
 
-</div>
+  <!-- Dein kompletter JS bleibt gleich -->
+
+</body>
+</html>
 
 <script>
 /*
@@ -168,19 +191,20 @@
         // Add prices for objects
         const objekte = {
          //   leer: { farbe: "lightblue", preis: 0, einnahmen: 0 },
-            parkplatz: { farbe: "grey", preis: 5, einnahmen: 1 },
-            rasen: { farbe: "green", preis: 2, einnahmen: 0,icon:"./icons/iso_gras.png" },
+            parkplatz: { farbe: "grey", preis: 5, einnahmen: 1 ,interest:[5,5,5]},
+            rasen: { farbe: "green", preis: 2, einnahmen: 0,icon:"./icons/iso_gras.png" ,interest:[1,1,3]},
             see: { farbe: "blue", preis: 8, einnahmen: 0 ,icon:"./icons/iso_pool.png",interest:[0,10,0]},
             shop: { farbe: "orange", preis: 15, einnahmen: 10,icon:"./icons/iso_shop.png",interest:[10,5,0] },
             bank:{farbe:"grey",preis:3,einnahmen:0,icon:"./icons/iso_bench.png", interest:[0,5,10]},
             playground:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/iso_play.png", interest:[0,10,0]},
-            stage:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/stage.png", interest:[0,10,0]}
+            stage:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/stage.png", interest:[0,10,0]},
+            leer:{"farbe": "grey",interest:[0,0,0],preis: 0, einnahmen: 0}
         };
 
         
         // Display the budget in the `.left` div
-        d3.select('.left').html(`<p><strong>Budget:</strong> €<span id="budget">${playerBudget}</span></p>`);
-        d3.select('.left').html(`<p><strong>Ticketsales:</strong> €<span id="budget">${ticketsales[0]}"</span></p>`);
+        d3.select('#budget-info').html(`<p><strong>Budget:</strong> €<span id="budget">${playerBudget}</span></p>`);
+        d3.select('#budget-info').html(`<p><strong>Ticketsales:</strong> €<span id="budget">${ticketsales[0]}"</span></p>`);
      
                 spielfeld_arr ={
                     A1:"parkplatz",
@@ -248,7 +272,7 @@ function next_turn() {
 
     // Add income to budget
     playerBudget += income;
-    budgetHistory[turn]=playerBudget;
+    budgetHistory[turn+1]=playerBudget;
     saveGame()
     // Update the left panel to reflect new budget and next income
     updateLeftPanel();
@@ -265,7 +289,7 @@ function restart(){
     spielfeld_arr =  {};
         playerBudget = 200;
         turn =  0;
-        budgetHistory = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        budgetHistory = [200,0,0,0,0,0,0,0,0,0,0,0]
     saveGame()
     updateLeftPanel();
     spielfeld_malen();
@@ -282,11 +306,12 @@ function calculateIncome() {
 }
 function updateLeftPanel() {
     const income = calculateIncome();
-    d3.select('.left').html(`
+    d3.select('#budget-info').html(`
         <p><strong>Budget:</strong> €<span id="budget">${playerBudget}</span></p>
         <p><strong>Income Next Turn:</strong> €<span id="income">${income}</span></p>
     `);
     d3.select('#leftdiv').append('div').attr('id','nochndiv')
+    d3.select("img").remove()
     d3.select('#leftdiv').append('img').attr("src","./icons/inet.jpg").style("width","100%")
 
 }
@@ -294,10 +319,11 @@ function spielfeld_malen() {
     total_interest =[0,0,0]
     Object.keys(spielfeld_arr).forEach(key => {
         const polygon = d3.select('#feld' + key);
-if (objekte[spielfeld_arr[key]].interest != undefined)
+
+/*        if (objekte[spielfeld_arr[key]].interest != undefined)
 { console.log("met")
     total_interest = total_interest.map((value, index) => value + objekte[spielfeld_arr[key]].interest[index]);}
-    
+    */
 // Update the fill color
         polygon.style('fill', objekte[spielfeld_arr[key]].farbe);
 
@@ -352,7 +378,7 @@ function loadGame() {
         spielfeld_arr = gameState.spielfeld || {};
         playerBudget = gameState.budget || 0;
         turn = gameState.turns || 0;
-        budgetHistory = gameState.budgetHistory ||[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        budgetHistory = gameState.budgetHistory ||[0,0,0,0,0,0,0,0,0,0,0,0]
 
         // Update the UI
         updateLeftPanel();
@@ -451,7 +477,7 @@ function renderBudgetChart() {
     // Dimensions
     const width = 800;
     const height = 200;
-    const margin = { top: 20, right: 30, bottom: 30, left: 50 };
+    const margin = { top: 20, right: 30, bottom: 30, left: 30 };
 
     // Remove old chart if it exists
     d3.select("#budget-chart").remove();
@@ -460,7 +486,7 @@ function renderBudgetChart() {
     const chart = d3.select("#chartdiv")
         .append("div")
         .attr("id", "budget-chart")
-        .style("width", "80%")
+       // .style("width", "80%")
         .style("margin", "10px auto")
         .append("svg")
         .attr("width", width)
@@ -468,7 +494,7 @@ function renderBudgetChart() {
 
     // Scales
     const x = d3.scaleLinear()
-        .domain([0, 19]) // Always 20 entries
+        .domain([0, 12]) // Always 20 entries
         .range([margin.left, width - margin.right]);
 
     const y = d3.scaleLinear()
@@ -484,7 +510,7 @@ function renderBudgetChart() {
     // X Axis
     chart.append("g")
         .attr("transform", `translate(0,${height - margin.bottom})`)
-        .call(d3.axisBottom(x).ticks(20).tickFormat(d => `${d }`));
+        .call(d3.axisBottom(x).ticks(13).tickFormat(d => `${d }`));
 
     // Y Axis
     chart.append("g")
@@ -493,7 +519,7 @@ function renderBudgetChart() {
 
     // Line path
     chart.append("path")
-        .datum(data)
+    .datum(data.slice(0, turn + 2))
         .attr("fill", "none")
         .attr("stroke", "limegreen")
         .attr("stroke-width", 2)
@@ -502,7 +528,8 @@ function renderBudgetChart() {
 
 setInterval(() => {
     renderBudgetChart()
-}, 1000);
+    renderInterestBarChart()
+}, 500);
 function triforce(){
     const width = 300;
         const height = 300;
@@ -542,9 +569,72 @@ function triforce(){
 
 
 }
+
+
+function berechneTotalInterest() {
+    const total = [0, 0, 0]; // A, B, C
+
+    Object.values(spielfeld_arr).forEach(type => {
+        const obj = objekte[type];
+        if (obj && obj.interest) {
+            obj.interest.forEach((val, i) => {
+                total[i] += val;
+            });
+        }
+    });
+
+    return total;
+}
+
+function renderInterestBarChart() {
+    const data = berechneTotalInterest().map((value, i) => ({
+        category: ['A', 'B', 'C'][i],
+        value: value
+    }));
+
+    const width = 200;
+    const height = 100;
+    const margin = { top: 10, right: 10, bottom: 10, left: 30 };
+
+    // Clear old chart
+    d3.select("#ulidiv").select("svg").remove();
+
+    const svg = d3.select(".container-bottom .left")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", "80%");
+
+    const x = d3.scaleBand()
+        .domain(data.map(d => d.category))
+        .range([margin.left, width - margin.right])
+        .padding(0.2);
+
+    const y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.value) || 1])
+        .nice()
+        .range([height - margin.bottom, margin.top]);
+
+    svg.append("g")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .call(d3.axisBottom(x));
+
+    svg.append("g")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).ticks(5));
+
+    svg.selectAll(".bar")
+        .data(data)
+        .enter()
+        .append("rect")
+        .attr("x", d => x(d.category))
+        .attr("y", d => y(d.value))
+        .attr("width", x.bandwidth())
+        .attr("height", d => y(0) - y(d.value))
+        .attr("fill", "#4A90E2");
+}
 function infobox(text){
 }
     </script>
 
-</body>
+
 </html>
