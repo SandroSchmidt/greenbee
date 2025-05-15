@@ -86,7 +86,7 @@
       transition: all 0.3s ease;
       box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
     }
-
+   
     .modern-button::before {
       content: '';
       position: absolute;
@@ -125,15 +125,16 @@
       transform: scale(2);
       cursor: pointer;
     }
+
   </style>
 </head>
 <body>
 
   <!-- Header -->
   <div class="below">
-    <p class="modern-button">Green Bee™ - ver 0.1</p>
-  </div>
+    <img src="./logo Kopie.png" class="logo-image" style="width: 7%;"/>
 
+  </div>
   <!-- Spielfeld & Menü -->
   <div class="container container-top">
     <div class="left" id="leftdiv">
@@ -191,9 +192,9 @@
         // Add prices for objects
         const objekte = {
          //   leer: { farbe: "lightblue", preis: 0, einnahmen: 0 },
-            parkplatz: { farbe: "grey", preis: 5, einnahmen: 1 ,interest:[5,5,5]},
-            rasen: { farbe: "green", preis: 2, einnahmen: 0,icon:"./icons/iso_gras.png" ,interest:[1,1,3]},
-            see: { farbe: "blue", preis: 8, einnahmen: 0 ,icon:"./icons/iso_pool.png",interest:[0,10,0]},
+            parking: { farbe: "grey", preis: 5, einnahmen: 1 ,interest:[5,5,5]},
+            green: { farbe: "green", preis: 2, einnahmen: 0,icon:"./icons/iso_gras.png" ,interest:[1,1,3]},
+            pool: { farbe: "blue", preis: 8, einnahmen: 0 ,icon:"./icons/iso_pool.png",interest:[0,10,0]},
             shop: { farbe: "orange", preis: 15, einnahmen: 10,icon:"./icons/iso_shop.png",interest:[10,5,0] },
             bank:{farbe:"grey",preis:3,einnahmen:0,icon:"./icons/iso_bench.png", interest:[0,5,10]},
             playground:{farbe:"white",preis:30,einnahmen:0,icon:"./icons/iso_play.png", interest:[0,10,0]},
@@ -289,7 +290,7 @@ function restart(){
     spielfeld_arr =  {};
         playerBudget = 200;
         turn =  0;
-        budgetHistory = [200,0,0,0,0,0,0,0,0,0,0,0]
+        budgetHistory = [200,200,0,0,0,0,0,0,0,0,0,0]
     saveGame()
     updateLeftPanel();
     spielfeld_malen();
@@ -311,8 +312,8 @@ function updateLeftPanel() {
         <p><strong>Income Next Turn:</strong> €<span id="income">${income}</span></p>
     `);
     d3.select('#leftdiv').append('div').attr('id','nochndiv')
-    d3.select("img").remove()
-    d3.select('#leftdiv').append('img').attr("src","./icons/inet.jpg").style("width","100%")
+    d3.select("#focki").remove()
+    d3.select('#leftdiv').append('img').attr("id","focki").attr("src","./icons/inet.jpg").style("width","100%")
 
 }
 function spielfeld_malen() {
@@ -411,7 +412,7 @@ function feld_ausgewaehlt(welches){
         const sellPrice = Math.floor(objekte[currentObject].preis / 2); // Half price
         d3.select('#buydiv')
             .append('button')
-            .attr('class', 'modern-button')
+            .attr('class', 'modern-button2')
             .style('margin', '5px 0')
             .text(`Sell ${currentObject} (€+${sellPrice})`)
             .on('click', function () {
@@ -433,9 +434,11 @@ function feld_ausgewaehlt(welches){
 
     // Add a list of objects to buy
     Object.keys(objekte).forEach(objKey => {
+                
+        d3.select('#buydiv').append("br")
         d3.select('#buydiv')
             .append('button')
-            .attr('class', 'modern-button')
+         
             .style('margin', '5px 0')
             .style("font-size","smaller")
             .text(`Buy ${objKey} (€${objekte[objKey].preis})`)
