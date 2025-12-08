@@ -1,0 +1,234 @@
+/* ===========================================
+   GLOBAL RESET
+=========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* Kein Scrollen */
+  font-family: system-ui, sans-serif;
+}
+
+
+/* ===========================================
+   THEMES
+=========================================== */
+:root {
+  --bg: #eef3ee;
+  --fg: #0a0a0a;
+  --panel-bg: #ffffffcc;
+  --panel-border: #c7c7c7;
+}
+
+body.theme-dark {
+  --bg: #0f172a;
+  --fg: #e5e7eb;
+  --panel-bg: #1e293bcc;
+  --panel-border: #475569;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+
+/* ===========================================
+   HEADER & FOOTER
+=========================================== */
+#main-header {
+  height: 70px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+#main-footer {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: var(--panel-bg);
+  border-top: 1px solid var(--panel-border);
+}
+
+
+/* ===========================================
+   PAGE STRUCTURE
+=========================================== */
+.page-wrap {
+  height: calc(100vh - 70px - 60px); /* Header + Footer abziehen */
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* ===========================================
+   OBERZEILE (Panels + Spielfeld)
+   → 70% der Seite
+=========================================== */
+.row-grid {
+  display: grid;
+  width: 100%;
+  height: 70%;
+  grid-template-columns: 18% 65% 15%; /* Info – Spielfeld – Shop */
+  gap: 10px;
+  padding: 10px;
+}
+
+
+/* ===========================================
+   UNTERE ZEILE (Charts)
+   → 30% der Höhe
+=========================================== */
+.container-bottom {
+  width: 100%;
+  height: 30%;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+}
+
+
+/* ===========================================
+   PANELS
+=========================================== */
+.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel h2 {
+  text-align: center;
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+
+/* ===========================================
+   SPIELFELD PANEL
+=========================================== */
+#panel-board {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#panel-board svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ===========================================
+   CHART PANELS
+=========================================== */
+#panel-interest svg,
+#panel-budget svg,
+#panel-tickets svg {
+  width: 100%;
+  height: 100%;
+}
+
+
+/* ===========================================
+   BUTTONS
+=========================================== */
+.btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #d1fae5;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn.primary {
+  background: #86efac;
+  border-color: #10b981;
+}
+
+.btn.small {
+  padding: 5px 10px;
+}
+
+
+/* ===========================================
+   HEADER ELEMENTE
+=========================================== */
+.header-pill {
+  padding: 4px 12px;
+  background: #218e55;
+  border: 1px solid #000000;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.logo-image {
+  height: 48px;
+}
+
+.company-logo {
+  height: 36px;
+}
+
+
+/* ===========================================
+   MODAL-OVERLAYS
+=========================================== */
+#select-overlay,
+#buy-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  z-index: 50;
+}
+
+.overlay-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  padding: 20px;
+  border-radius: 10px;
+  width: 350px;
+  max-width: 90%;
+}
+
+
+/* ===========================================
+   FORM ELEMENTE
+=========================================== */
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.field span {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.status {
+  margin-top: 6px;
+  font-size: 13px;
+}

@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Green Bee – Teacher Overview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="layout.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- Dein firebase.initializeApp(...) hier einfügen -->
+  <script src="functions.js"></script>
+</head>
+<body class="theme-light">
+  <header id="main-header">
+    <div class="header-left">
+      <img src="logo Kopie.png" class="logo-image" alt="Green Bee Logo">
+      <span class="app-title">Green Bee – Overview</span>
+    </div>
+    <div class="header-center">
+      <select id="world-select" class="header-pill"></select>
+    </div>
+    <div class="header-right">
+      <button id="theme-toggle" class="btn small">☀︎ / 🌙</button>
+    </div>
+  </header>
+
+  <main class="page-wrap two-columns">
+    <section class="panel">
+      <h2>Players</h2>
+      <table class="table" id="players-table">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Turn</th>
+            <th>Budget</th>
+            <th>Total Tickets</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <span id="status-overview" class="status"></span>
+    </section>
+
+    <section class="panel">
+      <h2>Board Preview</h2>
+      <div id="preview-meta" class="text-muted"></div>
+      <svg id="preview-svg" width="320" height="260"></svg>
+    </section>
+  </main>
+
+  <script>
+    let currentWorldId = null;
+    let globalSettings = null;
+
+    function applyThemeFromStorage() {
+      const pref = localStorage.getItem("gb-theme") || "light";
+      document.body.classList.toggle("theme-dark", pref === "dark");
+    }
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const isDark = document.body.classList.toggle("theme-dark");
+      localStorage.setItem("gb-theme", isDark ? "dark" : "light");
+    });
+    applyThemeFromStorage();
+
+    async function initOverview() {
+      globalSettings = await loadGlobalSettings();
+      const worlds = await listWorlds();
+      const sel = document.getElementById("world-select");
+      sel.innerHTML = "";
+      worlds.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = w;
+        opt.textContent = w;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("change", () => {
+        loadPlayers(sel.value);
+      });
+      if (worlds.length > 0) {
+        sel.value = worlds[0];
+        await loadPlayers(worlds[0]);
+      }
+    }
+
+    async function loadPlayers(worldId) {
+      currentWorldId = worldId;
+      const players = await loadPlayerList(worldId);
+      const tbody = document.querySelector("#players-table tbody");
+      tbody.innerHTML = "";
+
+      Object.keys(players || {}).forEach(pid => {
+        const player = players[pid];
+        const gs = player.gameState || {};
+        const turn = gs.turn || 0;
+        const budget = gs.budget || 0;
+        const ts = gs.ticketSales || {};
+        const totalTickets = (ts[0] || ts.youth || 0) +
+                             (ts[1] || ts.families || 0) +
+                             (ts[2] || ts.seniors || 0);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><button class="btn small" data-player="${pid}">${player.name || pid}</button></td>
+          <td>${turn}</td>
+          <td>${budget}</td>
+          <td>${totalTickets}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll("button[data-player]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          showPreview(currentWorldId, btn.dataset.player);
+        });
+      });
+    }
+
+    async function showPreview(worldId, playerId) {
+      const gs = await loadGameState(worldId, playerId);
+      const ws = await loadWorldSettings(worldId);
+      const svg = d3.select("#preview-svg");
+      svg.selectAll("*").remove();
+
+      if (!gs || !gs.board) {
+        d3.select("#preview-meta").text("No board yet.");
+        return;
+      }
+
+      d3.select("#preview-meta").text(`World: ${worldId} – Player: ${playerId}`);
+
+      const gridSize = ws.gridSize || 5;
+      const hexW = 40, hexH = 20;
+      const origin = [80, 130];
+
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      const board = gs.board;
+
+      for (let row = 1; row <= gridSize; row++) {
+        for (let col = gridSize - 1; col >= 0; col--) {
+          const id = letters[col] + row;
+          const cx = origin[0] + (hexW * (0.5 * (col + row)));
+          const cy = origin[1] - (hexH * (0.5 * (col - row)));
+          const objKey = board[id];
+          const obj = (globalSettings.objects || {})[objKey] || {};
+          const color = obj.color || "#9ca3af";
+
+          const points = [
+            [cx - hexW * 0.5, cy],
+            [cx, cy + hexH * 0.5],
+            [cx + hexW * 0.5, cy],
+            [cx, cy - hexH * 0.5]
+          ];
+
+          svg.append("polygon")
+            .attr("points", points.map(p => p.join(",")).join(" "))
+            .attr("fill", color)
+            .attr("stroke", "#111827")
+            .attr("stroke-width", 0.7);
+        }
+      }
+    }
+
+    initOverview();
+  </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Green Bee – Global Settings (Admin)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="layout.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Hier muss DEIN firebase.initializeApp({...})-Code stehen -->
+  <script src="functions.js"></script>
+</head>
+<body class="theme-light">
+  <header id="main-header">
+    <div class="header-left">
+      <img src="logo Kopie.png" class="logo-image" alt="Green Bee Logo">
+      <span class="app-title">Green Bee – Global Settings</span>
+    </div>
+    <div class="header-center">
+      <span class="header-pill">Admin</span>
+    </div>
+    <div class="header-right">
+      <button id="theme-toggle" class="btn small">☀︎ / 🌙</button>
+    </div>
+  </header>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h2>Objects</h2>
+      <p class="text-muted">Alle Bauelemente des Spiels mit Preis, Einkommen, Farbe und Interessens-Werten.</p>
+      <table class="table" id="objects-table">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Price</th>
+            <th>Income</th>
+            <th>Color</th>
+            <th>Interest 1</th>
+            <th>Interest 2</th>
+            <th>Interest 3</th>
+            <th>Icon Path</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button id="add-object" class="btn small">+ Add Object</button>
+    </section>
+
+    <section class="panel">
+      <h2>Base Rules</h2>
+      <p class="text-muted">Globale Steuerparameter (können später erweitert werden).</p>
+      <label class="field">
+        <span>Interest Saturation K (optional)</span>
+        <input type="number" id="base-interest-k" min="0">
+      </label>
+    </section>
+
+    <div class="footer-bar">
+      <button id="save-global" class="btn primary">Save Global Settings</button>
+      <span id="status-global" class="status"></span>
+    </div>
+  </main>
+
+  <script>
+    let localGlobal = null;
+
+    function applyThemeFromStorage() {
+      const pref = localStorage.getItem("gb-theme") || "light";
+      document.body.classList.toggle("theme-dark", pref === "dark");
+    }
+
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const isDark = document.body.classList.toggle("theme-dark");
+      localStorage.setItem("gb-theme", isDark ? "dark" : "light");
+    });
+    applyThemeFromStorage();
+
+    function renderObjectsTable() {
+      const tbody = document.querySelector("#objects-table tbody");
+      tbody.innerHTML = "";
+      const objs = localGlobal.objects || {};
+
+      Object.keys(objs).forEach(key => {
+        const o = objs[key] || {};
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input data-field="key" value="${key}"></td>
+          <td><input data-field="price" type="number" value="${o.price || 0}"></td>
+          <td><input data-field="income" type="number" value="${o.income || 0}"></td>
+          <td><input data-field="color" value="${o.color || ""}"></td>
+          <td><input data-field="int0" type="number" value="${(o.interest||[])[0] || 0}"></td>
+          <td><input data-field="int1" type="number" value="${(o.interest||[])[1] || 0}"></td>
+          <td><input data-field="int2" type="number" value="${(o.interest||[])[2] || 0}"></td>
+          <td><input data-field="icon" value="${o.icon || ""}"></td>
+          <td><button class="btn small danger" data-action="delete">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("add-object").addEventListener("click", () => {
+      const key = "obj_" + Math.random().toString(36).slice(2,7);
+      if (!localGlobal.objects) localGlobal.objects = {};
+      localGlobal.objects[key] = { price:0, income:0, color:"#cccccc", interest:[0,0,0], icon:"" };
+      renderObjectsTable();
+    });
+
+    document.querySelector("#objects-table tbody").addEventListener("click", e => {
+      if (e.target.dataset.action === "delete") {
+        const row = e.target.closest("tr");
+        const key = row.querySelector('input[data-field="key"]').value.trim();
+        if (key && localGlobal.objects[key]) delete localGlobal.objects[key];
+        row.remove();
+      }
+    });
+
+    async function initPage() {
+      localGlobal = await loadGlobalSettings();
+      localGlobal = JSON.parse(JSON.stringify(localGlobal)); // Kopie
+      renderObjectsTable();
+      document.getElementById("base-interest-k").value =
+        (localGlobal.baseRules && localGlobal.baseRules.interestSaturationK) || "";
+    }
+
+    document.getElementById("save-global").addEventListener("click", async () => {
+      const tbody = document.querySelector("#objects-table tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      const objects = {};
+
+      rows.forEach(tr => {
+        const get = f => tr.querySelector(`input[data-field="${f}"]`).value;
+        const key = get("key").trim();
+        if (!key) return;
+
+        objects[key] = {
+          price: parseFloat(get("price")) || 0,
+          income: parseFloat(get("income")) || 0,
+          color: get("color").trim() || "#cccccc",
+          interest: [
+            parseFloat(get("int0")) || 0,
+            parseFloat(get("int1")) || 0,
+            parseFloat(get("int2")) || 0
+          ],
+          icon: get("icon").trim() || ""
+        };
+      });
+
+      localGlobal.objects = objects;
+      localGlobal.baseRules = {
+        interestSaturationK: parseFloat(document.getElementById("base-interest-k").value) || 0
+      };
+
+      try {
+        await saveGlobalSettings(localGlobal);
+        document.getElementById("status-global").textContent = "Saved.";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status-global").textContent = "Error.";
+      }
+    });
+
+    initPage();
+  </script>
+</body>
+</html>

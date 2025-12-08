@@ -1,0 +1,272 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Green Bee – World Settings (Teacher)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="layout.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Dein firebase.initializeApp(...) hier einfügen -->
+  <script src="functions.js"></script>
+</head>
+<body class="theme-light">
+  <header id="main-header">
+    <div class="header-left">
+      <img src="logo Kopie.png" class="logo-image" alt="Green Bee Logo">
+      <span class="app-title">Green Bee – World Settings</span>
+    </div>
+    <div class="header-center">
+      <select id="world-select" class="header-pill"></select>
+    </div>
+    <div class="header-right">
+      <button id="theme-toggle" class="btn small">☀︎ / 🌙</button>
+    </div>
+  </header>
+
+  <main class="page-wrap">
+    <div class="row-grid">
+      <section class="panel">
+        <h2>World Parameters</h2>
+        <label class="field">
+          <span>World Name</span>
+          <input id="ws-name">
+        </label>
+        <label class="field">
+          <span>Start Budget</span>
+          <input id="ws-startBudget" type="number" min="0">
+        </label>
+        <label class="field">
+          <span>Max Turns</span>
+          <input id="ws-maxTurns" type="number" min="1">
+        </label>
+        <label class="field">
+          <span>Grid Size (rows = cols)</span>
+          <input id="ws-gridSize" type="number" min="3" max="20">
+        </label>
+        <fieldset class="field">
+          <legend>Tickets (Total Buyers)</legend>
+          <label><span>Group 1</span><input id="ws-tickets-0" type="number" min="0"></label>
+          <label><span>Group 2</span><input id="ws-tickets-1" type="number" min="0"></label>
+          <label><span>Group 3</span><input id="ws-tickets-2" type="number" min="0"></label>
+        </fieldset>
+      </section>
+
+      <section class="panel">
+        <h2>Enabled Objects</h2>
+        <div id="objects-enabled" class="chip-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Students (Name + Code)</h2>
+        <table class="table" id="students-table">
+          <thead>
+            <tr>
+              <th>Player ID</th>
+              <th>Display Name</th>
+              <th>Code</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <button id="add-student" class="btn small">+ Add Student</button>
+      </section>
+    </div>
+
+    <div class="footer-bar">
+      <button id="save-world" class="btn primary">Save World Settings</button>
+      <span id="status-world" class="status"></span>
+    </div>
+  </main>
+
+  <script>
+    let localGlobal = null;
+    let currentWorldId = null;
+    let currentWorld = null;
+
+    function applyThemeFromStorage() {
+      const pref = localStorage.getItem("gb-theme") || "light";
+      document.body.classList.toggle("theme-dark", pref === "dark");
+    }
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const isDark = document.body.classList.toggle("theme-dark");
+      localStorage.setItem("gb-theme", isDark ? "dark" : "light");
+    });
+    applyThemeFromStorage();
+
+    async function initWorlds() {
+      localGlobal = await loadGlobalSettings();
+      const worlds = await listWorlds();
+      const sel = document.getElementById("world-select");
+      sel.innerHTML = "";
+
+      worlds.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = w;
+        opt.textContent = w;
+        sel.appendChild(opt);
+      });
+
+      const optNew = document.createElement("option");
+      optNew.value = "__new__";
+      optNew.textContent = "+ New World…";
+      sel.appendChild(optNew);
+
+      sel.addEventListener("change", onWorldChange);
+
+      if (worlds.length > 0) {
+        sel.value = worlds[0];
+        await loadWorld(worlds[0]);
+      } else {
+        sel.value = "__new__";
+        createNewWorld();
+      }
+    }
+
+    function createNewWorld() {
+      const name = prompt("Name for new world:", "world1") || "world1";
+      currentWorldId = name;
+      currentWorld = {
+        name,
+        startBudget: 200,
+        maxTurns: 12,
+        gridSize: 5,
+        tickets: [500, 400, 300],
+        objectsEnabled: {},
+        students: {}
+      };
+      renderWorldForm();
+    }
+
+    async function onWorldChange() {
+      const value = this.value;
+      if (value === "__new__") {
+        createNewWorld();
+      } else {
+        await loadWorld(value);
+      }
+    }
+
+    async function loadWorld(worldId) {
+      currentWorldId = worldId;
+      const ws = await loadWorldSettings(worldId);
+      currentWorld = {
+        name: ws.name || worldId,
+        startBudget: ws.startBudget || 0,
+        maxTurns: ws.maxTurns || 10,
+        gridSize: ws.gridSize || 5,
+        tickets: Array.isArray(ws.tickets) ? ws.tickets : [
+          (ws.tickets && ws.tickets[0]) || 0,
+          (ws.tickets && ws.tickets[1]) || 0,
+          (ws.tickets && ws.tickets[2]) || 0
+        ],
+        objectsEnabled: ws.objectsEnabled || {},
+        students: ws.students || {}
+      };
+
+      if (!currentWorld.objectsEnabled) currentWorld.objectsEnabled = {};
+      Object.keys(localGlobal.objects || {}).forEach(k => {
+        if (typeof currentWorld.objectsEnabled[k] === "undefined") {
+          currentWorld.objectsEnabled[k] = true;
+        }
+      });
+
+      renderWorldForm();
+    }
+
+    function renderWorldForm() {
+      document.getElementById("ws-name").value = currentWorld.name;
+      document.getElementById("ws-startBudget").value = currentWorld.startBudget;
+      document.getElementById("ws-maxTurns").value = currentWorld.maxTurns;
+      document.getElementById("ws-gridSize").value = currentWorld.gridSize;
+      document.getElementById("ws-tickets-0").value = currentWorld.tickets[0] || 0;
+      document.getElementById("ws-tickets-1").value = currentWorld.tickets[1] || 0;
+      document.getElementById("ws-tickets-2").value = currentWorld.tickets[2] || 0;
+
+      const objDiv = document.getElementById("objects-enabled");
+      objDiv.innerHTML = "";
+      Object.keys(localGlobal.objects || {}).forEach(k => {
+        const label = document.createElement("label");
+        label.className = "chip";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.dataset.key = k;
+        input.checked = !!currentWorld.objectsEnabled[k];
+        const span = document.createElement("span");
+        span.textContent = k;
+        label.appendChild(input);
+        label.appendChild(span);
+        objDiv.appendChild(label);
+      });
+
+      const tbody = document.querySelector("#students-table tbody");
+      tbody.innerHTML = "";
+      Object.keys(currentWorld.students || {}).forEach(id => {
+        const st = currentWorld.students[id];
+        addStudentRow(id, st.name, st.code);
+      });
+    }
+
+    function addStudentRow(id = "", name = "", code = "") {
+      const tbody = document.querySelector("#students-table tbody");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input data-field="id" value="${id}"></td>
+        <td><input data-field="name" value="${name}"></td>
+        <td><input data-field="code" value="${code}"></td>
+        <td><button class="btn small danger" data-action="delete">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    document.getElementById("add-student").addEventListener("click", () => addStudentRow());
+
+    document.querySelector("#students-table tbody").addEventListener("click", e => {
+      if (e.target.dataset.action === "delete") {
+        e.target.closest("tr").remove();
+      }
+    });
+
+    document.getElementById("save-world").addEventListener("click", async () => {
+      currentWorld.name = document.getElementById("ws-name").value.trim() || currentWorldId;
+      currentWorld.startBudget = parseFloat(document.getElementById("ws-startBudget").value) || 0;
+      currentWorld.maxTurns = parseInt(document.getElementById("ws-maxTurns").value, 10) || 1;
+      currentWorld.gridSize = parseInt(document.getElementById("ws-gridSize").value, 10) || 5;
+      currentWorld.tickets = [
+        parseInt(document.getElementById("ws-tickets-0").value, 10) || 0,
+        parseInt(document.getElementById("ws-tickets-1").value, 10) || 0,
+        parseInt(document.getElementById("ws-tickets-2").value, 10) || 0
+      ];
+
+      const enabled = {};
+      document.querySelectorAll("#objects-enabled input[type=checkbox]").forEach(cb => {
+        enabled[cb.dataset.key] = cb.checked;
+      });
+      currentWorld.objectsEnabled = enabled;
+
+      const students = {};
+      document.querySelectorAll("#students-table tbody tr").forEach(tr => {
+        const id = tr.querySelector('input[data-field="id"]').value.trim();
+        const name = tr.querySelector('input[data-field="name"]').value.trim();
+        const code = tr.querySelector('input[data-field="code"]').value.trim();
+        if (!id || !name || !code) return;
+        students[id] = { name, code };
+      });
+      currentWorld.students = students;
+
+      try {
+        await saveWorldSettings(currentWorldId, currentWorld);
+        document.getElementById("status-world").textContent = "Saved";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status-world").textContent = "Error";
+      }
+    });
+
+    initWorlds();
+  </script>
+</body>
+</html>
