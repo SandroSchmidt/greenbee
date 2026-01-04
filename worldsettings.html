@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Green Bee – World Settings (Teacher)</title>
+  <title>World Settings (Teacher)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="layout.css">
@@ -12,11 +12,122 @@
   <!-- Dein firebase.initializeApp(...) hier einfügen -->
   <script src="functions.js"></script>
 </head>
+<style>/* ===============================
+   WORLD SETTINGS GRID
+   =============================== */
+
+.row-grid {
+  display: grid;
+  grid-template-columns: 320px 220px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ===============================
+   PANELS (override-safe)
+   =============================== */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  padding: 16px;
+  background: var(--panel-bg, #ffffff);
+  border-radius: 10px;
+
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+/* ===============================
+   ENABLED OBJECTS (schmal!)
+   =============================== */
+
+#objects-enabled {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+/* kompakte Chips */
+#objects-enabled .chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* ===============================
+   ENABLED MARKETING (schmal!)
+   =============================== */
+
+#marketing-enabled {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+#marketing-enabled .chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 4px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ===============================
+   STUDENTS TABLE (maximal breit)
+   =============================== */
+
+#students-table {
+  display: block;
+  width: 100%;
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+#students-table thead,
+#students-table tbody {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+#students-table th,
+#students-table td {
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
+
+/* ===============================
+   RESPONSIVE FALLBACK
+   =============================== */
+
+@media (max-width: 1100px) {
+  .row-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+</style>
 <body class="theme-light">
   <header id="main-header">
     <div class="header-left">
-      <img src="logo Kopie.png" class="logo-image" alt="Green Bee Logo">
-      <span class="app-title">Green Bee – World Settings</span>
+      <img src="logo.png" class="logo-image" alt="Green Bee Logo">
+      <span class="app-title"> World Settings</span>
     </div>
     <div class="header-center">
       <select id="world-select" class="header-pill"></select>
@@ -59,6 +170,12 @@
         <div id="objects-enabled" class="chip-list"></div>
       </section>
 
+      <!--
+<section class="panel">
+  <h2>Enabled Marketing</h2>
+  <div id="marketing-enabled" class="chip-list"></div>
+</section>
+-->
       <section class="panel">
         <h2>Students (Name + Code)</h2>
         <table class="table" id="students-table">
@@ -129,15 +246,23 @@
     function createNewWorld() {
       const name = prompt("Name for new world:", "world1") || "world1";
       currentWorldId = name;
-      currentWorld = {
-        name,
-        startBudget: 200,
-        maxTurns: 12,
-        gridSize: 5,
-        tickets: [500, 400, 300],
-        objectsEnabled: {},
-        students: {}
-      };
+    const mktEnabled = {};
+
+Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
+  mktEnabled[k] = false; // Default: alles aus
+});
+
+currentWorld = {
+  name,
+  startBudget: 200,
+  maxTurns: 12,
+  gridSize: 5,
+  tickets: [500, 400, 300],
+  objectsEnabled: {},
+  students: {},
+  marketingEnabled: mktEnabled
+};
+
       renderWorldForm();
     }
 
@@ -164,7 +289,9 @@
           (ws.tickets && ws.tickets[2]) || 0
         ],
         objectsEnabled: ws.objectsEnabled || {},
-        students: ws.students || {}
+        students: ws.students || {},
+        marketingEnabled: ws.marketingEnabled || {},
+
       };
 
       if (!currentWorld.objectsEnabled) currentWorld.objectsEnabled = {};
@@ -173,6 +300,13 @@
           currentWorld.objectsEnabled[k] = true;
         }
       });
+      if (!currentWorld.marketingEnabled) currentWorld.marketingEnabled = {};
+if (!currentWorld.marketingEnabled) currentWorld.marketingEnabled = {};
+Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
+  // Default: false, nur echtes true bleibt true
+  currentWorld.marketingEnabled[k] = (currentWorld.marketingEnabled[k] === true);
+});
+
 
       renderWorldForm();
     }
@@ -201,6 +335,27 @@
         label.appendChild(span);
         objDiv.appendChild(label);
       });
+const mktDiv = document.getElementById("marketing-enabled");
+mktDiv.innerHTML = "";
+Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
+  const label = document.createElement("label");
+  label.className = "chip";
+
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.dataset.key = k;
+  input.checked = (currentWorld.marketingEnabled[k] === true);
+
+
+  const span = document.createElement("span");
+  span.textContent = (localGlobal.marketingTypes[k] && localGlobal.marketingTypes[k].label) 
+    ? localGlobal.marketingTypes[k].label 
+    : k;
+
+  label.appendChild(input);
+  label.appendChild(span);
+  mktDiv.appendChild(label);
+});
 
       const tbody = document.querySelector("#students-table tbody");
       tbody.innerHTML = "";
@@ -246,6 +401,11 @@
         enabled[cb.dataset.key] = cb.checked;
       });
       currentWorld.objectsEnabled = enabled;
+const mktEnabled = {};
+document.querySelectorAll("#marketing-enabled input[type=checkbox]").forEach(cb => {
+  mktEnabled[cb.dataset.key] = cb.checked;
+});
+currentWorld.marketingEnabled = mktEnabled;
 
       const students = {};
       document.querySelectorAll("#students-table tbody tr").forEach(tr => {

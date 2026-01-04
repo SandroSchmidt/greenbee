@@ -232,3 +232,122 @@ body {
   margin-top: 6px;
   font-size: 13px;
 }
+
+.marketing-sliders{
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.mkt-row{
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 10px;
+  align-items: center;
+}
+
+.mkt-label{
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.mkt-slider-wrap{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mkt-meta{
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.mkt-slider{
+  width: 100%;
+}
+
+.mkt-value{
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  font-weight: 700;
+}
+/* 2) ADD THIS TO styles.css (or a page <style> block). Uses your existing theme variables. */
+
+.gb-overlay{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  z-index: 200;
+  padding: 16px;
+}
+
+.gb-overlay.is-open{ display:flex; }
+
+.gb-overlay-panel{
+  width: min(760px, 96vw);
+  max-height: min(80vh, 800px);
+  overflow: auto;
+
+  background: var(--panel-bg);
+  color: var(--fg);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+  padding: 16px;
+}
+
+.gb-overlay-header{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.gb-overlay-header h2{
+  font-size: 16px;
+  margin: 0;
+}
+
+.gb-overlay-content{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.gb-about-section{
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.gb-about-section h3{
+  font-size: 13px;
+  margin: 0 0 6px 0;
+  opacity: 0.9;
+}
+
+.gb-about-section ul{
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.gb-about-footer{
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+@media (max-width: 720px){
+  .gb-overlay-content{ grid-template-columns: 1fr; }
+}

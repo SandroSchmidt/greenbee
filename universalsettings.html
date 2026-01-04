@@ -1,0 +1,386 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Global Settings (Admin)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="layout.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Hier muss DEIN firebase.initializeApp({...})-Code stehen -->
+  <script src="functions.js"></script>
+</head>
+<style>
+/* ===============================
+   universal PAGE LAYOUT
+   =============================== */
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow-y: auto;
+}
+
+/* ===============================
+   PAGE WRAPPER
+   =============================== */
+
+.page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px;
+  padding-bottom: 96px; /* Platz für fixe Footer-Bar */
+  box-sizing: border-box;
+}
+
+/* ===============================
+   PANELS
+   =============================== */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  padding: 16px;
+  background: var(--panel-bg, #ffffff);
+  border-radius: 10px;
+
+  /* WICHTIG: Panel darf wachsen */
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+/* ===============================
+   TABLES
+   =============================== */
+
+.table {
+  display: block;
+  width: 100%;
+  max-height: 65vh;          /* Tabelle scrollt, Panel nicht */
+  overflow-y: auto;
+  border-collapse: collapse;
+}
+
+.table thead,
+.table tbody {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table th,
+.table td {
+  padding: 6px 8px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+/* ===============================
+   ADD BUTTONS
+   =============================== */
+
+.panel > .btn {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+
+/* ===============================
+   FOOTER BAR
+   =============================== */
+
+.footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  height: 56px;
+  padding: 0 16px;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  background: var(--panel-bg, #ffffff);
+  border-top: 1px solid rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+/* ===============================
+   DARK MODE SUPPORT
+   =============================== */
+
+body.theme-dark {
+  background: #111;
+}
+
+body.theme-dark .panel,
+body.theme-dark .footer-bar {
+  background: #1b1b1b;
+}
+
+body.theme-dark .table {
+  color: #e0e0e0;
+}
+</style>
+<body class="theme-light">
+  <header id="main-header">
+    <div class="header-left">
+      <img src="./logo.png" class="logo-image" alt="Green Bee Logo">
+      <span class="app-title">universal Settings</span>
+    </div>
+    <div class="header-center">
+      <span class="header-pill">Admin</span>
+    </div>
+    <div class="header-right">
+      <button id="theme-toggle" class="btn small">☀︎ / 🌙</button>
+    </div>
+  </header>
+
+  <main class="page-wrap">
+    <section class="panel">
+      <h2>Objects</h2>
+      <p class="text-muted">Alle Bauelemente des Spiels mit Preis, Einkommen, Farbe und Interessens-Werten.</p>
+      <table class="table" id="objects-table">
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Price</th>
+            <th>Income</th>
+            <th>Color</th>
+            <th>suitability 1</th>
+            <th>suitability 2</th>
+            <th>suitability 3</th>
+            <th>Icon Path</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button id="add-object" class="btn small">+ Add Object</button>
+    </section>
+
+    <section class="panel">
+  <h2>Advertising / Marketing Channels</h2>
+  <p class="text-muted">Werbearten mit Max-Kosten pro Runde und Wirksamkeit je Gruppe.</p>
+
+  <table class="table" id="marketing-table">
+    <thead>
+      <tr>
+        <th>Key</th>
+        
+        <th>Max Cost</th>
+        <th>Eff G1</th>
+        <th>Eff G2</th>
+        <th>Eff G3</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <button id="add-marketing" class="btn small">+ Add Channel</button>
+</section>
+
+
+    <section class="panel">
+      <h2>Base Rules</h2>
+      <p class="text-muted">universale Steuerparameter (können später erweitert werden).</p>
+      <label class="field">
+        <span>suitability Saturation K (optional)</span>
+        <input type="number" id="base-suitability-k" min="0">
+      </label>
+    </section>
+
+
+    <div class="footer-bar">
+      <button id="save-global" class="btn primary">Save Universal Settings</button>
+      <span id="status-global" class="status"></span>
+    </div>
+  </main>
+
+  <script>
+    let localGlobal = null;
+
+    function applyThemeFromStorage() {
+      const pref = localStorage.getItem("gb-theme") || "light";
+      document.body.classList.toggle("theme-dark", pref === "dark");
+    }
+
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const isDark = document.body.classList.toggle("theme-dark");
+      localStorage.setItem("gb-theme", isDark ? "dark" : "light");
+    });
+    applyThemeFromStorage();
+
+    function renderObjectsTable() {
+      const tbody = document.querySelector("#objects-table tbody");
+      tbody.innerHTML = "";
+      const objs = localGlobal.objects || {};
+
+      Object.keys(objs).forEach(key => {
+        const o = objs[key] || {};
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input data-field="key" value="${key}"></td>
+          <td><input data-field="price" type="number" value="${o.price || 0}"></td>
+          <td><input data-field="income" type="number" value="${o.income || 0}"></td>
+          <td><input data-field="color" value="${o.color || ""}"></td>
+          <td><input data-field="int0" type="number" value="${(o.suitability||[])[0] || 0}"></td>
+          <td><input data-field="int1" type="number" value="${(o.suitability||[])[1] || 0}"></td>
+          <td><input data-field="int2" type="number" value="${(o.suitability||[])[2] || 0}"></td>
+          <td><input data-field="icon" value="${o.icon || ""}"></td>
+          <td><button class="btn small danger" data-action="delete">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("add-object").addEventListener("click", () => {
+      const key = "obj_" + Math.random().toString(36).slice(2,7);
+      if (!localGlobal.objects) localGlobal.objects = {};
+      localGlobal.objects[key] = { price:0, income:0, color:"#cccccc", suitability:[0,0,0], icon:"" };
+      renderObjectsTable();
+    });
+    
+
+
+    document.querySelector("#objects-table tbody").addEventListener("click", e => {
+      if (e.target.dataset.action === "delete") {
+        const row = e.target.closest("tr");
+        const key = row.querySelector('input[data-field="key"]').value.trim();
+        if (key && localGlobal.objects[key]) delete localGlobal.objects[key];
+        row.remove();
+      }
+    });
+
+    async function initPage() {
+      localGlobal = await loadGlobalSettings();
+      localGlobal = JSON.parse(JSON.stringify(localGlobal)); // Kopie
+      renderObjectsTable();
+      if (!localGlobal.marketingChannels) localGlobal.marketingChannels = {};
+renderMarketingTable();
+      document.getElementById("base-suitability-k").value =
+        (localGlobal.baseRules && localGlobal.baseRules.suitabilitySaturationK) || "";
+    }
+
+    document.getElementById("save-global").addEventListener("click", async () => {
+      const tbody = document.querySelector("#objects-table tbody");
+      const rows = Array.from(tbody.querySelectorAll("tr"));
+      const objects = {};
+
+      rows.forEach(tr => {
+        const get = f => tr.querySelector(`input[data-field="${f}"]`).value;
+        const key = get("key").trim();
+        if (!key) return;
+
+        objects[key] = {
+          price: parseFloat(get("price")) || 0,
+          income: parseFloat(get("income")) || 0,
+          color: get("color").trim() || "#cccccc",
+          suitability: [
+            parseFloat(get("int0")) || 0,
+            parseFloat(get("int1")) || 0,
+            parseFloat(get("int2")) || 0
+          ],
+          icon: get("icon").trim() || ""
+        };
+      });
+
+      localGlobal.objects = objects;
+      // Marketing Channels einlesen
+const mbody = document.querySelector("#marketing-table tbody");
+const mrows = Array.from(mbody.querySelectorAll("tr"));
+const channels = {};
+
+mrows.forEach(tr => {
+  const get = f => tr.querySelector(`input[data-field="${f}"]`).value;
+
+  const key = get("key").trim();
+  if (!key) return;
+
+  channels[key] = {
+
+    maxSpend: parseFloat(get("maxSpend")) || 0,
+    effectiveness: [
+      parseFloat(get("eff0")) || 0,
+      parseFloat(get("eff1")) || 0,
+      parseFloat(get("eff2")) || 0
+    ]
+  };
+});
+
+localGlobal.marketingChannels = channels;
+
+      localGlobal.baseRules = {
+        suitabilitySaturationK: parseFloat(document.getElementById("base-suitability-k").value) || 0
+      };
+
+      try {
+        await saveGlobalSettings(localGlobal);
+        document.getElementById("status-global").textContent = "Saved.";
+      } catch (err) {
+        console.error(err);
+        document.getElementById("status-global").textContent = "Error.";
+      }
+    });
+function renderMarketingTable() {
+  const tbody = document.querySelector("#marketing-table tbody");
+  tbody.innerHTML = "";
+
+  // Wir speichern global unter localGlobal.marketingChannels
+  const ch = localGlobal.marketingChannels || {};
+
+  Object.keys(ch).forEach(key => {
+    const c = ch[key] || {};
+    const eff = Array.isArray(c.effectiveness) ? c.effectiveness : [0,0,0];
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input data-field="key" value="${key}"></td>
+      
+      <td><input data-field="maxSpend" type="number" min="0" value="${c.maxSpend || 0}"></td>
+      <td><input data-field="eff0" type="number" value="${eff[0] || 0}"></td>
+      <td><input data-field="eff1" type="number" value="${eff[1] || 0}"></td>
+      <td><input data-field="eff2" type="number" value="${eff[2] || 0}"></td>
+      <td><button class="btn small danger" data-action="delete">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+document.getElementById("add-marketing").addEventListener("click", () => {
+  const key = "mkt_" + Math.random().toString(36).slice(2,7);
+
+  if (!localGlobal.marketingChannels) localGlobal.marketingChannels = {};
+  localGlobal.marketingChannels[key] = {
+    label: "New channel",
+    maxSpend: 0,
+    effectiveness: [0,0,0]
+  };
+
+  renderMarketingTable();
+});
+document.querySelector("#marketing-table tbody").addEventListener("click", e => {
+  if (e.target.dataset.action === "delete") {
+    const row = e.target.closest("tr");
+    const key = row.querySelector('input[data-field="key"]').value.trim();
+    if (key && localGlobal.marketingChannels && localGlobal.marketingChannels[key]) {
+      delete localGlobal.marketingChannels[key];
+    }
+    row.remove();
+  }
+});
+
+    initPage();
+  </script>
+</body>
+</html>

@@ -145,4 +145,45 @@ function getCachedWorldSettings(worldId) {
   return worldsettingsCache[worldId] || null;
 }
 
+  function setupAboutOverlay(){
+    console.log("Setting up About Overlay");
+    const logo = document.getElementById("gb-logo");
+    const overlay = document.getElementById("about-overlay");
+    const closeBtn = document.getElementById("about-close");
+    if (!logo || !overlay || !closeBtn) return;
+
+    function openAbout(){
+      overlay.classList.add("is-open");
+      overlay.setAttribute("aria-hidden", "false");
+      closeBtn.focus();
+    }
+
+    function closeAbout(){
+      overlay.classList.remove("is-open");
+      overlay.setAttribute("aria-hidden", "true");
+      logo.focus();
+    }
+
+    logo.style.cursor = "pointer";
+    logo.setAttribute("tabindex", "0");
+    logo.setAttribute("role", "button");
+    logo.setAttribute("aria-label", "Open Green Bee version info");
+
+    logo.addEventListener("click", openAbout);
+    logo.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openAbout(); }
+    });
+
+    closeBtn.addEventListener("click", closeAbout);
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeAbout();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.classList.contains("is-open")) closeAbout();
+    });
+  };
+
+
 console.log("functions.js loaded");
