@@ -13,7 +13,81 @@
   <!-- Dein firebase.initializeApp(...) hier einfügen -->
   <script src="functions.js"></script>
 </head>
+<style>
+  /* ADD THIS TO styles.css (or a <style> block) */
+#summary-overlay{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.55);
+  z-index: 80;
+}
 
+#summary-overlay .summary-panel{
+  width: min(720px, 92vw);
+  max-height: 80vh;
+  overflow: auto;
+}
+
+.summary-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.summary-card{
+  border: 1px solid var(--panel-border);
+  background: var(--panel-bg);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.summary-card h3{
+  font-size: 13px;
+  margin: 0 0 6px 0;
+}
+
+.summary-table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.summary-table td{
+  padding: 4px 0;
+  vertical-align: top;
+}
+
+.summary-muted{
+  opacity: 0.8;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.budget-mini{
+  margin: 8px 0 10px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--panel-bg);
+  font-size: 13px;
+  display: grid;
+  gap: 6px;
+}
+.budget-mini > div{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+.budget-mini .muted{
+  opacity: .8;
+  font-weight: 600;
+}
+
+</style>
 <body class="theme-light">
 <!-- 1) ADD THIS DIRECTLY AFTER <body class="theme-light"> (or anywhere near the top of body) -->
 
@@ -67,7 +141,13 @@
       <button id="buy-close" class="btn small">Close</button>
     </div>
   </div>
-
+<div id="summary-overlay">
+  <div class="overlay-panel summary-panel">
+    <h2>Event Summary</h2>
+    <div id="summary-content"></div>
+    <button id="summary-close" class="btn small">Close</button>
+  </div>
+</div>
 
   <!-- MAIN CONTENT -->
   <main class="page-wrap">
@@ -91,8 +171,13 @@
       <section class="panel" id="panel-shop">
         <h2 id="turn-display">Info</h2>
 <div id="shop-container">
-  <div id="shop-hover-info" class="hover-info">
-    Hover over a tile or a chart to see details.
+  <div id="shop-hover-info" class="hover-info">    Hover over a tile or a chart to see details.
+    <div id="budget-mini" class="budget-mini">
+  <div><span class="muted">Current budget</span><span id="ui-current-budget">€0</span></div>
+  <div><span class="muted">Income next turn</span><span id="ui-income-next">€0</span></div>
+  <div><span class="muted">Projected next start</span><span id="ui-next-start">€0</span></div>
+</div>
+
   </div>
   <div id="shop-dynamic"></div>
 </div>
@@ -282,14 +367,21 @@ function computeGlobalInterestFromMarketing() {
 
     // ===== UI Updates =====
 
-    function updateInfoPanel() {
-      const suitability = computesuitability();
-      const income = computeIncome();
+function updateInfoPanel() {
+  document.getElementById("turn-display").textContent = "Turn " + (gameState.turn || 0);
 
-   //   document.getElementById("info-budget").textContent = gameState.budget;
-   //   document.getElementById("info-income").textContent = income;
-      document.getElementById("turn-display").textContent = "Turn " + (gameState.turn || 0);
-    }
+  const cur = Number(gameState.budget || 0);
+  const incomeNext = Number(computeIncome() || 0);
+  const nextStart = cur + incomeNext;
+
+  const elCur = document.getElementById("ui-current-budget");
+  const elInc = document.getElementById("ui-income-next");
+  const elNext = document.getElementById("ui-next-start");
+
+  if (elCur) elCur.textContent = `€${cur}`;
+  if (elInc) elInc.textContent = `€${incomeNext}`;
+  if (elNext) elNext.textContent = `€${nextStart}`;
+}
 
 function renderBoard() {
   const svg = d3.select("#game-board");
@@ -426,7 +518,7 @@ const poly = g.append("polygon")
       .on("click", async () => {
         gameState.budget += sellPrice;
         delete gameState.board[selectedId];
-        gameState.budgetHistory[gameState.turn] = gameState.budget;
+
 
         overlayEl.style.display = "none";
         renderBoard();
@@ -434,6 +526,8 @@ const poly = g.append("polygon")
         updateAll();
         await saveGameState(worldId, playerId, gameState);
       });
+
+
 
   } else {
     // Leeres Feld -> Buy-Liste
@@ -460,7 +554,7 @@ const poly = g.append("polygon")
 
           gameState.budget -= cost;
           gameState.board[selectedId] = key;
-          gameState.budgetHistory[gameState.turn] = gameState.budget;
+          
 
           overlayEl.style.display = "none";
           renderBoard();
@@ -639,6 +733,38 @@ function renderBudgetChart() {
     .attr("y2", height - CHART_MARGIN.bottom)
     .attr("stroke", "red")
     .attr("stroke-width", 2);
+    //#endregion
+    //#endregion
+
+      // --- PROJECTION: from current turn -> next turn (dashed) ---
+  const curTurn = turnNow;
+  const nextTurn = curTurn + 1;
+
+  if (nextTurn <= CHART_X_MAX) {
+    const curBudget = Number(gameState.budget || 0);
+    const incNext = Number(computeIncome() || 0);
+    const nextStart = curBudget + incNext;
+
+    // dashed line
+    svg.append("line")
+      .attr("x1", x(curTurn))
+      .attr("y1", y(curBudget))
+      .attr("x2", x(nextTurn))
+      .attr("y2", y(nextStart))
+      .attr("stroke", "#111827")
+      .attr("stroke-width", 2)
+      .attr("stroke-dasharray", "5 4")
+      .attr("opacity", 0.65);
+
+    // projected point
+    svg.append("circle")
+      .attr("cx", x(nextTurn))
+      .attr("cy", y(nextStart))
+      .attr("r", 4)
+      .attr("fill", "#111827")
+      .attr("opacity", 0.65);
+  }
+
 }
 
 function renderTicketChart() {
@@ -735,27 +861,42 @@ function updateAll() {
 });
     // ===== Turn-Logik =====
 
-  async function nextTurn() {
+async function nextTurn() {
   const income = computeIncome();
 
-  // Turn hochzählen
-  gameState.turn = (gameState.turn || 0) + 1;
+  const currentTurn = gameState.turn || 0;
 
-  // Budget aktualisieren
-  gameState.budget = (gameState.budget || 0) + income;
+  // Einkommen wirkt für die nächste Runde
+  const nextBudget = (gameState.budget || 0) + income;
 
-  // History-Arrays pflegen
+  // turn -> next
+  gameState.turn = currentTurn + 1;
+
+  // History-Arrays sicherstellen
   if (!Array.isArray(gameState.budgetHistory)) gameState.budgetHistory = [];
   if (!Array.isArray(gameState.incomeHistory)) gameState.incomeHistory = [];
 
-  gameState.budgetHistory[gameState.turn] = gameState.budget;
-  gameState.incomeHistory[gameState.turn] = income;
-gameState.interest = computeGlobalInterestFromMarketing();
+  // incomeHistory gehört zur gerade beendeten Runde (currentTurn)
+  gameState.incomeHistory[currentTurn] = income;
+
+  // budgetHistory ist immer Startbudget der jeweiligen Runde (NEUE Runde!)
+  gameState.budgetHistory[gameState.turn] = nextBudget;
+
+  // Budget wird zum Startbudget der neuen Runde
+  gameState.budget = nextBudget;
+
+  // Marketing -> Interest -> Tickets (werden beim Turnwechsel berechnet)
+  gameState.interest = computeGlobalInterestFromMarketing();
   const suitability = computesuitability();
   calculateTicketsAfterTurn(suitability);
 
   updateAll();
   await saveGameState(worldId, playerId, gameState);
+
+  const maxT = (worldSettings && worldSettings.maxTurns) || 10;
+  if ((gameState.turn || 0) >= maxT) {
+    showEventSummary();
+  }
 }
 
     async function restartGame() {
@@ -962,10 +1103,11 @@ function clearTileInfo() {
 
 
 function setHoverInfo(text) {
-  const el = document.getElementById("shop-hover-info");
+  const el = document.getElementById("hover-text");
   if (!el) return;
   el.textContent = text || "";
 }
+
 
 function resetHoverInfo() {
   setHoverInfo("Hover over a tile or a chart to see details.");
@@ -973,28 +1115,27 @@ function resetHoverInfo() {
 
 function showBudgetInfo() {
   const turn = gameState.turn || 0;
-  const currentBudget = gameState.budget || 0;
-  const incomeNext = computeIncome(); // “laufende Einnahmen” (nächste Runde)
-  const spent = gameState.turnSpent || 0;
-  const marketing = gameState.marketingBudget || 0;
 
-  // “laufende Ausgaben” existieren bei dir aktuell nicht als Mechanik -> 0
-  const runningExpenses = 0;
+  const startBudget = Array.isArray(gameState.budgetHistory)
+    ? (gameState.budgetHistory[turn] ?? gameState.budgetHistory[gameState.budgetHistory.length - 1] ?? 0)
+    : 0;
 
-  //         <div><strong>Budget:</strong> €<span id="info-budget">0</span></div>
-//        <div><strong>Income next turn:</strong> €<span id="info-income">0</span></div>
+  const currentBudget = Number(gameState.budget || 0);
+  const spentThisTurn = Math.max(0, Number(startBudget) - Number(currentBudget));
 
+  const incomeNext = Number(computeIncome() || 0);
+  const projectedNextStart = currentBudget + incomeNext;
 
   setHoverInfo(
 `Budget Panel
 Turn: ${turn}
 
-Current budget: €${currentBudget}
-Spent this turn: €${spent}
-Marketing budget: €${marketing}
+Start budget (this turn): €${startBudget}
+Current budget (after purchases): €${currentBudget}
+Spent this turn (purchases): €${spentThisTurn}
 
-Running income (next turn): €${incomeNext}
-Running expenses: €${runningExpenses}`
+Income (applies next turn): €${incomeNext}
+Projected next start budget: €${projectedNextStart}`
   );
 }
 
@@ -1099,6 +1240,136 @@ function renderMarketingSliders() {
     host.appendChild(row);
   });
 }
+
+
+function isGameFinished() {
+  const maxT = (worldSettings && worldSettings.maxTurns) || 10;
+  return (gameState && (gameState.turn || 0) >= maxT);
+}
+
+function calcTotals() {
+  const maxT = (worldSettings && worldSettings.maxTurns) || 10;
+  const turnsPlayed = Math.min((gameState.turn || 0), maxT);
+
+  const budgetNow = Number(gameState.budget || 0);
+  const budgetHist = Array.isArray(gameState.budgetHistory) ? gameState.budgetHistory : [];
+  const incomeHist = Array.isArray(gameState.incomeHistory) ? gameState.incomeHistory : [];
+
+  const totalIncome = incomeHist.reduce((a,v) => a + (Number(v)||0), 0);
+
+  const totalTickets = Array.isArray(gameState.ticketSales) ? gameState.ticketSales : [0,0,0];
+  const cap = Array.isArray(worldSettings.tickets) ? worldSettings.tickets : [0,0,0];
+
+  const suitability = computesuitability();        // raw (not *10)
+  const interest = (gameState.interest || [0,0,0]);
+
+  const board = (gameState.board || {});
+  const counts = {};
+  Object.values(board).forEach(k => counts[k] = (counts[k]||0) + 1);
+
+  const plan = (gameState.marketingPlan || {});
+  const totalMktSpend = Object.values(plan).reduce((a,v) => a + (Number(v)||0), 0);
+
+  return {
+    maxT, turnsPlayed,
+    budgetNow, totalIncome,
+    totalTickets, cap,
+    suitability, interest,
+    counts,
+    totalMktSpend
+  };
+}
+
+function renderSummaryHtml() {
+  const t = calcTotals();
+
+  const groups = ["Group 1", "Group 2", "Group 3"];
+
+  const ticketRows = groups.map((g,i) => {
+    const sold = Number(t.totalTickets[i] || 0);
+    const cap = Number(t.cap[i] || 0);
+    const pct = cap > 0 ? Math.round((sold / cap) * 100) : 0;
+    return `<tr><td>${g}</td><td style="text-align:right">${sold} / ${cap} (${pct}%)</td></tr>`;
+  }).join("");
+
+  const suitRows = groups.map((g,i) => {
+    const s = Number(t.suitability[i] || 0);
+    const it = Number(t.interest[i] || 0);
+    return `<tr><td>${g}</td><td style="text-align:right">${s} / ${it}</td></tr>`;
+  }).join("");
+
+  const objKeys = Object.keys(t.counts).sort((a,b) => t.counts[b]-t.counts[a]);
+  const objList = objKeys.length
+    ? `<table class="summary-table">${objKeys.map(k => `<tr><td>${k}</td><td style="text-align:right">${t.counts[k]}</td></tr>`).join("")}</table>`
+    : `<div class="summary-muted">No objects built.</div>`;
+
+  return `
+    <div class="summary-grid">
+
+      <div class="summary-card">
+        <h3>Outcome</h3>
+        <table class="summary-table">
+          <tr><td>Turns played</td><td style="text-align:right">${t.turnsPlayed} / ${t.maxT}</td></tr>
+          <tr><td>Final budget</td><td style="text-align:right">€${t.budgetNow}</td></tr>
+          <tr><td>Total income</td><td style="text-align:right">€${t.totalIncome}</td></tr>
+          <tr><td>Total marketing spend (plan)</td><td style="text-align:right">€${t.totalMktSpend}</td></tr>
+        </table>
+      </div>
+
+      <div class="summary-card">
+        <h3>Ticket Sales</h3>
+        <table class="summary-table">
+          ${ticketRows}
+        </table>
+      </div>
+
+      <div class="summary-card">
+        <h3>Suitability / Interest</h3>
+        <table class="summary-table">
+          <tr><td class="summary-muted" colspan="2">Format: suitability / interest</td></tr>
+          ${suitRows}
+        </table>
+      </div>
+
+      <div class="summary-card">
+        <h3>Built Objects</h3>
+        ${objList}
+      </div>
+
+    </div>
+
+    <div class="summary-muted">
+      Event finished. You can restart the game to play again.
+    </div>
+  `;
+}
+
+function showEventSummary() {
+  const overlay = document.getElementById("summary-overlay");
+  const content = document.getElementById("summary-content");
+  if (!overlay || !content) return;
+
+  content.innerHTML = renderSummaryHtml();
+  overlay.style.display = "flex";
+
+  // lock gameplay buttons (optional but recommended)
+  const nextBtn = document.getElementById("nextturn-btn");
+  if (nextBtn) nextBtn.disabled = true;
+}
+
+function hideEventSummary() {
+  const overlay = document.getElementById("summary-overlay");
+  if (!overlay) return;
+  overlay.style.display = "none";
+}
+
+document.getElementById("summary-close")?.addEventListener("click", hideEventSummary);
+
+// close by clicking outside panel
+document.getElementById("summary-overlay")?.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "summary-overlay") hideEventSummary();
+});
+
 
   </script>
 </body>
