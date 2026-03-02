@@ -141,6 +141,13 @@
       <button id="buy-close" class="btn small">Close</button>
     </div>
   </div>
+  <div id="credit-overlay">
+    <div class="overlay-panel">
+      <h2 id="credit-title">Request Credit</h2>
+      <div id="credit-content"></div>
+      <button id="credit-close" class="btn small">Close</button>
+    </div>
+  </div>
 <div id="summary-overlay">
   <div class="overlay-panel summary-panel">
     <h2>Event Summary</h2>
@@ -158,6 +165,7 @@
       <!-- LEFT: Info Panel -->
       <section class="panel" id="panel-info">
         <h2>Marketing</h2>
+          <button id="request-credit" class="btn small" type="button">Request Credit</button>
           <div id="marketing-sliders" class="marketing-sliders"></div>
 
       </section>
@@ -285,7 +293,9 @@ const FONT_FAMILY = "system-ui, sans-serif";
     ticketSales: [0,0,0],   // drei Gruppen
     marketingBudgetHistory: [0],
   marketingPlan :{},// € für nächste Runde
-interest : [0,0,0]// eventweit, aus Marketing kumuliert
+interest : [0,0,0],// eventweit, aus Marketing kumuliert
+requestedCredits: [],
+finalCreditRepaymentsApplied: false
 
   };
 }
@@ -515,7 +525,7 @@ const poly = g.append("polygon")
       .attr("class", "btn primary small")
       .style("margin-top", "6px")
       .text(`Sell ${objKey}`)
-      .on("click", async () => {
+      .on("click", () => {
         gameState.budget += sellPrice;
         delete gameState.board[selectedId];
 
@@ -524,7 +534,6 @@ const poly = g.append("polygon")
         renderBoard();
         renderShop(null, false);
         updateAll();
-        await saveGameState(worldId, playerId, gameState);
       });
 
 
@@ -545,7 +554,7 @@ const poly = g.append("polygon")
         .attr("class", "btn small")
         .style("margin", "4px 4px 0 0")
         .text(`${key} (€${o.price || 0})`)
-        .on("click", async () => {
+        .on("click", () => {
           const cost = o.price || 0;
           if (gameState.budget < cost) {
             alert("Not enough budget.");
@@ -560,7 +569,6 @@ const poly = g.append("polygon")
           renderBoard();
           renderShop(null, false);
           updateAll();
-          await saveGameState(worldId, playerId, gameState);
         });
     });
   }
@@ -859,10 +867,20 @@ function updateAll() {
   document.getElementById("buy-overlay").style.display = "none";
   d3.select("#shop-container").html("");
 });
+    document.getElementById("request-credit").addEventListener("click", () => {
+  openCreditOverlay();
+});
+    document.getElementById("credit-close").addEventListener("click", () => {
+  closeCreditOverlay();
+});
+    document.getElementById("credit-overlay").addEventListener("click", (e) => {
+  if (e.target.id === "credit-overlay") closeCreditOverlay();
+});
     // ===== Turn-Logik =====
 
 async function nextTurn() {
   const income = computeIncome();
+  const maxT = (worldSettings && worldSettings.maxTurns) || 10;
 
   const currentTurn = gameState.turn || 0;
 
@@ -885,6 +903,11 @@ async function nextTurn() {
   // Budget wird zum Startbudget der neuen Runde
   gameState.budget = nextBudget;
 
+  if ((gameState.turn || 0) >= maxT) {
+    applyFinalCreditRepayments();
+    gameState.budgetHistory[gameState.turn] = gameState.budget;
+  }
+
   // Marketing -> Interest -> Tickets (werden beim Turnwechsel berechnet)
   gameState.interest = computeGlobalInterestFromMarketing();
   const suitability = computesuitability();
@@ -893,21 +916,18 @@ async function nextTurn() {
   updateAll();
   await saveGameState(worldId, playerId, gameState);
 
-  const maxT = (worldSettings && worldSettings.maxTurns) || 10;
   if ((gameState.turn || 0) >= maxT) {
     showEventSummary();
   }
 }
 
-    async function restartGame() {
+    function restartGame() {
       if (!confirm("Restart game? This will reset your board.")) return;
       gameState = createEmptyGameState();
       renderBoard();
       renderShop(null,false);
       updateAll();
       resetHoverInfo();
-
-      await saveGameState(worldId, playerId, gameState);
     }
 
     document.getElementById("nextturn-btn").addEventListener("click", () => {
@@ -1001,6 +1021,12 @@ if (!Array.isArray(gameState.ticketSales)) {
 }
 if (!Array.isArray(gameState.incomeHistory)) {
   gameState.incomeHistory = [];
+}
+if (!Array.isArray(gameState.requestedCredits)) {
+  gameState.requestedCredits = [];
+}
+if (typeof gameState.finalCreditRepaymentsApplied !== "boolean") {
+  gameState.finalCreditRepaymentsApplied = false;
 }
 
 // aktuelles Einkommen für aktuellen Turn eintragen
@@ -1162,19 +1188,17 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 const suitPanel = document.getElementById("panel-suitability");
 suitPanel.addEventListener("mouseenter", showSuitabilityPanelInfo);
 suitPanel.addEventListener("mouseleave", resetHoverInfo);
+
 function renderMarketingSliders() {
   const host = document.getElementById("marketing-sliders");
   if (!host) return;
 
-  // ✅ richtiger Key aus Firebase
   const channels = (globalSettings && globalSettings.marketingChannels) || {};
 
   host.innerHTML = "";
 
-  // Plan sicherstellen
   if (!gameState.marketingPlan) gameState.marketingPlan = {};
 
-  // Falls keine Channels gefunden: kleine Debug-Ausgabe im UI (damit man es sieht)
   const keys = Object.keys(channels);
   if (keys.length === 0) {
     host.innerHTML = "<div style='font-size:12px;opacity:.8'>No marketingChannels found in globalsettings.</div>";
@@ -1188,7 +1212,6 @@ function renderMarketingSliders() {
 
     const maxSpend = Math.max(0, Number(ch.maxSpend || 0));
 
-    // Firebase kann arrays als Objekt "0":30 "1":30 "2":40 speichern -> normalisieren
     let eff = ch.effectiveness;
     if (eff && !Array.isArray(eff) && typeof eff === "object") {
       eff = [eff[0] ?? eff["0"] ?? 0, eff[1] ?? eff["1"] ?? 0, eff[2] ?? eff["2"] ?? 0].map(v => Number(v || 0));
@@ -1198,7 +1221,6 @@ function renderMarketingSliders() {
 
     if (typeof gameState.marketingPlan[key] !== "number") gameState.marketingPlan[key] = 0;
 
-    // clamp
     if (gameState.marketingPlan[key] > maxSpend) gameState.marketingPlan[key] = maxSpend;
 
     const row = document.createElement("div");
@@ -1212,7 +1234,7 @@ function renderMarketingSliders() {
     lab.textContent = label;
 
     const meta = document.createElement("div");
-   
+
     const slider = document.createElement("input");
     slider.className = "mkt-slider";
     slider.type = "range";
@@ -1239,6 +1261,136 @@ function renderMarketingSliders() {
     row.appendChild(right);
     host.appendChild(row);
   });
+}
+
+function normalizeCreditOptions(rawOptions) {
+  if (!Array.isArray(rawOptions)) return [];
+
+  return rawOptions
+    .slice(0, 3)
+    .map(opt => {
+      if (!Array.isArray(opt)) return null;
+      const amount = Math.max(0, parseFloat(opt[0]) || 0);
+      const interest = Math.max(0, parseFloat(opt[1]) || 0);
+      return [amount, interest];
+    })
+    .filter(Boolean);
+}
+
+function getRequestedCredits() {
+  if (!Array.isArray(gameState.requestedCredits)) gameState.requestedCredits = [];
+  return gameState.requestedCredits;
+}
+
+function getCreditMonthsRemaining(takenTurn) {
+  const maxT = (worldSettings && worldSettings.maxTurns) || 10;
+  const turn = Math.max(0, Number(takenTurn) || 0);
+  return Math.max(0, maxT - turn);
+}
+
+function getCreditRepaymentAmount(credit) {
+  const amount = Math.max(0, Number(credit && credit.amount) || 0);
+  const interest = Math.max(0, Number(credit && credit.interest) || 0);
+  const months = getCreditMonthsRemaining(credit && credit.takenTurn);
+  return Math.round(amount * (1 + ((interest / 100) * months)));
+}
+
+function hasRequestedCreditOption(optionIndex) {
+  return getRequestedCredits().some(credit => Number(credit.optionIndex) === Number(optionIndex));
+}
+
+function getRequestedCreditByOption(optionIndex) {
+  return getRequestedCredits().find(credit => Number(credit.optionIndex) === Number(optionIndex)) || null;
+}
+
+function requestCredit(optionIndex, amount, interest) {
+  if (hasRequestedCreditOption(optionIndex)) return;
+
+  const credit = {
+    optionIndex,
+    amount: Math.max(0, Number(amount) || 0),
+    interest: Math.max(0, Number(interest) || 0),
+    takenTurn: Number(gameState.turn || 0)
+  };
+
+  getRequestedCredits().push(credit);
+  gameState.budget = Number(gameState.budget || 0) + credit.amount;
+
+  updateAll();
+  renderCreditOverlayContent();
+}
+
+function applyFinalCreditRepayments() {
+  if (gameState.finalCreditRepaymentsApplied) return;
+
+  const credits = getRequestedCredits();
+  if (credits.length === 0) {
+    gameState.finalCreditRepaymentsApplied = true;
+    return;
+  }
+
+  const totalRepayment = credits.reduce((sum, credit) => sum + getCreditRepaymentAmount(credit), 0);
+  gameState.budget = Number(gameState.budget || 0) - totalRepayment;
+  gameState.finalCreditRepaymentsApplied = true;
+}
+
+function renderCreditOverlayContent() {
+  const host = document.getElementById("credit-content");
+  if (!host) return;
+
+  const creditOptions = normalizeCreditOptions(worldSettings && worldSettings.creditoptions);
+  host.innerHTML = "";
+
+  if (creditOptions.length === 0) {
+    host.innerHTML = "<p>No credit options configured for this world.</p>";
+    return;
+  }
+
+  host.innerHTML = "<p>Select one of the configured credit options for this world.</p>";
+
+  creditOptions.forEach((opt, idx) => {
+    const row = document.createElement("div");
+    row.className = "credit-option-row";
+    const existingCredit = getRequestedCreditByOption(idx);
+    const requested = !!existingCredit;
+    const creditData = existingCredit || {
+      amount: opt[0],
+      interest: opt[1],
+      takenTurn: Number(gameState && gameState.turn || 0)
+    };
+    const repayment = getCreditRepaymentAmount(creditData);
+    row.innerHTML = `
+      <div class="credit-option-text">
+        <strong>Option ${idx + 1}</strong><br>
+        Amount: €${creditData.amount}<br>
+        Monthly interest: ${creditData.interest}%<br>
+        Final payment: €${repayment}
+      </div>
+    `;
+    const btn = document.createElement("button");
+    btn.className = "btn small";
+    btn.type = "button";
+    btn.textContent = requested ? "Requested" : "Request";
+    btn.disabled = requested || isGameFinished();
+    btn.addEventListener("click", () => {
+      requestCredit(idx, opt[0], opt[1]);
+    });
+    row.appendChild(btn);
+    host.appendChild(row);
+  });
+}
+
+function openCreditOverlay() {
+  const overlay = document.getElementById("credit-overlay");
+  if (!overlay) return;
+  renderCreditOverlayContent();
+  overlay.style.display = "flex";
+}
+
+function closeCreditOverlay() {
+  const overlay = document.getElementById("credit-overlay");
+  if (!overlay) return;
+  overlay.style.display = "none";
 }
 
 
@@ -1269,6 +1421,10 @@ function calcTotals() {
 
   const plan = (gameState.marketingPlan || {});
   const totalMktSpend = Object.values(plan).reduce((a,v) => a + (Number(v)||0), 0);
+  const requestedCredits = getRequestedCredits();
+  const totalCreditAmount = requestedCredits.reduce((sum, credit) => sum + (Number(credit.amount) || 0), 0);
+  const totalCreditRepayment = requestedCredits.reduce((sum, credit) => sum + getCreditRepaymentAmount(credit), 0);
+  const totalCreditInterestPaid = Math.max(0, totalCreditRepayment - totalCreditAmount);
 
   return {
     maxT, turnsPlayed,
@@ -1276,7 +1432,9 @@ function calcTotals() {
     totalTickets, cap,
     suitability, interest,
     counts,
-    totalMktSpend
+    totalMktSpend,
+    totalCreditAmount,
+    totalCreditInterestPaid
   };
 }
 
@@ -1334,6 +1492,14 @@ function renderSummaryHtml() {
       <div class="summary-card">
         <h3>Built Objects</h3>
         ${objList}
+      </div>
+
+      <div class="summary-card">
+        <h3>Credits</h3>
+        <table class="summary-table">
+          <tr><td>Total requested</td><td style="text-align:right">€${t.totalCreditAmount}</td></tr>
+          <tr><td>Interest paid</td><td style="text-align:right">€${t.totalCreditInterestPaid}</td></tr>
+        </table>
       </div>
 
     </div>

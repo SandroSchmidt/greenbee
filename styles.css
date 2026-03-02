@@ -194,7 +194,8 @@ body {
    MODAL-OVERLAYS
 =========================================== */
 #select-overlay,
-#buy-overlay {
+#buy-overlay,
+#credit-overlay {
   position: fixed;
   inset: 0;
   display: none;
@@ -211,6 +212,23 @@ body {
   border-radius: 10px;
   width: 350px;
   max-width: 90%;
+}
+
+.credit-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.credit-option-row:last-child {
+  border-bottom: 0;
+}
+
+.credit-option-text {
+  line-height: 1.4;
 }
 
 

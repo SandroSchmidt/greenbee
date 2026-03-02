@@ -260,7 +260,7 @@
       currentWorldId = name;
     const mktEnabled = {};
 
-Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
+Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
   mktEnabled[k] = false; // Default: alles aus
 });
 
@@ -316,7 +316,7 @@ currentWorld = {
       });
       if (!currentWorld.marketingEnabled) currentWorld.marketingEnabled = {};
 if (!currentWorld.marketingEnabled) currentWorld.marketingEnabled = {};
-Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
+Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
   // Default: false, nur echtes true bleibt true
   currentWorld.marketingEnabled[k] = (currentWorld.marketingEnabled[k] === true);
 });
@@ -404,7 +404,7 @@ Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
       });
 const mktDiv = document.getElementById("marketing-enabled");
 mktDiv.innerHTML = "";
-Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
+Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
   const label = document.createElement("label");
   label.className = "chip";
 
@@ -415,8 +415,8 @@ Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
 
 
   const span = document.createElement("span");
-  span.textContent = (localGlobal.marketingTypes[k] && localGlobal.marketingTypes[k].label) 
-    ? localGlobal.marketingTypes[k].label 
+  span.textContent = (localGlobal.marketingChannels[k] && localGlobal.marketingChannels[k].label) 
+    ? localGlobal.marketingChannels[k].label 
     : k;
 
   label.appendChild(input);
