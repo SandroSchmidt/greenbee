@@ -163,6 +163,18 @@
           <label><span>Group 2</span><input id="ws-tickets-1" type="number" min="0"></label>
           <label><span>Group 3</span><input id="ws-tickets-2" type="number" min="0"></label>
         </fieldset>
+        <fieldset class="field">
+          <legend>Credit Options</legend>
+          <label>
+            <span>Number of options</span>
+            <select id="ws-credit-count">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </label>
+          <div id="ws-credit-rows"></div>
+        </fieldset>
       </section>
 
       <section class="panel">
@@ -258,6 +270,7 @@ currentWorld = {
   maxTurns: 12,
   gridSize: 5,
   tickets: [500, 400, 300],
+  creditoptions: [[100, 5]],
   objectsEnabled: {},
   students: {},
   marketingEnabled: mktEnabled
@@ -291,6 +304,7 @@ currentWorld = {
         objectsEnabled: ws.objectsEnabled || {},
         students: ws.students || {},
         marketingEnabled: ws.marketingEnabled || {},
+        creditoptions: normalizeCreditOptions(ws.creditoptions),
 
       };
 
@@ -311,6 +325,56 @@ Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
       renderWorldForm();
     }
 
+    function normalizeCreditOptions(rawOptions) {
+      if (!Array.isArray(rawOptions)) return [[100, 5]];
+
+      const normalized = rawOptions
+        .slice(0, 3)
+        .map(opt => {
+          if (!Array.isArray(opt)) return null;
+          const amount = Math.max(0, parseFloat(opt[0]) || 0);
+          const interest = Math.max(0, parseFloat(opt[1]) || 0);
+          return [amount, interest];
+        })
+        .filter(Boolean);
+
+      return normalized.length > 0 ? normalized : [[100, 5]];
+    }
+
+    function readCreditOptionsFromForm() {
+      const rows = Array.from(document.querySelectorAll("#ws-credit-rows .credit-row"));
+      return rows.map(row => {
+        const amountEl = row.querySelector('input[data-field="amount"]');
+        const interestEl = row.querySelector('input[data-field="interest"]');
+        const amount = Math.max(0, parseFloat(amountEl && amountEl.value) || 0);
+        const interest = Math.max(0, parseFloat(interestEl && interestEl.value) || 0);
+        return [amount, interest];
+      });
+    }
+
+    function renderCreditOptionRows(options) {
+      const rowsHost = document.getElementById("ws-credit-rows");
+      rowsHost.innerHTML = "";
+
+      options.forEach((opt, idx) => {
+        const row = document.createElement("div");
+        row.className = "credit-row";
+        row.innerHTML = `
+          <label><span>Amount ${idx + 1}</span><input data-field="amount" type="number" min="0" value="${opt[0]}"></label>
+          <label><span>Interest % ${idx + 1}</span><input data-field="interest" type="number" min="0" step="0.01" value="${opt[1]}"></label>
+        `;
+        rowsHost.appendChild(row);
+      });
+    }
+
+    function onCreditCountChange() {
+      const countEl = document.getElementById("ws-credit-count");
+      const targetCount = Math.min(3, Math.max(1, parseInt(countEl.value, 10) || 1));
+      const existing = readCreditOptionsFromForm();
+      while (existing.length < targetCount) existing.push([0, 0]);
+      renderCreditOptionRows(existing.slice(0, targetCount));
+    }
+
     function renderWorldForm() {
       document.getElementById("ws-name").value = currentWorld.name;
       document.getElementById("ws-startBudget").value = currentWorld.startBudget;
@@ -319,6 +383,9 @@ Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
       document.getElementById("ws-tickets-0").value = currentWorld.tickets[0] || 0;
       document.getElementById("ws-tickets-1").value = currentWorld.tickets[1] || 0;
       document.getElementById("ws-tickets-2").value = currentWorld.tickets[2] || 0;
+      const creditOptions = normalizeCreditOptions(currentWorld.creditoptions);
+      document.getElementById("ws-credit-count").value = String(creditOptions.length);
+      renderCreditOptionRows(creditOptions);
 
       const objDiv = document.getElementById("objects-enabled");
       objDiv.innerHTML = "";
@@ -378,6 +445,7 @@ Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
     }
 
     document.getElementById("add-student").addEventListener("click", () => addStudentRow());
+    document.getElementById("ws-credit-count").addEventListener("change", onCreditCountChange);
 
     document.querySelector("#students-table tbody").addEventListener("click", e => {
       if (e.target.dataset.action === "delete") {
@@ -395,6 +463,7 @@ Object.keys(localGlobal.marketingTypes || {}).forEach(k => {
         parseInt(document.getElementById("ws-tickets-1").value, 10) || 0,
         parseInt(document.getElementById("ws-tickets-2").value, 10) || 0
       ];
+      currentWorld.creditoptions = readCreditOptionsFromForm();
 
       const enabled = {};
       document.querySelectorAll("#objects-enabled input[type=checkbox]").forEach(cb => {
