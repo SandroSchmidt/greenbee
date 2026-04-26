@@ -1,176 +1,79 @@
-# Green Bee: Datenstruktur und Speicherkonzept
+Green Bee
 
-## Überblick
+Green Bee is a browser-based strategy and simulation game for learning resource management, planning, and decision-making.
+The application is built with HTML, JavaScript (D3.js) and uses Firebase Realtime Database as backend.
 
-Das Projekt speichert die fachlichen Spieldaten zentral in **Firebase Realtime Database** und nutzt **`localStorage`** im Browser nur für kleine lokale Zustände.
+Overview
 
-Aktuell gibt es zwei Speicherarten:
+The game simulates a venue where different target groups (youth, families, seniors) buy tickets based on how attractive the environment is.
 
-- **Firebase Realtime Database** für globale Einstellungen, Welten, Schüler und Spielstände
-- **Browser `localStorage`** für Theme-Umschaltung und in einem separaten Django-Spielteil für einen lokalen `gameState`
+Players:
 
-## Verwendete Speicherorte
+Build objects on a grid
+Allocate marketing budget
+Optimize their strategy over multiple turns
+Try to sell all available tickets
+Tech Stack
+Frontend: HTML, CSS, JavaScript
+Visualization: D3.js
+Backend: Firebase Realtime Database
+Storage: Firebase + browser localStorage (minimal)
+Project Structure
 
-### 1. Firebase Realtime Database
+Main files:
 
-Die zentrale Struktur ist aktuell sinngemäß:
+index.html
+→ Main game interface
+overview.html
+→ Overview of all players (e.g. teacher/admin view)
+universalsettings.html
+→ Global configuration (objects, marketing, rules)
+worldsettings.html
+→ World setup (players, grid size, tickets, etc.)
+Data Architecture
 
-```text
+All core data is stored in Firebase Realtime Database.
+
+Global Settings
 globalsettings/
-  groups: ["youth", "families", "seniors"]
-  objects/
-    <objectKey>/
-      price: number
-      income: number
-      color: string
-      suitability: [number, number, number]
-      icon: string
-  marketingChannels/
-    <channelKey>/
-      maxSpend: number
-      effectiveness: [number, number, number]
-  baseRules/
-    suitabilitySaturationK: number
+  groups
+  objects
+  marketingChannels
+  baseRules
 
-worlds/
-  <worldId>/
-    worldsettings/
-      name: string
-      startBudget: number
-      maxTurns: number
-      gridSize: number
-      tickets: [number, number, number]
-      objectsEnabled/
-        <objectKey>: boolean
-      marketingEnabled/
-        <channelKey>: boolean
-      students/
-        <playerId>/
-          name: string
-          code: string
-    players/
-      <playerId>/
-        name: string
-        lastUpdate: number
-        gameState/
-          turn: number
-          budget: number
-          board/
-            <tileId>: <objectKey>
-          budgetHistory: number[]
-          incomeHistory: number[]
-          ticketSales: [number, number, number]
-          marketingBudgetHistory: number[]
-          marketingPlan/
-            <channelKey>: number
-          interest: [number, number, number]
-          lastUpdate: number
-```
+Defines:
 
-### 2. Browser `localStorage`
+target groups
+available objects
+marketing channels
+base formulas
+World Settings
+worlds/<worldId>/worldsettings/
 
-Es werden aktuell diese Keys genutzt:
+Defines:
 
-- `gb-theme`: speichert nur `"light"` oder `"dark"`
-- `gameState`: nur im Django-Teil unter `src/backend/greenbee_django/static/js/game.js`
+world name
+grid size
+available tickets
+enabled objects
+enabled marketing channels
+players (students)
+Player Game State
+worlds/<worldId>/players/<playerId>/gameState/
 
-Wichtig: Der eigentliche Hauptspielstand in `index.html` liegt **nicht** im `localStorage`, sondern in Firebase unter `worlds/<worldId>/players/<playerId>/gameState`.
+Contains:
 
-## Fachliche Aufteilung der Daten
+current turn
+budget
+board state
+ticket sales
+marketing plan
+history values
+Game Logic (Simplified)
 
-### `globalsettings`
+Each turn:
 
-Globale, weltübergreifende Konfiguration:
-
-- Zielgruppen
-- baubare Objekte
-- Marketing-Kanäle
-- Basisregeln für die Berechnung
-
-Diese Daten werden in der Admin-Seite `universalsettings.html` gepflegt.
-
-### `worlds/<worldId>/worldsettings`
-
-Welt-spezifische Konfiguration:
-
-- Name der Welt
-- Startbudget
-- Rundenzahl
-- Spielfeldgröße
-- verfügbare Tickets je Zielgruppe
-- aktivierte Objekte
-- aktivierte Marketing-Kanäle
-- Schülerliste inklusive Zugangscode
-
-Diese Daten werden in `worldsettings.html` gepflegt.
-
-### `worlds/<worldId>/players/<playerId>/gameState`
-
-Individueller Spielstand pro Spieler:
-
-- aktuelles Budget
-- aktuelle Runde
-- belegte Felder auf dem Spielfeld
-- Ticketverkäufe
-- Budget- und Einkommenshistorie
-- Marketing-Plan
-- kumuliertes Interesse
-
-Diese Daten werden während des Spiels in `index.html` geladen und bei Änderungen vollständig zurück nach Firebase geschrieben.
-
-## Aktuelles Speicherkonzept
-
-Das Projekt arbeitet im Kern wie folgt:
-
-1. Beim Start lädt das Frontend globale Einstellungen und Welt-Einstellungen aus Firebase.
-2. Der Spieler wird über `worldsettings.students` ausgewählt und per einfachem Code geprüft.
-3. Der Spielstand wird unter `players/<playerId>/gameState` geladen oder neu angelegt.
-4. Bei Aktionen wie Bauen, Verkaufen oder Rundenwechsel wird der komplette `gameState` wieder in Firebase gespeichert.
-
-## Auffälligkeiten im aktuellen Stand
-
-- Firebase-Konfiguration ist direkt im Frontend in `functions.js` hinterlegt.
-- Schülercodes werden im Klartext in der Realtime Database gespeichert.
-- Der Spielstand wird oft als kompletter Block mit `set(...)` gespeichert statt nur geänderte Felder zu aktualisieren.
-- Es wird Firebase Realtime Database verwendet, obwohl viele Daten eher dokumentenartig und selten geändert sind.
-- Im Firebase-Config ist auch ein Storage-Bucket eingetragen, im gezeigten Code wird Firebase Storage aber nicht aktiv genutzt.
-
-## Optimierungshinweise
-
-### Schnell umsetzbar
-
-- **Nur Teilbereiche speichern**:
-  Statt den kompletten `gameState` nach jeder Aktion mit `set(...)` zu schreiben, besser gezielt `update(...)` auf `budget`, `board`, `turn` oder `marketingPlan` verwenden. Das reduziert Schreibvolumen.
-- **Writes bündeln**:
-  Während einer Spielaktion mehrere Änderungen erst lokal sammeln und anschließend einmal speichern.
-- **Unnötige Daten vermeiden**:
-  Historien nur speichern, wenn sie wirklich im UI benötigt werden. Besonders `budgetHistory`, `incomeHistory` und `marketingBudgetHistory` wachsen mit jeder Runde.
-
-### Für Kostenreduktion sinnvoll
-
-- **Welt-Stammdaten cachen**:
-  `globalsettings` und `worldsettings` ändern sich selten. Diese Daten können lokal zwischengespeichert und nur bei Admin-Änderungen neu geladen werden.
-- **Spielstand kleiner schneiden**:
-  `board` nur mit belegten Feldern speichern ist bereits gut. Das sollte beibehalten werden.
-- **Übersichtsseite optimieren**:
-  `overview.html` lädt alle Spieler einer Welt. Bei vielen Spielern kann das teuer werden. Besser nur benötigte Felder laden oder eine kompakte Summary pro Spieler separat ablegen.
-
-### Strukturell sinnvoll
-
-- **Authentifizierung sauber lösen**:
-  Statt Codes im Klartext besser Firebase Auth oder mindestens gehashte Codes plus Security Rules verwenden.
-- **Security Rules konsequent absichern**:
-  Spieler sollten nur ihren eigenen Spielstand lesen und schreiben dürfen.
-- **Firestore prüfen**:
-  Wenn das Projekt eher dokumentenbasiert bleibt, kann Firestore langfristig wartbarer sein. Wenn viele kleine Echtzeit-Updates gebraucht werden, kann Realtime Database weiter sinnvoll sein.
-- **Server-seitige Logik auslagern**:
-  Berechnungen oder Validierungen, die nicht manipulierbar sein sollen, sollten mittelfristig nicht nur im Browser laufen.
-
-## Empfehlung
-
-Wenn kurzfristig nur Kosten und Wartbarkeit verbessert werden sollen, würde ich zuerst diese zwei Punkte umsetzen:
-
-1. Schreibzugriffe von `set(...)` auf gezielte `update(...)`-Operationen umstellen
-2. Schülercodes und Firebase-Zugriffe mit Security Rules absichern
-
-Das bringt den größten Nutzen bei wenig Umbau.
+Player builds objects
+Player sets marketing budget
+Suitability per target group is calculated
+Tickets are sold based on:
