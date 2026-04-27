@@ -18,12 +18,17 @@
    =============================== */
 
 html, body {
-  height: 100%;
+  height: auto;
+  min-height: 100vh;
   margin: 0;
+  overflow-y:auto;
 }
 
 body {
-  overflow-y: auto;
+  background:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 34rem),
+    linear-gradient(135deg, #f6faf7 0%, #edf4f0 52%, #f8fbfa 100%);
+  color: #14231a;
 }
 
 /* ===============================
@@ -33,10 +38,14 @@ body {
 .page-wrap {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 16px;
-  padding-bottom: 96px; /* Platz für fixe Footer-Bar */
+  gap: 18px;
+  height: auto;
+  padding: 22px;
+  padding-top: 96px;
+  padding-bottom: 40px; /* Platz für fixe Footer-Bar */
   box-sizing: border-box;
+  max-width: 1480px;
+  margin: 0 auto;
 }
 
 /* ===============================
@@ -46,16 +55,32 @@ body {
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 
-  padding: 16px;
-  background: var(--panel-bg, #ffffff);
-  border-radius: 10px;
+  padding: 18px;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(20, 35, 26, 0.08);
 
   /* WICHTIG: Panel darf wachsen */
   height: auto;
   max-height: none;
   overflow: visible;
+}
+
+.panel h2 {
+  text-align: left;
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0;
+  color: #102317;
+}
+
+.panel .text-muted {
+  color: #5d6f64;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 /* ===============================
@@ -65,9 +90,12 @@ body {
 .table {
   display: block;
   width: 100%;
-  max-height: 65vh;          /* Tabelle scrollt, Panel nicht */
-  overflow-y: auto;
+  /*max-height: 65vh;          /* Tabelle scrollt, Panel nicht */
+  overflow: auto;
   border-collapse: collapse;
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.72);
 }
 
 .table thead,
@@ -79,9 +107,59 @@ body {
 
 .table th,
 .table td {
-  padding: 6px 8px;
+  padding: 10px 12px;
   text-align: left;
   box-sizing: border-box;
+  border-bottom: 1px solid rgba(20, 35, 26, 0.08);
+  vertical-align: middle;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef6f0;
+  color: #526357;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.table tbody tr {
+  transition: background 140ms ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table input,
+.field input {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  color: #17251c;
+  background: #ffffff;
+  border: 1px solid rgba(20, 35, 26, 0.16);
+  border-radius: 9px;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.table input:focus,
+.field input:focus {
+  border-color: #22a860;
+  box-shadow: 0 0 0 3px rgba(34, 168, 96, 0.16);
+}
+
+.table input[type="color"] {
+  min-width: 44px;
+  padding: 4px;
 }
 
 /* ===============================
@@ -91,6 +169,49 @@ body {
 .panel > .btn {
   align-self: flex-start;
   margin-top: 8px;
+}
+
+.btn {
+  border: 1px solid rgba(20, 35, 26, 0.14);
+  background: #eef8f1;
+  color: #16351f;
+  border-radius: 10px;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.btn:hover {
+  background: #e3f5e8;
+  box-shadow: 0 8px 18px rgba(20, 35, 26, 0.08);
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  background: #1f9d59;
+  border-color: #1f9d59;
+  color: #ffffff;
+}
+
+.btn.primary:hover {
+  background: #18884c;
+}
+
+.btn.danger {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.danger-cell {
+  text-align: right;
+}
+.danger-cell-div {
+  width: 100%;
+  display: flex;
+  justify-content:end;
+}
+
+.btn.danger:hover {
+  background: #ffe4e6;
 }
 
 /* ===============================
@@ -110,9 +231,166 @@ body {
   align-items: center;
   gap: 12px;
 
-  background: var(--panel-bg, #ffffff);
-  border-top: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255, 255, 255, 0);
+  border-top: 1px solid rgba(20, 35, 26, 0.1);
+  box-shadow: 0 -14px 40px rgba(20, 35, 26, 0.08);
+  /*backdrop-filter: blur(16px);*/
   z-index: 10;
+}
+
+.status {
+  color: #486153;
+  font-weight: 600;
+}
+
+/* ===============================
+   HEADER
+   =============================== */
+
+#main-header {
+  height: 74px;
+  padding: 0 22px;
+  background: rgba(255,255,255,0.88);
+  border-bottom: 1px solid rgba(20, 35, 26, 0.1);
+  box-shadow: 0 14px 40px rgba(20, 35, 26, 0.08);
+  backdrop-filter: blur(16px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.header-left,
+.header-right,
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #348451;
+  letter-spacing: 0;
+  text-transform: capitalize;
+}
+
+.logo-image {
+  height: 44px;
+  width: auto;
+  filter: drop-shadow(0 8px 14px rgba(20, 35, 26, 0.12));
+}
+
+.header-pill {
+  padding: 7px 14px;
+  background: #e8f7ee;
+  border: 1px solid rgba(31, 157, 89, 0.22);
+  border-radius: 8px;
+  color: #177345;
+  font-size: 13px;
+  font-weight: 800;
+  padding-right: 10px;
+}
+
+.theme-button {
+  min-width: 42px;
+  height: 38px;
+  padding: 0 12px;
+}
+
+/* ===============================
+   ICON PICKER
+   =============================== */
+
+.icon-cell {
+  position: relative;
+  overflow: visible;
+}
+
+.icon-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-trigger {
+  width: 48px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  background: #f7fbf8;
+}
+
+.icon-trigger img {
+  max-width: 34px;
+  max-height: 34px;
+  object-fit: contain;
+}
+
+.icon-trigger .empty-icon {
+  color: #829286;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.icon-name {
+  color: #5d6f64;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.icon-popover {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(360px, 82vw);
+  padding: 10px;
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid rgba(20, 35, 26, 0.14);
+  border-radius: 14px;
+  box-shadow: 0 22px 50px rgba(20, 35, 26, 0.18);
+  z-index: 30;
+}
+
+.icon-cell.is-open .icon-popover {
+  display: grid;
+}
+
+.icon-choice {
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: #f7fbf8;
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.icon-choice:hover,
+.icon-choice.is-selected {
+  background: #e8f7ee;
+  border-color: #22a860;
+}
+
+.icon-choice img {
+  max-width: 42px;
+  max-height: 42px;
+  object-fit: contain;
+}
+
+.icon-choice.clear-choice {
+  color: #64746a;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 /* ===============================
@@ -120,33 +398,187 @@ body {
    =============================== */
 
 body.theme-dark {
-  background: #111;
+  --dark-bg: #07111f;
+  --dark-bg-deep: #030712;
+  --dark-surface: #0f1b2e;
+  --dark-surface-soft: #13223a;
+  --dark-surface-raised: #172842;
+  --dark-border: rgba(148, 163, 184, 0.22);
+  --dark-border-soft: rgba(148, 163, 184, 0.14);
+  --dark-text: #e8f1ff;
+  --dark-muted: #93a4bd;
+  --dark-accent: #38bdf8;
+  --dark-accent-strong: #2563eb;
+  background:
+    radial-gradient(circle at 12% -8%, rgba(56, 189, 248, 0.18), transparent 28rem),
+    radial-gradient(circle at 92% 4%, rgba(37, 99, 235, 0.16), transparent 26rem),
+    linear-gradient(135deg, var(--dark-bg-deep) 0%, var(--dark-bg) 48%, #09172a 100%);
+  color: var(--dark-text);
 }
 
 body.theme-dark .panel,
 body.theme-dark .footer-bar {
-  background: #1b1b1b;
+  background: rgba(15, 27, 46, 0);
+  /*border-color: var(--dark-border-soft);*/
+  /*box-shadow: 0 20px 52px rgba(0, 0, 0, 0.28);*/
 }
 
 body.theme-dark .table {
-  color: #e0e0e0;
+  color: var(--dark-text);
+  background: rgba(7, 17, 31, 0.7);
+  border-color: var(--dark-border-soft);
+}
+
+body.theme-dark .table th {
+  background: #13213a;
+  color: #9fb5d3;
+}
+
+body.theme-dark .table td {
+  border-color: rgba(148, 163, 184, 0.1);
+}
+
+body.theme-dark .table tbody tr:hover {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+body.theme-dark .panel h2,
+body.theme-dark .app-title {
+  color: var(--dark-text);
+}
+
+body.theme-dark .text-muted,
+body.theme-dark .panel .text-muted,
+body.theme-dark .icon-name,
+body.theme-dark .status {
+  color: var(--dark-muted);
+}
+
+body.theme-dark #main-header {
+  background: rgba(10, 20, 36, 0.9);
+  border-color: var(--dark-border-soft);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark .header-pill {
+  background: rgba(56, 189, 248, 0.13);
+  border-color: rgba(56, 189, 248, 0.34);
+  color: #93dafe;
+}
+
+body.theme-dark .table input,
+body.theme-dark .field input {
+  background: rgba(5, 12, 24, 0.82);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: var(--dark-text);
+}
+
+body.theme-dark .table input:focus,
+body.theme-dark .field input:focus {
+  border-color: var(--dark-accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+}
+
+body.theme-dark .btn {
+  background: var(--dark-surface-soft);
+  border-color: var(--dark-border);
+  color: #dbeafe;
+}
+
+body.theme-dark .btn:hover {
+  background: var(--dark-surface-raised);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+body.theme-dark .btn.primary {
+  background: linear-gradient(135deg, var(--dark-accent-strong), #0284c7);
+  border-color: rgba(125, 211, 252, 0.4);
+  color: #f8fbff;
+}
+
+body.theme-dark .btn.danger {
+  background: rgba(127, 29, 29, 0.26);
+  border-color: rgba(248, 113, 113, 0.36);
+  color: #fecdd3;
+}
+
+body.theme-dark .icon-trigger,
+body.theme-dark .icon-choice {
+  background: rgba(9, 22, 41, 0.9);
+  border-color: var(--dark-border-soft);
+}
+
+body.theme-dark .icon-popover {
+  background: #0f1b2e;
+  border-color: rgba(148, 163, 184, 0.24);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.48);
+}
+
+body.theme-dark .icon-choice:hover,
+body.theme-dark .icon-choice.is-selected {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: var(--dark-accent);
+}
+
+body.theme-dark .icon-choice.clear-choice,
+body.theme-dark .icon-trigger .empty-icon {
+  color: #9fb5d3;
+}
+
+@media (max-width: 760px) {
+  #main-header {
+    padding: 0 14px;
+  }
+
+  .header-center {
+    display: none;
+  }
+
+  .page-wrap {
+    padding: 14px;
+    padding-bottom: 96px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
 }
 </style>
 <body class="theme-light">
   <header id="main-header">
     <div class="header-left">
-      <img src="./logo.png" class="logo-image" alt="Green Bee Logo">
-      <span class="app-title">universal Settings</span>
-    </div>
-    <div class="header-center">
-      <span class="header-pill">Admin</span>
+      <img src="./logo_transparent.png" class="logo-image" alt="Green Bee Logo">
+      <span class="app-title">Universal Settings</span>
     </div>
     <div class="header-right">
-      <button id="theme-toggle" class="btn small">☀︎ / 🌙</button>
+      <span class="header-pill">Admin</span>
+      <button id="save-global" class="btn primary">Save Settings</button>
+      <button id="theme-toggle" class="btn small theme-button" title="Toggle theme">☀︎ / 🌙</button>
     </div>
   </header>
 
   <main class="page-wrap">
+    <section class="panel">
+  <h2>Population</h2>
+  <p class="text-muted">Number of people by group</p>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Youth</th>
+        <th>Families</th>
+        <th>Senior citizens</th>
+        <th></th>
+      </tr>
+      <tr>
+        <td><input data-field="population-youth" type="number" min="0"></td>
+        <td><input data-field="population-families" type="number" min="0"></td>
+        <td><input data-field="population-seniors" type="number" min="0"></td>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
     <section class="panel">
       <h2>Objects</h2>
       <p class="text-muted">Alle Bauelemente des Spiels mit Preis, Einkommen, Farbe und Interessens-Werten.</p>
@@ -157,10 +589,10 @@ body.theme-dark .table {
             <th>Price</th>
             <th>Income</th>
             <th>Color</th>
-            <th>suitability 1</th>
-            <th>suitability 2</th>
-            <th>suitability 3</th>
-            <th>Icon Path</th>
+            <th>Suitability 1</th>
+            <th>Suitability 2</th>
+            <th>Suitability 3</th>
+            <th>Icon</th>
             <th></th>
           </tr>
         </thead>
@@ -202,14 +634,85 @@ body.theme-dark .table {
     </section>
 
 
-    <div class="footer-bar">
-      <button id="save-global" class="btn primary">Save Universal Settings</button>
-      <span id="status-global" class="status"></span>
-    </div>
+
   </main>
 
   <script>
     let localGlobal = null;
+    const ICON_OPTIONS = [
+      "icons/iso_animals.png",
+      "icons/iso_bank.png",
+      "icons/iso_bar.png",
+      "icons/iso_decoration.png",
+      "icons/iso_playarea.png",
+      "icons/iso_premium.png",
+      "icons/iso_stage.png",
+      "icons/iso_stand.png",
+      "icons/inet.jpg",
+      "icons/andere/iso_animals.png",
+      "icons/andere/iso_bank.png",
+      "icons/andere/iso_bar.png",
+      "icons/andere/iso_decoration.png",
+      "icons/andere/iso_empty.png",
+      "icons/andere/iso_playarea.png",
+      "icons/andere/iso_premium.png",
+      "icons/andere/iso_stage.png",
+      "icons/andere/iso_stand2.png"
+    ];
+
+    function getIconLabel(path) {
+      if (!path) return "No icon";
+      return path.split("/").pop().replace(/\.[^.]+$/, "").replace(/^iso_/, "").replace(/_/g, " ");
+    }
+
+    function renderIconPicker(value) {
+      const iconButtons = ICON_OPTIONS.map(path => `
+        <button type="button" class="icon-choice${path === value ? " is-selected" : ""}" data-icon-value="${path}" title="${path}">
+          <img src="${path}" alt="${getIconLabel(path)}">
+        </button>
+      `).join("");
+
+      return `
+        <div class="icon-picker">
+          <input type="hidden" data-field="icon" value="${value || ""}">
+          <button type="button" class="btn icon-trigger" data-action="toggle-icon" title="Choose icon">
+            ${value ? `<img src="${value}" alt="${getIconLabel(value)}">` : `<span class="empty-icon">None</span>`}
+          </button>
+          <span class="icon-name">${getIconLabel(value)}</span>
+          <div class="icon-popover">
+            <button type="button" class="icon-choice clear-choice${!value ? " is-selected" : ""}" data-icon-value="">None</button>
+            ${iconButtons}
+          </div>
+        </div>
+      `;
+    }
+
+    function positionIconPopover(cell) {
+      const trigger = cell.querySelector(".icon-trigger");
+      const popover = cell.querySelector(".icon-popover");
+      const gap = 8;
+      const margin = 12;
+      const triggerRect = trigger.getBoundingClientRect();
+      const popoverRect = popover.getBoundingClientRect();
+
+      let left = triggerRect.left;
+      let top = triggerRect.bottom + gap;
+
+      if (left + popoverRect.width > window.innerWidth - margin) {
+        left = window.innerWidth - popoverRect.width - margin;
+      }
+
+      if (top + popoverRect.height > window.innerHeight - margin) {
+        top = triggerRect.top - popoverRect.height - gap;
+      }
+
+      popover.style.left = `${Math.max(margin, left)}px`;
+      popover.style.top = `${Math.max(margin, top)}px`;
+    }
+
+    function positionOpenIconPopovers() {
+      document.querySelectorAll(".icon-cell.is-open").forEach(positionIconPopover);
+    }
 
     function applyThemeFromStorage() {
       const pref = localStorage.getItem("gb-theme") || "light";
@@ -234,12 +737,12 @@ body.theme-dark .table {
           <td><input data-field="key" value="${key}"></td>
           <td><input data-field="price" type="number" value="${o.price || 0}"></td>
           <td><input data-field="income" type="number" value="${o.income || 0}"></td>
-          <td><input data-field="color" value="${o.color || ""}"></td>
+          <td><input data-field="color" type="color" value="${o.color || "#cccccc"}"></td>
           <td><input data-field="int0" type="number" value="${(o.suitability||[])[0] || 0}"></td>
           <td><input data-field="int1" type="number" value="${(o.suitability||[])[1] || 0}"></td>
           <td><input data-field="int2" type="number" value="${(o.suitability||[])[2] || 0}"></td>
-          <td><input data-field="icon" value="${o.icon || ""}"></td>
-          <td><button class="btn small danger" data-action="delete">✕</button></td>
+          <td class="icon-cell">${renderIconPicker(o.icon || "")}</td>
+          <td class="danger-cell"><div class="danger-cell-div"><button class="btn small danger" data-action="delete">✕</button></div></td>
         `;
         tbody.appendChild(tr);
       });
@@ -261,14 +764,61 @@ body.theme-dark .table {
         if (key && localGlobal.objects[key]) delete localGlobal.objects[key];
         row.remove();
       }
+
+      const iconToggle = e.target.closest('[data-action="toggle-icon"]');
+      if (iconToggle) {
+        const cell = iconToggle.closest(".icon-cell");
+        document.querySelectorAll(".icon-cell.is-open").forEach(openCell => {
+          if (openCell !== cell) openCell.classList.remove("is-open");
+        });
+        cell.classList.toggle("is-open");
+        if (cell.classList.contains("is-open")) {
+          positionIconPopover(cell);
+        }
+      }
+
+      const iconChoice = e.target.closest("[data-icon-value]");
+      if (iconChoice) {
+        const cell = iconChoice.closest(".icon-cell");
+        const value = iconChoice.dataset.iconValue;
+        const input = cell.querySelector('input[data-field="icon"]');
+        const trigger = cell.querySelector(".icon-trigger");
+        const label = cell.querySelector(".icon-name");
+
+        input.value = value;
+        trigger.innerHTML = value
+          ? `<img src="${value}" alt="${getIconLabel(value)}">`
+          : `<span class="empty-icon">None</span>`;
+        label.textContent = getIconLabel(value);
+        cell.querySelectorAll(".icon-choice").forEach(choice => {
+          choice.classList.toggle("is-selected", choice.dataset.iconValue === value);
+        });
+        cell.classList.remove("is-open");
+      }
     });
+
+    document.addEventListener("click", e => {
+      if (!e.target.closest(".icon-cell")) {
+        document.querySelectorAll(".icon-cell.is-open").forEach(cell => cell.classList.remove("is-open"));
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      positionOpenIconPopovers();
+    });
+
+    window.addEventListener("scroll", positionOpenIconPopovers, true);
 
     async function initPage() {
       localGlobal = await loadGlobalSettings();
       localGlobal = JSON.parse(JSON.stringify(localGlobal)); // Kopie
       renderObjectsTable();
       if (!localGlobal.marketingChannels) localGlobal.marketingChannels = {};
-renderMarketingTable();
+      if (!localGlobal.population) localGlobal.population = [3000, 3000, 3000];
+      document.querySelector('[data-field="population-youth"]').value = localGlobal.population[0];
+      document.querySelector('[data-field="population-families"]').value = localGlobal.population[1];
+      document.querySelector('[data-field="population-seniors"]').value = localGlobal.population[2];
+      renderMarketingTable();
       document.getElementById("base-suitability-k").value =
         (localGlobal.baseRules && localGlobal.baseRules.suitabilitySaturationK) || "";
     }
@@ -321,6 +871,11 @@ mrows.forEach(tr => {
 
 localGlobal.marketingChannels = channels;
 
+      localGlobal.population = [
+        parseFloat(document.querySelector('[data-field="population-youth"]').value) || 0,
+        parseFloat(document.querySelector('[data-field="population-families"]').value) || 0,
+        parseFloat(document.querySelector('[data-field="population-seniors"]').value) || 0
+      ];
       localGlobal.baseRules = {
         suitabilitySaturationK: parseFloat(document.getElementById("base-suitability-k").value) || 0
       };
@@ -352,7 +907,7 @@ function renderMarketingTable() {
       <td><input data-field="eff0" type="number" value="${eff[0] || 0}"></td>
       <td><input data-field="eff1" type="number" value="${eff[1] || 0}"></td>
       <td><input data-field="eff2" type="number" value="${eff[2] || 0}"></td>
-      <td><button class="btn small danger" data-action="delete">✕</button></td>
+      <td><div class="danger-cell-div"><button class="btn small danger" data-action="delete">✕</button></div></td>
     `;
     tbody.appendChild(tr);
   });
