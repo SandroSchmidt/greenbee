@@ -12,203 +12,715 @@
   <!-- Dein firebase.initializeApp(...) hier einfügen -->
   <script src="functions.js"></script>
 </head>
-<style>/* ===============================
-   WORLD SETTINGS GRID
+<style>
+/* ===============================
+   WORLD PAGE LAYOUT
    =============================== */
+
+html, body {
+  height: auto;
+  min-height: 100vh;
+  margin: 0;
+  overflow-y: auto;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 34rem),
+    linear-gradient(135deg, #f6faf7 0%, #edf4f0 52%, #f8fbfa 100%);
+  color: #14231a;
+}
+
+.page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  height: auto;
+  padding: 22px;
+  padding-top: 96px;
+  padding-bottom: 40px;
+  box-sizing: border-box;
+  max-width: 1480px;
+  margin: 0 auto;
+}
 
 .row-grid {
   display: grid;
-  grid-template-columns: 320px 220px 1fr;
-  gap: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
   align-items: start;
+  padding:0px;
+}
+
+.settings-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.world-parameters-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) minmax(260px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.parameter-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.parameter-column:not(fieldset) {
+  padding: 14px;
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 12px;
+  background: rgba(247, 251, 248, 0.74);
 }
 
 /* ===============================
-   PANELS (override-safe)
+   PANELS
    =============================== */
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-
-  padding: 16px;
-  background: var(--panel-bg, #ffffff);
-  border-radius: 10px;
-
+  gap: 14px;
+  padding: 18px;
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(20, 35, 26, 0.08);
   height: auto;
   max-height: none;
   overflow: visible;
 }
 
+.panel h2 {
+  text-align: left;
+  font-size: 18px;
+  line-height: 1.2;
+  margin: 0;
+  color: #102317;
+}
+
 /* ===============================
-   ENABLED OBJECTS (schmal!)
+   HEADER
    =============================== */
 
-#objects-enabled {
+#main-header {
+  height: 74px;
+  padding: 0 22px;
+  background: rgba(255,255,255,0.88);
+  border-bottom: 1px solid rgba(20, 35, 26, 0.1);
+  box-shadow: 0 14px 40px rgba(20, 35, 26, 0.08);
+  backdrop-filter: blur(16px);
+  position: fixed;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #348451;
+  letter-spacing: 0;
+  text-transform: capitalize;
+}
+
+.logo-image {
+  height: 44px;
+  width: auto;
+  filter: drop-shadow(0 8px 14px rgba(20, 35, 26, 0.12));
+}
+
+/* ===============================
+   CONTROLS
+   =============================== */
+
+.field,
+.field label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-
-  max-height: 65vh;
-  overflow-y: auto;
 }
 
-/* kompakte Chips */
-#objects-enabled .chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.field {
+  margin: 0;
+}
 
-  padding: 4px 6px;
+.field span,
+.field legend {
+  color: #486153;
   font-size: 12px;
-  white-space: nowrap;
+  font-weight: 800;
 }
+
+fieldset.field {
+  padding: 14px;
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 12px;
+  background: rgba(247, 251, 248, 0.74);
+}
+
+fieldset.field legend {
+  padding: 0 6px;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  color: #17251c;
+  background: #ffffff;
+  border: 1px solid rgba(20, 35, 26, 0.16);
+  border-radius: 9px;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+input:focus,
+select:focus {
+  border-color: #22a860;
+  box-shadow: 0 0 0 3px rgba(34, 168, 96, 0.16);
+}
+
+.btn {
+  border: 1px solid rgba(20, 35, 26, 0.14);
+  background: #eef8f1;
+  color: #16351f;
+  border-radius: 10px;
+  flex-shrink: 0;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.btn:hover {
+  background: #e3f5e8;
+  box-shadow: 0 8px 18px rgba(20, 35, 26, 0.08);
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  background: #1f9d59;
+  border-color: #1f9d59;
+  color: #ffffff;
+}
+
+.btn.primary:hover {
+  background: #18884c;
+}
+
+.btn.danger {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.btn.danger:hover {
+  background: #ffe4e6;
+}
+
+.theme-button {
+  min-width: 42px;
+  height: 38px;
+  padding: 0 12px;
+}
+
+.header-pill {
+  min-width: 220px;
+  padding: 7px 34px 7px 14px;
+  background-color: #e8f7ee;
+  border: 1px solid rgba(31, 157, 89, 0.22);
+  border-radius: 8px;
+  color: #177345;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 /* ===============================
-   ENABLED MARKETING (schmal!)
+   TABLES
    =============================== */
 
-#marketing-enabled {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
-  max-height: 65vh;
-  overflow-y: auto;
-}
-
-#marketing-enabled .chip {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  padding: 4px 6px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-/* ===============================
-   STUDENTS TABLE (maximal breit)
-   =============================== */
-
-#students-table {
+.table {
   display: block;
   width: 100%;
-  max-height: 65vh;
-  overflow-y: auto;
+  overflow: auto;
+  border-collapse: collapse;
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.72);
 }
 
-#students-table thead,
-#students-table tbody {
+#students-table {
+  max-height: 65vh;
+}
+
+.table thead,
+.table tbody {
   display: table;
   width: 100%;
   table-layout: fixed;
 }
 
-#students-table th,
-#students-table td {
-  padding: 6px 8px;
+.table th,
+.table td {
+  padding: 10px 12px;
+  text-align: left;
   box-sizing: border-box;
+  border-bottom: 1px solid rgba(20, 35, 26, 0.08);
+  vertical-align: middle;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef6f0;
+  color: #526357;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.table tbody tr {
+  transition: background 140ms ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.danger-cell {
+  text-align: right;
+}
+
+.danger-cell-div {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ===============================
-   RESPONSIVE FALLBACK
+   CHIPS
    =============================== */
 
-@media (max-width: 1100px) {
+#objects-enabled,
+#marketing-enabled {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 65vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: #263f2e;
+  background: rgba(247, 251, 248, 0.82);
+  border: 1px solid rgba(20, 35, 26, 0.1);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chip-icon img {
+  max-width: 30px;
+  max-height: 30px;
+  object-fit: contain;
+}
+
+.chip-icon.is-empty {
+  border: 1px dashed rgba(20, 35, 26, 0.18);
+  border-radius: 8px;
+}
+
+.chip:hover {
+  background: #e8f7ee;
+  border-color: rgba(31, 157, 89, 0.25);
+}
+
+.chip input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
+  flex: 0 0 16px;
+  padding: 0;
+  accent-color: #1f9d59;
+}
+
+/* ===============================
+   CREDIT ROWS
+   =============================== */
+
+#ws-credit-rows,
+.credit-row {
+  display: grid;
+  gap: 10px;
+}
+
+.credit-row {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ===============================
+   FOOTER BAR
+   =============================== */
+
+.footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0);
+  border-top: 1px solid rgba(20, 35, 26, 0.1);
+  box-shadow: 0 -14px 40px rgba(20, 35, 26, 0.08);
+  z-index: 10;
+}
+
+.status {
+  color: #486153;
+  font-weight: 600;
+}
+
+/* ===============================
+   DARK MODE
+   =============================== */
+
+body.theme-dark {
+  --dark-bg: #07111f;
+  --dark-bg-deep: #030712;
+  --dark-surface-soft: #13223a;
+  --dark-surface-raised: #172842;
+  --dark-border: rgba(148, 163, 184, 0.22);
+  --dark-border-soft: rgba(148, 163, 184, 0.14);
+  --dark-text: #e8f1ff;
+  --dark-muted: #93a4bd;
+  --dark-accent: #38bdf8;
+  --dark-accent-strong: #2563eb;
+  background:
+    radial-gradient(circle at 12% -8%, rgba(56, 189, 248, 0.18), transparent 28rem),
+    radial-gradient(circle at 92% 4%, rgba(37, 99, 235, 0.16), transparent 26rem),
+    linear-gradient(135deg, var(--dark-bg-deep) 0%, var(--dark-bg) 48%, #09172a 100%);
+  color: var(--dark-text);
+}
+
+body.theme-dark .panel,
+body.theme-dark .footer-bar {
+  background: rgba(15, 27, 46, 0);
+}
+
+body.theme-dark .panel h2,
+body.theme-dark .app-title {
+  color: var(--dark-text);
+}
+
+body.theme-dark .field span,
+body.theme-dark .field legend,
+body.theme-dark .status {
+  color: var(--dark-muted);
+}
+
+body.theme-dark #main-header {
+  background: rgba(10, 20, 36, 0.9);
+  border-color: var(--dark-border-soft);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark .header-pill {
+  background-color: rgba(56, 189, 248, 0.13);
+  border-color: rgba(56, 189, 248, 0.34);
+  color: #93dafe;
+}
+
+body.theme-dark input,
+body.theme-dark select {
+  background: rgba(5, 12, 24, 0.82);
+  border-color: rgba(148, 163, 184, 0.22);
+  color: var(--dark-text);
+}
+
+body.theme-dark input:focus,
+body.theme-dark select:focus {
+  border-color: var(--dark-accent);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.16);
+}
+
+body.theme-dark fieldset.field,
+body.theme-dark .parameter-column:not(fieldset),
+body.theme-dark .chip {
+  background: rgba(7, 17, 31, 0.7);
+  border-color: var(--dark-border-soft);
+  color: var(--dark-text);
+}
+
+body.theme-dark .chip-icon.is-empty {
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+body.theme-dark .chip:hover {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+body.theme-dark .table {
+  color: var(--dark-text);
+  background: rgba(7, 17, 31, 0.7);
+  border-color: var(--dark-border-soft);
+}
+
+body.theme-dark .table th {
+  background: #13213a;
+  color: #9fb5d3;
+}
+
+body.theme-dark .table td {
+  border-color: rgba(148, 163, 184, 0.1);
+}
+
+body.theme-dark .table tbody tr:hover {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+body.theme-dark .btn {
+  background: var(--dark-surface-soft);
+  border-color: var(--dark-border);
+  color: #dbeafe;
+}
+
+body.theme-dark .btn:hover {
+  background: var(--dark-surface-raised);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+}
+
+body.theme-dark .btn.primary {
+  background: linear-gradient(135deg, var(--dark-accent-strong), #0284c7);
+  border-color: rgba(125, 211, 252, 0.4);
+  color: #f8fbff;
+}
+
+body.theme-dark .btn.danger {
+  background: rgba(127, 29, 29, 0.26);
+  border-color: rgba(248, 113, 113, 0.36);
+  color: #fecdd3;
+}
+
+/* ===============================
+   RESPONSIVE
+   =============================== */
+
+@media (max-width: 1180px) {
+  .world-parameters-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .world-parameters-grid .parameter-column:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .row-grid,
+  .world-parameters-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .row-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .world-parameters-grid .parameter-column:last-child {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  #objects-enabled,
+  #marketing-enabled {
     grid-template-columns: 1fr;
   }
 }
 
+@media (max-width: 760px) {
+  #main-header {
+    height: auto;
+    min-height: 74px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
 
+  .header-center {
+    order: 3;
+    width: 100%;
+  }
+
+  .header-pill {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .page-wrap {
+    padding: 14px;
+    padding-top: 136px;
+    padding-bottom: 96px;
+  }
+
+  .row-grid,
+  .world-parameters-grid,
+  .credit-row {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-title {
+    display: none;
+  }
+}
 </style>
 <body class="theme-light">
   <header id="main-header">
     <div class="header-left">
-      <img src="logo.png" class="logo-image" alt="Green Bee Logo">
-      <span class="app-title"> World Settings</span>
-    </div>
-    <div class="header-center">
-      <select id="world-select" class="header-pill"></select>
+      <img src="./logo_transparent.png" class="logo-image" alt="Green Bee Logo">
+      <span class="app-title">World Settings</span>
     </div>
     <div class="header-right">
-      <button id="theme-toggle" class="btn small">☀︎ / 🌙</button>
+      <select id="world-select" class="header-pill"></select>
+      <button id="save-world" class="btn primary">Save Settings</button>
+      <button id="theme-toggle" class="btn small theme-button" title="Toggle theme">☀︎ / 🌙</button>
     </div>
   </header>
 
   <main class="page-wrap">
-    <div class="row-grid">
+    <div class="settings-stack">
       <section class="panel">
         <h2>World Parameters</h2>
-        <label class="field">
-          <span>World Name</span>
-          <input id="ws-name">
-        </label>
-        <label class="field">
-          <span>Start Budget</span>
-          <input id="ws-startBudget" type="number" min="0">
-        </label>
-        <label class="field">
-          <span>Max Turns</span>
-          <input id="ws-maxTurns" type="number" min="1">
-        </label>
-        <label class="field">
-          <span>Grid Size (rows = cols)</span>
-          <input id="ws-gridSize" type="number" min="3" max="20">
-        </label>
-        <fieldset class="field">
-          <legend>Tickets (Total Buyers)</legend>
-          <label><span>Group 1</span><input id="ws-tickets-0" type="number" min="0"></label>
-          <label><span>Group 2</span><input id="ws-tickets-1" type="number" min="0"></label>
-          <label><span>Group 3</span><input id="ws-tickets-2" type="number" min="0"></label>
-        </fieldset>
-        <fieldset class="field">
-          <legend>Credit Options</legend>
-          <label>
-            <span>Number of options</span>
-            <select id="ws-credit-count">
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
-          </label>
-          <div id="ws-credit-rows"></div>
-        </fieldset>
+        <div class="world-parameters-grid">
+          <div class="parameter-column">
+            <label class="field">
+              <span>World Name</span>
+              <input id="ws-name">
+            </label>
+            <label class="field">
+              <span>Start Budget</span>
+              <input id="ws-startBudget" type="number" min="0">
+            </label>
+            <label class="field">
+              <span>Max Turns</span>
+              <input id="ws-maxTurns" type="number" min="1">
+            </label>
+            <label class="field">
+              <span>Grid Size (rows = cols)</span>
+              <input id="ws-gridSize" type="number" min="3" max="20">
+            </label>
+          </div>
+          <fieldset class="field parameter-column">
+            <legend>Population</legend>
+            <label><span>Youth</span><input id="ws-population-0" type="number" min="0"></label>
+            <label><span>Families</span><input id="ws-population-1" type="number" min="0"></label>
+            <label><span>Seniors</span><input id="ws-population-2" type="number" min="0"></label>
+          </fieldset>
+          <fieldset class="field parameter-column">
+            <legend>Credit Options</legend>
+            <label>
+              <span>Number of options</span>
+              <select id="ws-credit-count">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </label>
+            <div id="ws-credit-rows"></div>
+          </fieldset>
+        </div>
       </section>
+      <div class="row-grid">
+        <section class="panel">
+          <h2>Enabled Objects</h2>
+          <div id="objects-enabled" class="chip-list"></div>
+        </section>
 
-      <section class="panel">
-        <h2>Enabled Objects</h2>
-        <div id="objects-enabled" class="chip-list"></div>
-      </section>
-
-      <!--
+        <!--
 <section class="panel">
   <h2>Enabled Marketing</h2>
   <div id="marketing-enabled" class="chip-list"></div>
 </section>
 -->
-      <section class="panel">
-        <h2>Students (Name + Code)</h2>
-        <table class="table" id="students-table">
-          <thead>
-            <tr>
-              <th>Player ID</th>
-              <th>Display Name</th>
-              <th>Code</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <button id="add-student" class="btn small">+ Add Student</button>
-      </section>
+        <section class="panel">
+          <h2>Students (Name + Code)</h2>
+          <table class="table" id="students-table">
+            <thead>
+              <tr>
+                <th>Player ID</th>
+                <th>Display Name</th>
+                <th>Code</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <button id="add-student" class="btn small">+ Add Student</button>
+        </section>
+      </div>
     </div>
 
-    <div class="footer-bar">
-      <button id="save-world" class="btn primary">Save World Settings</button>
-      <span id="status-world" class="status"></span>
-    </div>
+    <span id="status-world" class="status"></span>
   </main>
 
   <script>
@@ -269,7 +781,8 @@ currentWorld = {
   startBudget: 200,
   maxTurns: 12,
   gridSize: 5,
-  tickets: [500, 400, 300],
+  //tickets: [500, 400, 300],
+  population: [2000, 2000, 2000],
   creditoptions: [[100, 5]],
   objectsEnabled: {},
   students: {},
@@ -296,10 +809,10 @@ currentWorld = {
         startBudget: ws.startBudget || 0,
         maxTurns: ws.maxTurns || 10,
         gridSize: ws.gridSize || 5,
-        tickets: Array.isArray(ws.tickets) ? ws.tickets : [
-          (ws.tickets && ws.tickets[0]) || 0,
-          (ws.tickets && ws.tickets[1]) || 0,
-          (ws.tickets && ws.tickets[2]) || 0
+        population: Array.isArray(ws.population) ? ws.population : [
+          (ws.population && ws.population[0]) || 0,
+          (ws.population && ws.population[1]) || 0,
+          (ws.population && ws.population[2]) || 0
         ],
         objectsEnabled: ws.objectsEnabled || {},
         students: ws.students || {},
@@ -375,14 +888,19 @@ Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
       renderCreditOptionRows(existing.slice(0, targetCount));
     }
 
+    function getObjectIconPath(key) {
+      const objectSettings = localGlobal.objects && localGlobal.objects[key];
+      return objectSettings && objectSettings.icon ? objectSettings.icon : "";
+    }
+
     function renderWorldForm() {
       document.getElementById("ws-name").value = currentWorld.name;
       document.getElementById("ws-startBudget").value = currentWorld.startBudget;
       document.getElementById("ws-maxTurns").value = currentWorld.maxTurns;
       document.getElementById("ws-gridSize").value = currentWorld.gridSize;
-      document.getElementById("ws-tickets-0").value = currentWorld.tickets[0] || 0;
-      document.getElementById("ws-tickets-1").value = currentWorld.tickets[1] || 0;
-      document.getElementById("ws-tickets-2").value = currentWorld.tickets[2] || 0;
+      document.getElementById("ws-population-0").value = currentWorld.population[0] || 0;
+      document.getElementById("ws-population-1").value = currentWorld.population[1] || 0;
+      document.getElementById("ws-population-2").value = currentWorld.population[2] || 0;
       const creditOptions = normalizeCreditOptions(currentWorld.creditoptions);
       document.getElementById("ws-credit-count").value = String(creditOptions.length);
       renderCreditOptionRows(creditOptions);
@@ -392,18 +910,40 @@ Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
       Object.keys(localGlobal.objects || {}).forEach(k => {
         const label = document.createElement("label");
         label.className = "chip";
+        const main = document.createElement("div");
+        main.className = "chip-main";
         const input = document.createElement("input");
         input.type = "checkbox";
         input.dataset.key = k;
         input.checked = !!currentWorld.objectsEnabled[k];
         const span = document.createElement("span");
+        span.className = "chip-name";
         span.textContent = k;
-        label.appendChild(input);
-        label.appendChild(span);
+        const iconWrap = document.createElement("div");
+        iconWrap.className = "chip-icon";
+        const iconPath = getObjectIconPath(k);
+
+        main.appendChild(input);
+        main.appendChild(span);
+        label.appendChild(main);
+
+        if (iconPath) {
+          const icon = document.createElement("img");
+          icon.src = iconPath;
+          icon.alt = "";
+          icon.loading = "lazy";
+          iconWrap.appendChild(icon);
+        } else {
+          iconWrap.classList.add("is-empty");
+        }
+
+        label.appendChild(iconWrap);
         objDiv.appendChild(label);
       });
 const mktDiv = document.getElementById("marketing-enabled");
-mktDiv.innerHTML = "";
+if(mktDiv){
+  mktDiv.innerHTML = "";
+}
 Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
   const label = document.createElement("label");
   label.className = "chip";
@@ -421,7 +961,9 @@ Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
 
   label.appendChild(input);
   label.appendChild(span);
-  mktDiv.appendChild(label);
+  if(mktDiv){
+     mktDiv.appendChild(label);
+  }
 });
 
       const tbody = document.querySelector("#students-table tbody");
@@ -439,7 +981,7 @@ Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
         <td><input data-field="id" value="${id}"></td>
         <td><input data-field="name" value="${name}"></td>
         <td><input data-field="code" value="${code}"></td>
-        <td><button class="btn small danger" data-action="delete">✕</button></td>
+        <td class="danger-cell"><div class="danger-cell-div"><button class="btn small danger" data-action="delete">✕</button></div></td>
       `;
       tbody.appendChild(tr);
     }
@@ -458,10 +1000,10 @@ Object.keys(localGlobal.marketingChannels || {}).forEach(k => {
       currentWorld.startBudget = parseFloat(document.getElementById("ws-startBudget").value) || 0;
       currentWorld.maxTurns = parseInt(document.getElementById("ws-maxTurns").value, 10) || 1;
       currentWorld.gridSize = parseInt(document.getElementById("ws-gridSize").value, 10) || 5;
-      currentWorld.tickets = [
-        parseInt(document.getElementById("ws-tickets-0").value, 10) || 0,
-        parseInt(document.getElementById("ws-tickets-1").value, 10) || 0,
-        parseInt(document.getElementById("ws-tickets-2").value, 10) || 0
+      currentWorld.population = [
+        parseInt(document.getElementById("ws-population-0").value, 10) || 0,
+        parseInt(document.getElementById("ws-population-1").value, 10) || 0,
+        parseInt(document.getElementById("ws-population-2").value, 10) || 0
       ];
       currentWorld.creditoptions = readCreditOptionsFromForm();
 
