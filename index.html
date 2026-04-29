@@ -11,13 +11,14 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <!-- Dein firebase.initializeApp(...) hier einfügen -->
   <script src="functions.js"></script>
+  <script src="logic.js"></script>
 </head>
 <style>
   /* =========================================================
      DESIGN SYSTEM TOKENS (scoped overrides – styles.css untouched)
      ========================================================= */
   :root{
-    --gb-radius:       12px;
+    --gb-radius:       4px;
     --gb-radius-sm:    8px;
     --gb-radius-pill:  100px;
 
@@ -121,14 +122,14 @@
      BUTTONS – refined with proper states
      ========================================================= */
   .btn{
-    padding: 8px 14px;
+    padding: 8px 10px;
     border-radius: var(--gb-radius-sm);
     border: 1px solid var(--gb-border-strong);
     background: var(--gb-surface);
     color: var(--gb-text);
     cursor: pointer;
     font-weight: 500;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.2;
     transition: var(--gb-tx);
     display: inline-flex;
@@ -162,9 +163,34 @@
     border-color: var(--gb-accent-hover);
     color: #fff;
   }
-  .btn.small{ padding: 6px 10px; font-size: 12px; }
+  .btn.small{ padding: 12px 12px; font-size: 12px; }
   .btn.ghost{ background: transparent; }
   .btn.full{ width: 100%; }
+  .btn.small.full { border-radius:2px; font-weight: 600; padding: 12px 6px; font-size: 12px; }
+
+  #ticket-prices-btn,
+  #marketing-tools-btn{
+    transition:
+      transform var(--gb-tx),
+      border-color var(--gb-tx),
+      color var(--gb-tx),
+      background-color var(--gb-tx),
+      box-shadow var(--gb-tx);
+  }
+  #ticket-prices-btn:hover,
+  #marketing-tools-btn:hover,
+  #ticket-prices-btn[aria-expanded="true"],
+  #marketing-tools-btn[aria-expanded="true"]{
+    border-color: var(--gb-accent);
+    color: var(--gb-accent-ink);
+    background: var(--gb-accent-soft);
+  }
+  #ticket-prices-btn[aria-expanded="true"],
+  #marketing-tools-btn[aria-expanded="true"]{
+    width: calc(100% - 8px);
+    box-shadow: inset -3px 0 0 var(--gb-accent);
+    transform: translateX(8px);
+  }
 
   /* =========================================================
      BOARD – never overflow its container
@@ -211,11 +237,124 @@
     margin-bottom: 14px;
   }
 
+  .ticket-prices-menu,
+  .marketing-tools-menu{
+    position: fixed;
+    display: none;
+    width: min(360px, calc(100vw - 32px));
+    max-height: min(72vh, 560px);
+    overflow-y: auto;
+    padding: 12px;
+    background: var(--gb-surface);
+    border: 1px solid var(--gb-border);
+    border-radius: var(--gb-radius);
+    box-shadow: var(--gb-shadow-lg);
+    z-index: 75;
+  }
+  .ticket-prices-menu.is-open,
+  .marketing-tools-menu.is-open{
+    display: block;
+  }
+
+  .ticket-prices-menu-head,
+  .marketing-tools-menu-head{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .ticket-prices-menu-head h3,
+  .marketing-tools-menu-head h3{
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--gb-text);
+  }
+
+  .ticket-price-form{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ticket-price-field{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ticket-price-field label{
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--gb-text-muted);
+  }
+  .ticket-price-input-wrap{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    background: var(--gb-surface-soft);
+    border: 1px solid var(--gb-border);
+    border-radius: var(--gb-radius-sm);
+    transition: border-color var(--gb-tx), box-shadow var(--gb-tx);
+  }
+  .ticket-price-input-wrap:focus-within{
+    border-color: var(--gb-accent);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, .12);
+  }
+  .ticket-price-currency{
+    color: var(--gb-text-muted);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .ticket-price-input{
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--gb-text);
+    padding: 11px 0;
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .ticket-price-note,
+  .ticket-price-insight{
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: var(--gb-radius-sm);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .ticket-price-note{
+    color: var(--gb-text);
+    background: rgba(245, 158, 11, .12);
+    border: 1px solid rgba(245, 158, 11, .26);
+  }
+  .ticket-price-insight{
+    color: var(--gb-text-muted);
+    background: var(--gb-surface-soft);
+    border: 1px solid var(--gb-border);
+  }
+  .ticket-price-insight strong{
+    display: block;
+    margin-bottom: 4px;
+    color: var(--gb-text);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
   /* sliders container */
   .marketing-sliders{
     margin-top: 0 !important;
+    display: flex;
+    flex-direction: column;
     align-items: stretch !important;
-    gap: 10px !important;
+    gap: 4px !important;
   }
 
   /* slider row – stacked, never overflows */
@@ -238,6 +377,7 @@
   }
   .mkt-row-head{
     display: flex;
+    width:100%;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
@@ -398,11 +538,59 @@
     font-size: 13px;
     color: var(--gb-text);
   }
-  #shop-dynamic button{ margin: 4px 6px 0 0; }
 
   .shop-actions-top{
     display: flex; flex-direction: column; gap: 6px;
     margin-bottom: 12px;
+  }
+
+  .shop-object-grid{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .shop-object-btn{
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 10px;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .shop-object-main{
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+  .shop-object-icon{
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--gb-radius-sm);
+  }
+  .shop-object-icon img{
+    max-width: 30px;
+    max-height: 30px;
+    object-fit: contain;
+  }
+  .shop-object-icon.is-empty{
+    border: 1px dashed var(--gb-border-strong);
+  }
+  .shop-object-name{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .shop-object-price{
+    color: var(--gb-text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  @media (max-width: 520px){
+    .shop-object-grid{ grid-template-columns: 1fr; }
   }
 
   .shop-footer-actions{
@@ -477,6 +665,11 @@
     font-size: 12.5px;
     color: var(--gb-text-muted);
     margin: 4px 0 0 0;
+  }
+  #buy-overlay .overlay-panel{
+    width: min(540px, 94vw);
+    max-height: 88vh;
+    overflow: auto;
   }
 
   /* form fields refinement */
@@ -748,23 +941,20 @@
   .nowrap-ellipsis{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* keep buy summary panel on top of others */
-  #summary-overlay{ z-index: 95; }
+  #summary-overlay{ z-index: 95; display: none;}
 </style>
 <body class="theme-light">
 
   <!-- HEADER -->
   <header id="main-header">
     <div class="header-left">
-      <img src="logo.png" class="logo-image" alt="GreenBee Logo" style="cursor:pointer"
+      <img src="logo_transparent.png" class="logo-image" alt="GreenBee Logo" style="cursor:pointer"
            onclick="window.open('about.html', '_blank')">
     </div>
 
-    <div class="header-center">
+    <div class="header-right">
       <span id="world-display" class="header-pill">World: -</span>
       <span id="player-display" class="header-pill">Player: -</span>
-    </div>
-
-    <div class="header-right">
       <button id="theme-toggle" class="btn small ghost" type="button">☀︎ / 🌙</button>
     </div>
   </header>
@@ -871,7 +1061,25 @@
         <div class="marketing-actions">
           <button id="request-credit" class="btn small full" type="button">Request credit</button>
           <button id="hire-sales-btn"  class="btn small full" type="button">Hire sales team</button>
+          <button id="ticket-prices-btn"  class="btn small full" type="button" aria-expanded="false" aria-controls="ticket-prices-menu">Ticket prices</button>
         </div>
+
+        <div id="ticket-prices-menu" class="ticket-prices-menu" aria-hidden="true">
+            <div class="ticket-prices-menu-head">
+              <h3>Ticket prices</h3>
+            </div>
+            <div class="ticket-price-form">
+              <div class="ticket-price-field">
+                <label for="ticket-price-input">Ticket price</label>
+                <div class="ticket-price-input-wrap">
+                  <span class="ticket-price-currency">€</span>
+                  <input id="ticket-price-input" class="ticket-price-input" type="number" min="0" step="1" inputmode="decimal">
+                </div>
+              </div>
+              <p class="ticket-price-note">Keep the price within reach. Setting it too high can shatter sales and reduce demand across your audience groups.</p>
+              <div id="ticket-price-insight" class="ticket-price-insight"></div>
+            </div>
+          </div>
 
         <div class="panel-section">
           <p class="panel-section-label">Sales partner</p>
@@ -885,7 +1093,13 @@
 
         <div class="panel-section" style="flex:1; display:flex; flex-direction:column; min-height:0;">
           <p class="panel-section-label">Channel spend</p>
-          <div id="marketing-sliders" class="marketing-sliders"></div>
+          <button id="marketing-tools-btn" class="btn small full" type="button" aria-expanded="false" aria-controls="marketing-tools-menu">Marketing Tools</button>
+          <div id="marketing-tools-menu" class="marketing-tools-menu" aria-hidden="true">
+            <div class="marketing-tools-menu-head">
+              <h3>Marketing Tools</h3>
+            </div>
+            <div id="marketing-sliders" class="marketing-sliders"></div>
+          </div>
         </div>
       </section>
 
@@ -1044,6 +1258,9 @@
         budgetHistory: [startBudget],
         incomeHistory: [0],
         ticketSales: [0,0,0],
+        ticketSalesProgress: [], //progress through rounds
+        ticketPrice: 0, 
+        ticketPriceProgress: [], //pricess progress through rounds
         marketingBudgetHistory: [0],
         marketingPlan: {},
         interest: [0,0,0],
@@ -1059,6 +1276,7 @@
       let income = 0;
       Object.values(gameState.board || {}).forEach(key => {
         const o = objs[key];
+        console.log(`Object ${key}: `, o);
         if (o && o.income) income += o.income;
       });
       return income;
@@ -1101,58 +1319,6 @@
       return res;
     }
 
-    function clamp01(v) { return Math.max(0, Math.min(1, Number(v || 0))); }
-
-    function saturate(value, k) {
-      const v = Math.max(0, Number(value || 0));
-      const kk = Math.max(1, Number(k || 1));
-      return v <= 0 ? 0 : v / (v + kk);
-    }
-
-    function calculateTicketsAfterTurn(suitabilityVec) {
-      const groupPopulation = worldSettings.population;
-      const sold = gameState.ticketSales;
-      const marketingScore = gameState.interest;
-      const suitabilityScore = suitabilityVec;
-
-      const remaining = groupPopulation.map((total, i) => Math.max(0, total - (sold[i] || 0)));
-      const rules = globalSettings.baseRules || {};
-      const marketingK = Number(rules.marketingSaturationK || 50);
-      const suitabilityK = Number(rules.suitabilitySaturationK || 50);
-      const baseDemand = Number(rules.ticketBaseDemand ?? 0.03);
-      const marketingWeight = Number(rules.ticketMarketingWeight ?? 0.40);
-      const suitabilityWeight = Number(rules.ticketSuitabilityWeight ?? 0.45);
-      const synergyWeight = Number(rules.ticketSynergyWeight ?? 0.15);
-      const maxDemand = Number(rules.ticketMaxDemand ?? 0.95);
-
-      const maxTurns = Number(worldSettings.maxTurns || 10);
-      const currentTurn = Number(gameState.turn || 0);
-      const turnsLeft = Math.max(1, maxTurns - currentTurn);
-
-      const newSales = [0, 0, 0];
-      const debug = [];
-
-      for (let i = 0; i < 3; i++) {
-        if (remaining[i] <= 0) { newSales[i] = 0; continue; }
-        const marketingFactor = saturate(marketingScore[i], marketingK);
-        const suitabilityFactor = saturate(suitabilityScore[i], suitabilityK);
-        let demand =
-          baseDemand +
-          marketingWeight * marketingFactor +
-          suitabilityWeight * suitabilityFactor +
-          synergyWeight * marketingFactor * suitabilityFactor;
-        demand = Math.min(maxDemand, clamp01(demand));
-        const baseSalesPace = remaining[i] / turnsLeft;
-        const tickets = Math.min(remaining[i], Math.round(baseSalesPace * demand));
-        newSales[i] = tickets;
-        debug[i] = { group:i, population:groupPopulation[i], alreadySold:sold[i], remaining:remaining[i],
-          marketingScore:marketingScore[i], suitabilityScore:suitabilityScore[i],
-          marketingFactor, suitabilityFactor, demand, tickets };
-      }
-
-      gameState.ticketSales = sold.map((oldVal, i) => oldVal + (newSales[i] || 0));
-      console.log("check LIST: ", debug);
-    }
 
     // ===== UI Updates =====
     function updateInfoPanel() {
@@ -1303,14 +1469,14 @@
 
         const objs = globalSettings.objects || {};
         const enabled = worldSettings.objectsEnabled || {};
+        const grid = content.append("div").attr("class", "shop-object-grid");
 
         Object.keys(objs).forEach(key => {
           if (!enabled[key]) return;
           const o = objs[key];
-          content.append("button")
-            .attr("class", "btn small")
-            .style("margin", "4px 6px 0 0")
-            .text(`${key} · €${o.price || 0}`)
+          const btn = grid.append("button")
+            .attr("class", "btn small shop-object-btn")
+            .attr("type", "button")
             .on("click", () => {
               const cost = o.price || 0;
               if (gameState.budget < cost) { alert("Not enough budget."); return; }
@@ -1321,6 +1487,23 @@
               renderShop(null, false);
               updateAll();
             });
+
+          const main = btn.append("span").attr("class", "shop-object-main");
+          const iconWrap = main.append("span").attr("class", "shop-object-icon");
+          if (o.icon) {
+            iconWrap.append("img")
+              .attr("src", o.icon)
+              .attr("alt", "")
+              .attr("loading", "lazy");
+          } else {
+            iconWrap.classed("is-empty", true);
+          }
+          main.append("span")
+            .attr("class", "shop-object-name")
+            .text(key);
+          btn.append("span")
+            .attr("class", "shop-object-price")
+            .text(`€${o.price || 0}`);
         });
       }
     }
@@ -1487,11 +1670,185 @@
       updateInsightsButtonVisibility();
     }
 
+    function isMarketingToolsMenuOpen() {
+      const menu = document.getElementById("marketing-tools-menu");
+      return !!(menu && menu.classList.contains("is-open"));
+    }
+    function isTicketsPricesMenuOpen() {
+      const menu = document.getElementById("ticket-prices-menu");
+      return !!(menu && menu.classList.contains("is-open"));
+    }
+
+    function positionMarketingToolsMenu() {
+      const menu = document.getElementById("marketing-tools-menu");
+      const btn = document.getElementById("marketing-tools-btn");
+      const panel = document.getElementById("panel-info");
+      if (!menu || !btn || !panel || !isMarketingToolsMenuOpen()) return;
+
+      const gap = 0;
+      const margin = 12;
+      const panelRect = panel.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      let left = panelRect.right + gap;
+      let top = btnRect.top;
+
+      if (left + menuRect.width > window.innerWidth - margin) {
+        left = Math.max(margin, window.innerWidth - menuRect.width - margin);
+      }
+      if (top + menuRect.height > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - menuRect.height - margin);
+      }
+
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+    }
+
+    function positionTicketPricesMenu() {
+      const menu = document.getElementById("ticket-prices-menu");
+      const btn = document.getElementById("ticket-prices-btn");
+      const panel = document.getElementById("panel-info");
+      if (!menu || !btn || !panel || !isTicketsPricesMenuOpen()) return;
+
+      const gap = 0;
+      const margin = 12;
+      const panelRect = panel.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      let left = panelRect.right + gap;
+      let top = btnRect.top;
+
+      if (left + menuRect.width > window.innerWidth - margin) {
+        left = Math.max(margin, window.innerWidth - menuRect.width - margin);
+      }
+      if (top + menuRect.height > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - menuRect.height - margin);
+      }
+
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+    }
+
+    function renderTicketPricesMenu() {
+      const input = document.getElementById("ticket-price-input");
+      const insight = document.getElementById("ticket-price-insight");
+      if (!gameState || !input || !insight) return;
+
+      input.value = Number(gameState.ticketPrice || 0);
+      const team = getHiredSalesTeam();
+      if (team) {
+        insight.innerHTML = `
+          <strong>Sales team insight</strong>
+          ${team.name} will provide ticket-price guidance here once the insight model is connected.
+        `;
+      } else {
+        insight.innerHTML = `
+          <strong>Sales team insight</strong>
+          Insights will be available once a sales team is hired.
+        `;
+      }
+    }
+
+    function openMarketingToolsMenu() {
+      const menu = document.getElementById("marketing-tools-menu");
+      const btn = document.getElementById("marketing-tools-btn");
+      if (!menu || !btn) return;
+      closeTicketsPricesMenu();
+      renderMarketingSliders();
+      menu.classList.add("is-open");
+      menu.setAttribute("aria-hidden", "false");
+      btn.setAttribute("aria-expanded", "true");
+      requestAnimationFrame(positionMarketingToolsMenu);
+    }
+
+    function closeMarketingToolsMenu() {
+      const menu = document.getElementById("marketing-tools-menu");
+      const btn = document.getElementById("marketing-tools-btn");
+      if (!menu || !btn) return;
+      menu.classList.remove("is-open");
+      menu.setAttribute("aria-hidden", "true");
+      btn.setAttribute("aria-expanded", "false");
+    }
+
+    function closeTicketsPricesMenu() {
+      const menu = document.getElementById("ticket-prices-menu");
+      const btn = document.getElementById("ticket-prices-btn");
+      if(!menu || !btn) return;
+      menu.classList.remove("is-open");
+      menu.setAttribute("aria-hidden", "true");
+      btn.setAttribute("aria-expanded", "false");
+    }
+
+    function openTicketsPricesMenu() {
+      const menu = document.getElementById("ticket-prices-menu");
+      const btn = document.getElementById("ticket-prices-btn");
+      if (!menu || !btn) return;
+      closeMarketingToolsMenu();
+      renderTicketPricesMenu();
+      menu.classList.add("is-open");
+      menu.setAttribute("aria-hidden", "false");
+      btn.setAttribute("aria-expanded", "true");
+      requestAnimationFrame(positionTicketPricesMenu);
+    }
+
+    function toggleMarketingToolsMenu() {
+      if (isMarketingToolsMenuOpen()) closeMarketingToolsMenu();
+      else openMarketingToolsMenu();
+    }
+
+    function toggleTicketPricesMenu() {
+      if (isTicketsPricesMenuOpen()) closeTicketsPricesMenu();
+      else openTicketsPricesMenu();
+    }
+
 
     document.getElementById("buy-close").addEventListener("click", () => {
       document.getElementById("buy-overlay").style.display = "none";
       d3.select("#shop-container").html("");
     });
+    document.getElementById("marketing-tools-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleMarketingToolsMenu();
+    });
+    document.getElementById("ticket-prices-btn").addEventListener("click", (e)=> {
+      e.stopPropagation();
+      toggleTicketPricesMenu();
+    });
+    document.getElementById("ticket-price-input").addEventListener("input", (e) => {
+      if (!gameState) return;
+      const raw = Number(e.target.value);
+      gameState.ticketPrice = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+    });
+    document.getElementById("ticket-price-input").addEventListener("change", async (e) => {
+      if (!gameState) return;
+      const raw = Number(e.target.value);
+      const price = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      gameState.ticketPrice = price;
+      e.target.value = price;
+      await saveGameState(worldId, playerId, gameState);
+    });
+    document.addEventListener("click", (e) => {
+      const menu = document.getElementById("marketing-tools-menu");
+      const btn = document.getElementById("marketing-tools-btn");
+      if (!menu || !btn || !isMarketingToolsMenuOpen()) return;
+      if (menu.contains(e.target) || btn.contains(e.target)) return;
+      closeMarketingToolsMenu();
+    });
+    document.addEventListener("click", (e) => {
+      const menu = document.getElementById("ticket-prices-menu");
+      const btn = document.getElementById("ticket-prices-btn");
+      if (!menu || !btn || !isTicketsPricesMenuOpen()) return;
+      if (menu.contains(e.target) || btn.contains(e.target)) return;
+      closeTicketsPricesMenu();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeMarketingToolsMenu();
+        closeTicketsPricesMenu();
+      }
+    });
+    window.addEventListener("resize", positionMarketingToolsMenu);
+    window.addEventListener("resize", positionTicketPricesMenu);
     document.getElementById("request-credit").addEventListener("click", openCreditOverlay);
     document.getElementById("credit-close").addEventListener("click", closeCreditOverlay);
     document.getElementById("credit-overlay").addEventListener("click", (e) => {
@@ -1512,8 +1869,12 @@
 
     // ===== Turn-Logik =====
     async function nextTurn() {
-      const income = computeIncome();
       const maxT = (worldSettings && worldSettings.maxTurns) || 10;
+      if(gameState.turn+1 > maxT){
+        //need to add error popup explaining whats going on
+        return;
+      }
+      const income = computeIncome();
       const currentTurn = gameState.turn || 0;
       const nextBudget = (gameState.budget || 0) + income;
 
@@ -1531,8 +1892,8 @@
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
-      calculateTicketsAfterTurn(suitability);
-
+      gameState.ticketSales = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings);
+      console.log("GAME STATE: ", gameState);
       updateAll();
       await saveGameState(worldId, playerId, gameState);
 
@@ -1616,6 +1977,7 @@
       if (!Array.isArray(gameState.incomeHistory)) gameState.incomeHistory = [];
       if (!Array.isArray(gameState.requestedCredits)) gameState.requestedCredits = [];
       if (typeof gameState.finalCreditRepaymentsApplied !== "boolean") gameState.finalCreditRepaymentsApplied = false;
+      if (typeof gameState.ticketPrice === "undefined") gameState.ticketPrice = 0;
       if (typeof gameState.salesTeam === "undefined") gameState.salesTeam = null;
 
       const currentTurn = gameState.turn || 0;
@@ -1781,14 +2143,14 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         slider.setAttribute("aria-label", label);
 
         // meta row: 0 / max
-        const meta = document.createElement("div");
-        meta.className = "mkt-meta";
-        const metaLeft = document.createElement("span");
-        metaLeft.textContent = "€0";
-        const metaRight = document.createElement("span");
-        metaRight.textContent = `Max €${maxSpend}`;
-        meta.appendChild(metaLeft);
-        meta.appendChild(metaRight);
+        //const meta = document.createElement("div");
+        //meta.className = "mkt-meta";
+        //const metaLeft = document.createElement("span");
+        //metaLeft.textContent = "€0";
+        //const metaRight = document.createElement("span");
+        //metaRight.textContent = `Max €${maxSpend}`;
+        //meta.appendChild(metaLeft);
+        //meta.appendChild(metaRight);
 
         slider.addEventListener("input", () => {
           const v = parseInt(slider.value, 10) || 0;
@@ -1798,7 +2160,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 
         row.appendChild(head);
         row.appendChild(slider);
-        row.appendChild(meta);
+        //row.appendChild(meta);
         host.appendChild(row);
       });
     }
@@ -2092,6 +2454,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           renderHireOverlay();
           renderSalesTeamStatus();
           updateInsightsButtonVisibility();
+          if (isTicketsPricesMenuOpen()) renderTicketPricesMenu();
         });
 
         card.appendChild(btn);
