@@ -633,6 +633,7 @@
   #credit-overlay,
   #summary-overlay,
   #hire-overlay,
+  #assistant-overlay,
   #insights-overlay{
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
@@ -707,7 +708,8 @@
   /* =========================================================
      HIRE SALES TEAM OVERLAY
      ========================================================= */
-  #hire-overlay{
+  #hire-overlay,
+  #assistant-overlay{
     position: fixed; inset: 0;
     display: none;
     align-items: center;
@@ -716,7 +718,8 @@
     z-index: 90;
     padding: 16px;
   }
-  #hire-overlay .overlay-panel{
+  #hire-overlay .overlay-panel,
+  #assistant-overlay .overlay-panel{
     width: min(960px, 96vw);
     max-height: 88vh;
     overflow: auto;
@@ -895,6 +898,96 @@
   }
 
   /* =========================================================
+     ASSISTANT UI
+     ========================================================= */
+  .assistant-status{
+    margin-top: 6px;
+  }
+  .assistant-status.is-hired{
+    background: rgba(124, 58, 237, .12);
+    border-color: rgba(124, 58, 237, .45);
+  }
+  .assistant-avatar,
+  .assistant-mini-avatar{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    box-shadow: var(--gb-shadow-sm);
+  }
+  .assistant-avatar{
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    font-size: 22px;
+  }
+  .assistant-mini-avatar{
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+  .assistant-insight-card,
+  .assistant-projection-card{
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    border: 1px solid rgba(124, 58, 237, .25);
+    background: linear-gradient(135deg, rgba(124, 58, 237, .10), rgba(6, 182, 212, .08));
+    border-radius: var(--gb-radius-sm);
+    padding: 12px;
+  }
+  .assistant-insight-card strong,
+  .assistant-projection-card strong{
+    display: block;
+    margin-bottom: 4px;
+    color: var(--gb-text);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .assistant-projection-body{
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--gb-text-muted);
+  }
+  .assistant-projection-value{
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--gb-text);
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .assistant-projection-meta{
+    margin-top: 5px;
+    font-size: 10.5px;
+    color: var(--gb-text-subtle);
+  }
+  .assistant-projection-box{
+    display: none;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--gb-border-strong);
+  }
+  .assistant-projection-box.is-visible{ display:block; }
+  .assistant-projection-box .btn{ margin-top: 8px; }
+  .turn-report-total{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: var(--gb-radius-pill);
+    background: var(--gb-accent-soft);
+    color: var(--gb-accent-ink);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* =========================================================
      SUMMARY OVERLAY (existing) refinement
      ========================================================= */
   .summary-grid{
@@ -1012,7 +1105,7 @@
   <div id="summary-overlay">
     <div class="overlay-panel summary-panel">
       <div class="overlay-header">
-        <h2>Event summary</h2>
+        <h2 id="summary-title">Event summary</h2>
         <button id="summary-close" class="btn small ghost" type="button">Close</button>
       </div>
       <div id="summary-content"></div>
@@ -1030,6 +1123,20 @@
         <button id="hire-close" class="btn small ghost" type="button">Close</button>
       </div>
       <div id="hire-grid" class="hire-grid"></div>
+    </div>
+  </div>
+
+  <!-- OVERLAY: HIRE ASSISTANT -->
+  <div id="assistant-overlay">
+    <div class="overlay-panel">
+      <div class="overlay-header">
+        <div>
+          <h2>Hire an assistant</h2>
+          <p class="subtitle">Choose one assistant for pricing advice and once-per-turn revenue projections.</p>
+        </div>
+        <button id="assistant-close" class="btn small ghost" type="button">Close</button>
+      </div>
+      <div id="assistant-grid" class="hire-grid"></div>
     </div>
   </div>
 
@@ -1061,6 +1168,7 @@
         <div class="marketing-actions">
           <button id="request-credit" class="btn small full" type="button">Request credit</button>
           <button id="hire-sales-btn"  class="btn small full" type="button">Hire sales team</button>
+          <button id="hire-assistant-btn"  class="btn small full" type="button">Hire assistant</button>
           <button id="ticket-prices-btn"  class="btn small full" type="button" aria-expanded="false" aria-controls="ticket-prices-menu">Ticket prices</button>
         </div>
 
@@ -1086,6 +1194,16 @@
           <div id="sales-team-status" class="sales-team-status">
             <div class="sts-left">
               <span class="sts-sub">No sales team</span>
+            </div>
+            <span style="color:var(--gb-text-subtle); font-size:11px;">—</span>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <p class="panel-section-label">Assistant</p>
+          <div id="assistant-status" class="sales-team-status assistant-status">
+            <div class="sts-left">
+              <span class="sts-sub">No assistant</span>
             </div>
             <span style="color:var(--gb-text-subtle); font-size:11px;">—</span>
           </div>
@@ -1126,8 +1244,7 @@
               <div id="hover-text">Hover over a tile or a chart to see details.</div>
               <div id="budget-mini" class="budget-mini">
                 <div><span class="muted">Current budget</span><span id="ui-current-budget">€0</span></div>
-                <div><span class="muted">Income next turn</span><span id="ui-income-next">€0</span></div>
-                <div><span class="muted">Projected next start</span><span id="ui-next-start">€0</span></div>
+                <div id="assistant-projection-box" class="assistant-projection-box"></div>
               </div>
             </div>
             <div id="shop-dynamic"></div>
@@ -1239,6 +1356,39 @@
       }
     ];
 
+    const ASSISTANTS = [
+      {
+        id: "mira",
+        name: "Mira, Pricing Analyst",
+        initials: "🤖",
+        color: "linear-gradient(135deg, #7c3aed, #06b6d4)",
+        tagline: "Ticket pricing & demand",
+        bio: "Mira studies your current ticket price, infrastructure and audience response, then gives practical pricing advice from the next turn onward.",
+        stats: ["Price insight", "Projection", "Demand model"],
+        price: 700
+      },
+      {
+        id: "leo",
+        name: "Leo, Revenue Planner",
+        initials: "🧠",
+        color: "linear-gradient(135deg, #0f766e, #22c55e)",
+        tagline: "Balanced revenue planning",
+        bio: "Leo focuses on turning object income and ticket sales into a realistic budget forecast with a cautious business tone.",
+        stats: ["Revenue", "Budget", "Cautious"],
+        price: 900
+      },
+      {
+        id: "nora",
+        name: "Nora, Audience Scout",
+        initials: "📈",
+        color: "linear-gradient(135deg, #ea580c, #f59e0b)",
+        tagline: "Audience-first advice",
+        bio: "Nora reads group sales momentum and points out whether your current price is blocking demand or leaving money on the table.",
+        stats: ["Audience", "Momentum", "Friendly"],
+        price: 800
+      }
+    ];
+
     // ===== Spielzustand =====
     let globalSettings = null;
     let worldSettings = null;
@@ -1261,12 +1411,22 @@
         ticketSalesProgress: [], //progress through rounds
         ticketPrice: 0, 
         ticketPriceProgress: [], //pricess progress through rounds
+        cumulativeSalesFactorProgress: [],
+        priceReasonablenessProgress: [],
         marketingBudgetHistory: [0],
         marketingPlan: {},
         interest: [0,0,0],
         requestedCredits: [],
         finalCreditRepaymentsApplied: false,
-        salesTeam: null // PLACEHOLDER: id of hired team or null
+        salesTeam: null,
+        assistant: null,
+        assistantHiredTurn: null,
+        assistantProjectionTurn: null,
+        assistantProjection: null,
+        objectIncomeHistory: [0],
+        ticketIncomeHistory: [0],
+        turnReports: [],
+        infrastructuralSpendings: 0,
       };
     }
 
@@ -1319,19 +1479,72 @@
       return res;
     }
 
+    function formatEuro(value) {
+      return `€${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
+    }
+
+    function vec3(value, fallback = [0,0,0]) {
+      const src = Array.isArray(value) ? value : fallback;
+      return [0, 1, 2].map(i => Math.max(0, Number(src[i] || 0)));
+    }
+
+    function getGroupLabels() {
+      const groups = globalSettings && Array.isArray(globalSettings.groups) ? globalSettings.groups : null;
+      return groups && groups.length >= 3 ? groups : ["Youth", "Families", "Seniors"];
+    }
+
+    function computeInfrastructureSpendingsFromBoard() {
+      const objs = (globalSettings && globalSettings.objects) || {};
+      return Object.values((gameState && gameState.board) || {}).reduce((sum, key) => {
+        const obj = objs[key] || {};
+        return sum + Math.max(0, Number(obj.price || 0));
+      }, 0);
+    }
+
+    function refreshInfrastructureSpendingsFromBoard() {
+      if (!gameState) return 0;
+      gameState.infrastructuralSpendings = computeInfrastructureSpendingsFromBoard();
+      return gameState.infrastructuralSpendings;
+    }
+
+    function ensureGameStateShape(state) {
+      if (!state) state = createEmptyGameState();
+      if (!state.board) state.board = {};
+      if (!Array.isArray(state.budgetHistory)) state.budgetHistory = [Number(state.budget || 0)];
+      if (!Array.isArray(state.incomeHistory)) state.incomeHistory = [0];
+      if (!Array.isArray(state.objectIncomeHistory)) state.objectIncomeHistory = [];
+      if (!Array.isArray(state.ticketIncomeHistory)) state.ticketIncomeHistory = [];
+      if (!Array.isArray(state.ticketSales)) state.ticketSales = [0,0,0];
+      state.ticketSales = vec3(state.ticketSales);
+      if (!Array.isArray(state.ticketSalesProgress)) state.ticketSalesProgress = [];
+      if (!Array.isArray(state.ticketPriceProgress)) state.ticketPriceProgress = [];
+      if (!Array.isArray(state.cumulativeSalesFactorProgress)) state.cumulativeSalesFactorProgress = [];
+      if (!Array.isArray(state.priceReasonablenessProgress)) state.priceReasonablenessProgress = [];
+      if (!Array.isArray(state.marketingBudgetHistory)) state.marketingBudgetHistory = [0];
+      if (!state.marketingPlan) state.marketingPlan = {};
+      if (!Array.isArray(state.interest)) state.interest = [0,0,0];
+      state.interest = vec3(state.interest);
+      if (!Array.isArray(state.requestedCredits)) state.requestedCredits = [];
+      if (typeof state.finalCreditRepaymentsApplied !== "boolean") state.finalCreditRepaymentsApplied = false;
+      if (typeof state.ticketPrice === "undefined") state.ticketPrice = 0;
+      if (typeof state.salesTeam === "undefined") state.salesTeam = null;
+      if (typeof state.assistant === "undefined") state.assistant = null;
+      if (typeof state.assistantHiredTurn === "undefined") state.assistantHiredTurn = null;
+      if (typeof state.assistantProjectionTurn === "undefined") state.assistantProjectionTurn = null;
+      if (typeof state.assistantProjection === "undefined") state.assistantProjection = null;
+      if (!Array.isArray(state.turnReports)) state.turnReports = [];
+      if (typeof state.infrastructuralSpendings !== "number") state.infrastructuralSpendings = 0;
+      return state;
+    }
+
 
     // ===== UI Updates =====
     function updateInfoPanel() {
       document.getElementById("turn-display").textContent = "Turn " + (gameState.turn || 0);
       const cur = Number(gameState.budget || 0);
-      const incomeNext = Number(computeIncome() || 0);
-      const nextStart = cur + incomeNext;
       const elCur = document.getElementById("ui-current-budget");
-      const elInc = document.getElementById("ui-income-next");
-      const elNext = document.getElementById("ui-next-start");
-      if (elCur) elCur.textContent = `€${cur}`;
-      if (elInc) elInc.textContent = `€${incomeNext}`;
-      if (elNext) elNext.textContent = `€${nextStart}`;
+      if (elCur) elCur.textContent = formatEuro(cur);
+      renderAssistantProjectionBox();
     }
 
     function renderBoard() {
@@ -1455,13 +1668,15 @@
         content.append("button")
           .attr("class", "btn primary")
           .text(`Sell ${objKey}`)
-          .on("click", () => {
+          .on("click", async () => {
             gameState.budget += sellPrice;
             delete gameState.board[selectedId];
+            refreshInfrastructureSpendingsFromBoard();
             overlayEl.style.display = "none";
             renderBoard();
             renderShop(null, false);
             updateAll();
+            await saveGameState(worldId, playerId, gameState);
           });
 
       } else {
@@ -1477,15 +1692,17 @@
           const btn = grid.append("button")
             .attr("class", "btn small shop-object-btn")
             .attr("type", "button")
-            .on("click", () => {
-              const cost = o.price || 0;
+            .on("click", async () => {
+              const cost = Number(o.price || 0);
               if (gameState.budget < cost) { alert("Not enough budget."); return; }
               gameState.budget -= cost;
               gameState.board[selectedId] = key;
+              refreshInfrastructureSpendingsFromBoard();
               overlayEl.style.display = "none";
               renderBoard();
               renderShop(null, false);
               updateAll();
+              await saveGameState(worldId, playerId, gameState);
             });
 
           const main = btn.append("span").attr("class", "shop-object-main");
@@ -1612,31 +1829,25 @@
       svg.selectAll("*").remove();
       const { width, height } = setupDynamicSvg(svg);
 
-      const totalAvailable = worldSettings.population || [0,0,0];
-      const soldNow = gameState.ticketSales || [0,0,0];
-      const suitability = computesuitability();
-      const k = (globalSettings.baseRules?.suitabilitySaturationK) || 50;
-      const turnNow = gameState.turn || 0;
+      const progress = Array.isArray(gameState.ticketSalesProgress) ? gameState.ticketSalesProgress : [];
+      const series = [{ t: 0, g0: 0, g1: 0, g2: 0 }];
+      const cumulative = [0, 0, 0];
 
-      function simulateStep(current) {
-        return current.map((v, i) => {
-          const rem = totalAvailable[i] - v;
-          if (rem <= 0) return v;
-          const factor = suitability[i] / (suitability[i] + k);
-          return v + Math.min(rem, Math.round(rem * factor * 0.25));
-        });
-      }
+      progress.forEach((row, idx) => {
+        const sales = vec3(row);
+        cumulative[0] += sales[0];
+        cumulative[1] += sales[1];
+        cumulative[2] += sales[2];
+        series.push({ t: idx + 1, g0: cumulative[0], g1: cumulative[1], g2: cumulative[2] });
+      });
 
-      const series = [];
-      let sold = soldNow.slice();
-      series.push({ t: turnNow, g0: sold[0], g1: sold[1], g2: sold[2] });
-      for (let i = 1; i <= 3; i++) {
-        sold = simulateStep(sold);
-        series.push({ t: turnNow + i, g0: sold[0], g1: sold[1], g2: sold[2] });
+      if (series.length === 1 && Array.isArray(gameState.ticketSales)) {
+        const sold = vec3(gameState.ticketSales);
+        series.push({ t: gameState.turn || 0, g0: sold[0], g1: sold[1], g2: sold[2] });
       }
 
       const x = d3.scaleLinear().domain([CHART_X_MIN, CHART_X_MAX]).range([CHART_MARGIN.left, width - CHART_MARGIN.right]);
-      const maxY = d3.max(series, d => d.g0 + d.g1 + d.g2) || 1;
+      const maxY = Math.max(1, d3.max(series, d => d.g0 + d.g1 + d.g2) || 1);
       const y = d3.scaleLinear().domain([0, maxY]).range([height - CHART_MARGIN.bottom, CHART_MARGIN.top]);
 
       const stack = d3.stack().keys(["g0", "g1", "g2"]);
@@ -1656,6 +1867,7 @@
         .call(d3.axisLeft(y).ticks(4))
         .selectAll("text").style("font-size", FONT_SIZE).style("font-family", FONT_FAMILY);
 
+      const turnNow = gameState.turn || 0;
       svg.append("line").attr("x1", x(turnNow)).attr("x2", x(turnNow))
         .attr("y1", CHART_MARGIN.top).attr("y2", height - CHART_MARGIN.bottom)
         .attr("stroke", "red").attr("stroke-width", 2);
@@ -1667,6 +1879,8 @@
       renderBudgetChart();
       renderTicketChart();
       renderSalesTeamStatus();
+      renderAssistantStatus();
+      renderAssistantProjectionBox();
       updateInsightsButtonVisibility();
     }
 
@@ -1735,18 +1949,58 @@
       if (!gameState || !input || !insight) return;
 
       input.value = Number(gameState.ticketPrice || 0);
-      const team = getHiredSalesTeam();
-      if (team) {
+      const assistant = getHiredAssistant();
+      if (!assistant) {
         insight.innerHTML = `
-          <strong>Sales team insight</strong>
-          ${team.name} will provide ticket-price guidance here once the insight model is connected.
+          <strong>Assistant insight</strong>
+          Hire an assistant to unlock ticket-price assessments.
         `;
-      } else {
-        insight.innerHTML = `
-          <strong>Sales team insight</strong>
-          Insights will be available once a sales team is hired.
-        `;
+        return;
       }
+
+      if (!isAssistantActive()) {
+        insight.innerHTML = `
+          <div class="assistant-insight-card">
+            <div class="assistant-mini-avatar">${assistant.initials}</div>
+            <div>
+              <strong>Assistant insight</strong>
+              ${assistant.name} is setting up the model. Pricing advice starts from the next turn.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const suitability = computesuitability();
+      gameState.interest = computeGlobalInterestFromMarketing();
+      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, {
+        mutate: false,
+        deterministic: true,
+      });
+      const factor = Number(preview.priceReasonablenessRes || 0);
+      const price = Number(gameState.ticketPrice || 0);
+
+      let verdict;
+      if (price <= 0) {
+        verdict = "Your tickets are free. Demand will be strong, but you are leaving revenue on the table — I would increase the price.";
+      } else if (factor < 0.72) {
+        verdict = "My analysis says the current ticket price is too high for the value visitors see right now. I would decrease it before the next turn.";
+      } else if (factor > 1.08) {
+        verdict = "The current ticket price looks very affordable. You probably have room to increase it without hurting demand too much.";
+      } else {
+        verdict = "The current ticket price looks about right for your infrastructure and current demand signals.";
+      }
+
+      insight.innerHTML = `
+        <div class="assistant-insight-card">
+          <div class="assistant-mini-avatar">${assistant.initials}</div>
+          <div>
+            <strong>${assistant.name}</strong>
+            ${verdict}<br>
+            <span style="font-size:11px; opacity:.75;">Price reasonableness score: ${factor.toFixed(2)} / 1.20</span>
+          </div>
+        </div>
+      `;
     }
 
     function openMarketingToolsMenu() {
@@ -1861,6 +2115,14 @@
     document.getElementById("hire-overlay").addEventListener("click", (e) => {
       if (e.target.id === "hire-overlay") closeHireOverlay();
     });
+    document.getElementById("hire-assistant-btn").addEventListener("click", openAssistantOverlay);
+    document.getElementById("assistant-close").addEventListener("click", closeAssistantOverlay);
+    document.getElementById("assistant-overlay").addEventListener("click", (e) => {
+      if (e.target.id === "assistant-overlay") closeAssistantOverlay();
+    });
+    document.getElementById("budget-mini").addEventListener("click", (e) => {
+      if (e.target && e.target.id === "get-assistant-projection-btn") createAssistantProjection();
+    });
     document.getElementById("get-insights-btn").addEventListener("click", openInsightsOverlay);
     document.getElementById("insights-close").addEventListener("click", closeInsightsOverlay);
     document.getElementById("insights-overlay").addEventListener("click", (e) => {
@@ -1870,39 +2132,79 @@
     // ===== Turn-Logik =====
     async function nextTurn() {
       const maxT = (worldSettings && worldSettings.maxTurns) || 10;
-      if(gameState.turn+1 > maxT){
-        //need to add error popup explaining whats going on
+      if (gameState.turn + 1 > maxT) {
+        alert("The event has already finished.");
         return;
       }
-      const income = computeIncome();
-      const currentTurn = gameState.turn || 0;
-      const nextBudget = (gameState.budget || 0) + income;
 
-      gameState.turn = currentTurn + 1;
-      if (!Array.isArray(gameState.budgetHistory)) gameState.budgetHistory = [];
-      if (!Array.isArray(gameState.incomeHistory)) gameState.incomeHistory = [];
-      gameState.incomeHistory[currentTurn] = income;
-      gameState.budgetHistory[gameState.turn] = nextBudget;
-      gameState.budget = nextBudget;
+      ensureGameStateShape(gameState);
+      refreshInfrastructureSpendingsFromBoard();
 
-      if ((gameState.turn || 0) >= maxT) {
-        applyFinalCreditRepayments();
-        gameState.budgetHistory[gameState.turn] = gameState.budget;
-      }
+      const currentTurn = Number(gameState.turn || 0);
+      const openingBudget = Number(gameState.budget || 0);
+      const objectIncome = Number(computeIncome() || 0);
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
-      gameState.ticketSales = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings);
-      console.log("GAME STATE: ", gameState);
+      const ticketResult = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, { mutate: true });
+      const ticketIncome = Number(ticketResult.ticketIncome || 0);
+      const totalIncome = objectIncome + ticketIncome;
+      const turnAfter = currentTurn + 1;
+
+      if (!Array.isArray(gameState.budgetHistory)) gameState.budgetHistory = [];
+      if (!Array.isArray(gameState.incomeHistory)) gameState.incomeHistory = [];
+      if (!Array.isArray(gameState.objectIncomeHistory)) gameState.objectIncomeHistory = [];
+      if (!Array.isArray(gameState.ticketIncomeHistory)) gameState.ticketIncomeHistory = [];
+      if (!Array.isArray(gameState.ticketSalesProgress)) gameState.ticketSalesProgress = [];
+      if (!Array.isArray(gameState.ticketPriceProgress)) gameState.ticketPriceProgress = [];
+      if (!Array.isArray(gameState.cumulativeSalesFactorProgress)) gameState.cumulativeSalesFactorProgress = [];
+      if (!Array.isArray(gameState.priceReasonablenessProgress)) gameState.priceReasonablenessProgress = [];
+      if (!Array.isArray(gameState.turnReports)) gameState.turnReports = [];
+
+      gameState.ticketSalesProgress.push(vec3(ticketResult.newSales));
+      gameState.ticketPriceProgress.push(Number(gameState.ticketPrice || 0));
+      gameState.cumulativeSalesFactorProgress.push(vec3(ticketResult.salesEfficiency));
+      gameState.priceReasonablenessProgress.push(Number(ticketResult.priceReasonablenessRes || 0));
+
+      gameState.incomeHistory[currentTurn] = totalIncome;
+      gameState.objectIncomeHistory[currentTurn] = objectIncome;
+      gameState.ticketIncomeHistory[currentTurn] = ticketIncome;
+      gameState.turn = turnAfter;
+      gameState.budget = openingBudget + totalIncome;
+
+      let creditRepayment = 0;
+      if ((gameState.turn || 0) >= maxT) {
+        const beforeCredits = Number(gameState.budget || 0);
+        applyFinalCreditRepayments();
+        creditRepayment = beforeCredits - Number(gameState.budget || 0);
+      }
+
+      gameState.budgetHistory[gameState.turn] = gameState.budget;
+
+      const report = {
+        turn: gameState.turn,
+        openingBudget,
+        objectIncome,
+        ticketIncome,
+        totalIncome,
+        creditRepayment,
+        closingBudget: Number(gameState.budget || 0),
+        newSales: vec3(ticketResult.newSales),
+        totalTicketSales: vec3(gameState.ticketSales),
+        salesEfficiency: vec3(ticketResult.salesEfficiency),
+        priceReasonableness: Number(ticketResult.priceReasonablenessRes || 0),
+        ticketPrice: Number(gameState.ticketPrice || 0),
+        suitability: vec3(suitability),
+        interest: vec3(gameState.interest),
+      };
+      gameState.turnReports.push(report);
+
       updateAll();
       await saveGameState(worldId, playerId, gameState);
-
-      if ((gameState.turn || 0) >= maxT) {
-        showEventSummary();
-      }
+      showTurnReport(report, (gameState.turn || 0) >= maxT);
     }
 
-    function restartGame() {
+    async function restartGame() {
       if (!confirm("Restart game? This will reset your board.")) return;
       gameState = createEmptyGameState();
       renderBoard();
@@ -1910,6 +2212,9 @@
       renderMarketingSliders();
       updateAll();
       resetHoverInfo();
+      const nextBtn = document.getElementById("nextturn-btn");
+      if (nextBtn) nextBtn.disabled = false;
+      await saveGameState(worldId, playerId, gameState);
     }
 
     document.getElementById("nextturn-btn").addEventListener("click", () => { nextTurn(); });
@@ -1968,21 +2273,15 @@
 
       let existing = await loadGameState(worldId, playerId);
       if (!existing) { existing = createEmptyGameState(); await saveGameState(worldId, playerId, existing); }
-      gameState = existing;
+      gameState = ensureGameStateShape(existing);
+      refreshInfrastructureSpendingsFromBoard();
       renderMarketingSliders();
 
-      if (!gameState.board) gameState.board = {};
-      if (!Array.isArray(gameState.budgetHistory)) gameState.budgetHistory = [gameState.budget || 0];
-      if (!Array.isArray(gameState.ticketSales)) gameState.ticketSales = [0,0,0];
-      if (!Array.isArray(gameState.incomeHistory)) gameState.incomeHistory = [];
-      if (!Array.isArray(gameState.requestedCredits)) gameState.requestedCredits = [];
-      if (typeof gameState.finalCreditRepaymentsApplied !== "boolean") gameState.finalCreditRepaymentsApplied = false;
-      if (typeof gameState.ticketPrice === "undefined") gameState.ticketPrice = 0;
-      if (typeof gameState.salesTeam === "undefined") gameState.salesTeam = null;
-
       const currentTurn = gameState.turn || 0;
-      const currentIncome = computeIncome();
-      gameState.incomeHistory[currentTurn] = currentIncome;
+      const currentObjectIncome = computeIncome();
+      if (typeof gameState.objectIncomeHistory[currentTurn] === "undefined") {
+        gameState.objectIncomeHistory[currentTurn] = currentObjectIncome;
+      }
 
       renderBoard();
       renderShop(null,false);
@@ -2060,18 +2359,13 @@ ${DEFAULT_DESCRIPTIONS.empty || "You can build something here."}`
         : 0;
       const currentBudget = Number(gameState.budget || 0);
       const spentThisTurn = Math.max(0, Number(startBudget) - Number(currentBudget));
-      const incomeNext = Number(computeIncome() || 0);
-      const projectedNextStart = currentBudget + incomeNext;
       setHoverInfo(
 `Budget Panel
 Turn: ${turn}
 
 Start budget (this turn): €${startBudget}
 Current budget (after purchases): €${currentBudget}
-Spent this turn (purchases): €${spentThisTurn}
-
-Income (applies next turn): €${incomeNext}
-Projected next start budget: €${projectedNextStart}`
+Spent this turn (purchases): €${spentThisTurn}`
       );
     }
 
@@ -2349,10 +2643,75 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       `;
     }
 
+    function renderTurnReportHtml(report, isFinal = false) {
+      const groups = getGroupLabels();
+      const salesRows = groups.map((g, i) => {
+        const sold = Number(report.newSales[i] || 0);
+        const total = Number(report.totalTicketSales[i] || 0);
+        const efficiency = Math.round((Number(report.salesEfficiency[i] || 0)) * 100);
+        return `<tr><td>${g}</td><td style="text-align:right">+${sold} tickets</td><td style="text-align:right">${total} total</td><td style="text-align:right">${efficiency}% pace</td></tr>`;
+      }).join("");
+
+      return `
+        <div class="summary-grid">
+          <div class="summary-card">
+            <h3>Turn ${report.turn} result</h3>
+            <table class="summary-table">
+              <tr><td>Opening balance</td><td style="text-align:right">${formatEuro(report.openingBudget)}</td></tr>
+              <tr><td>Object income</td><td style="text-align:right">${formatEuro(report.objectIncome)}</td></tr>
+              <tr><td>Ticket income</td><td style="text-align:right">${formatEuro(report.ticketIncome)}</td></tr>
+              <tr><td><strong>Total income</strong></td><td style="text-align:right"><span class="turn-report-total">${formatEuro(report.totalIncome)}</span></td></tr>
+              ${report.creditRepayment ? `<tr><td>Credit repayment</td><td style="text-align:right">-${formatEuro(report.creditRepayment)}</td></tr>` : ""}
+              <tr><td>Closing balance</td><td style="text-align:right"><strong>${formatEuro(report.closingBudget)}</strong></td></tr>
+            </table>
+          </div>
+          <div class="summary-card">
+            <h3>Ticket sales by group</h3>
+            <table class="summary-table">${salesRows}</table>
+          </div>
+          <div class="summary-card">
+            <h3>Ticket price</h3>
+            <table class="summary-table">
+              <tr><td>Price this turn</td><td style="text-align:right">${formatEuro(report.ticketPrice)}</td></tr>
+              <tr><td>Reasonableness</td><td style="text-align:right">${report.priceReasonableness.toFixed(2)} / 1.20</td></tr>
+            </table>
+          </div>
+          <div class="summary-card">
+            <h3>Signals</h3>
+            <table class="summary-table">
+              ${groups.map((g,i) => `<tr><td>${g}</td><td style="text-align:right">Suit. ${report.suitability[i] || 0} / Int. ${report.interest[i] || 0}</td></tr>`).join("")}
+            </table>
+          </div>
+        </div>
+        ${isFinal ? `<div class="summary-muted">Event finished. Final repayment and final balance are included above.</div>` : `<div class="summary-muted">Objective turn report. Close this popup to continue planning the next turn.</div>`}
+      `;
+    }
+
+    function showTurnReport(report, isFinal = false) {
+      const overlay = document.getElementById("summary-overlay");
+      const content = document.getElementById("summary-content");
+      const title = document.getElementById("summary-title");
+      if (!overlay || !content) return;
+      if (title) title.textContent = isFinal ? "Final turn summary" : `Turn ${report.turn} summary`;
+      content.innerHTML = renderTurnReportHtml(report, isFinal);
+      overlay.style.display = "flex";
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.background = "rgba(0,0,0,.55)";
+      overlay.style.zIndex = "100";
+      overlay.style.padding = "16px";
+      const nextBtn = document.getElementById("nextturn-btn");
+      if (nextBtn) nextBtn.disabled = !!isFinal;
+    }
+
     function showEventSummary() {
       const overlay = document.getElementById("summary-overlay");
       const content = document.getElementById("summary-content");
       if (!overlay || !content) return;
+      const title = document.getElementById("summary-title");
+      if (title) title.textContent = "Event summary";
       content.innerHTML = renderSummaryHtml();
       overlay.style.display = "flex";
       const nextBtn = document.getElementById("nextturn-btn");
@@ -2362,6 +2721,8 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       const overlay = document.getElementById("summary-overlay");
       if (!overlay) return;
       overlay.style.display = "none";
+      const nextBtn = document.getElementById("nextturn-btn");
+      if (nextBtn && !isGameFinished()) nextBtn.disabled = false;
     }
     document.getElementById("summary-close")?.addEventListener("click", hideEventSummary);
     document.getElementById("summary-overlay")?.addEventListener("click", (e) => {
@@ -2445,16 +2806,19 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.className = isHired ? "btn small" : "btn small primary";
         btn.style.width = "100%";
         btn.type = "button";
-        btn.textContent = isHired ? "Currently hired" : "Hire team";
-        btn.disabled = isHired;
-        btn.addEventListener("click", () => {
-          // PLACEHOLDER: integrate real logic (cost deduction, persistence, etc.)
-          if (!gameState) return;
+        const alreadyHasTeam = !!(gameState && gameState.salesTeam);
+        btn.textContent = isHired ? "Currently hired" : (alreadyHasTeam ? "Team already hired" : "Hire team");
+        btn.disabled = isHired || alreadyHasTeam || isGameFinished();
+        btn.addEventListener("click", async () => {
+          if (!gameState || gameState.salesTeam) return;
+          if (Number(gameState.budget || 0) < Number(team.price || 0)) { alert("Not enough budget."); return; }
+          gameState.budget = Number(gameState.budget || 0) - Number(team.price || 0);
           gameState.salesTeam = team.id;
           renderHireOverlay();
           renderSalesTeamStatus();
           updateInsightsButtonVisibility();
-          if (isTicketsPricesMenuOpen()) renderTicketPricesMenu();
+          updateAll();
+          await saveGameState(worldId, playerId, gameState);
         });
 
         card.appendChild(btn);
@@ -2468,6 +2832,204 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     }
     function closeHireOverlay(){
       document.getElementById("hire-overlay").style.display = "none";
+    }
+
+    function getHiredAssistant(){
+      if (!gameState || !gameState.assistant) return null;
+      return ASSISTANTS.find(a => a.id === gameState.assistant) || null;
+    }
+
+    function isAssistantHired(){
+      return !!getHiredAssistant();
+    }
+
+    function isAssistantActive(){
+      if (!gameState || !gameState.assistant) return false;
+      return Number(gameState.turn || 0) > Number(gameState.assistantHiredTurn || 0);
+    }
+
+    function renderAssistantStatus(){
+      const el = document.getElementById("assistant-status");
+      if (!el) return;
+      const assistant = getHiredAssistant();
+      el.classList.toggle("is-hired", !!assistant);
+      if (assistant) {
+        el.innerHTML = `
+          <div class="sts-left">
+            <div class="assistant-mini-avatar">${assistant.initials}</div>
+            <div class="grow" style="min-width:0;">
+              <div class="sts-sub">Assistant</div>
+              <div class="sts-name nowrap-ellipsis">${assistant.name}</div>
+            </div>
+          </div>
+          <span class="pill-success">${isAssistantActive() ? "✓ Active" : "Next turn"}</span>
+        `;
+      } else {
+        el.innerHTML = `
+          <div class="sts-left">
+            <div class="sts-sub">No assistant</div>
+          </div>
+          <span style="color:var(--gb-text-subtle); font-size:11px;">—</span>
+        `;
+      }
+    }
+
+    function renderAssistantOverlay(){
+      const grid = document.getElementById("assistant-grid");
+      if (!grid) return;
+      grid.innerHTML = "";
+
+      ASSISTANTS.forEach(assistant => {
+        const isHired = gameState && gameState.assistant === assistant.id;
+        const alreadyHasAssistant = !!(gameState && gameState.assistant);
+        const card = document.createElement("div");
+        card.className = "hire-card" + (isHired ? " is-hired" : "");
+        card.innerHTML = `
+          ${isHired ? `<div class="hire-card-badge">✓ Hired</div>` : ""}
+          <div class="hire-head">
+            <div class="assistant-avatar">${assistant.initials}</div>
+            <div class="grow" style="min-width:0;">
+              <div class="hire-name nowrap-ellipsis">${assistant.name}</div>
+              <div class="hire-tagline">${assistant.tagline}</div>
+            </div>
+          </div>
+          <div class="hire-bio">${assistant.bio}</div>
+          <div class="hire-stats">
+            ${assistant.stats.map(s => `<span class="hire-stat">${s}</span>`).join("")}
+          </div>
+          <div class="hire-foot">
+            <div>
+              <span class="hire-price-value">${formatEuro(assistant.price)}</span><span class="hire-price-label">flat</span>
+            </div>
+          </div>
+        `;
+
+        const btn = document.createElement("button");
+        btn.className = isHired ? "btn small" : "btn small primary";
+        btn.style.width = "100%";
+        btn.type = "button";
+        btn.textContent = isHired ? "Currently hired" : (alreadyHasAssistant ? "Assistant already hired" : "Hire assistant");
+        btn.disabled = isHired || alreadyHasAssistant || isGameFinished();
+        btn.addEventListener("click", async () => {
+          if (!gameState || gameState.assistant) return;
+          if (Number(gameState.budget || 0) < Number(assistant.price || 0)) { alert("Not enough budget."); return; }
+          gameState.budget = Number(gameState.budget || 0) - Number(assistant.price || 0);
+          gameState.assistant = assistant.id;
+          gameState.assistantHiredTurn = Number(gameState.turn || 0);
+          gameState.assistantProjectionTurn = null;
+          gameState.assistantProjection = null;
+          renderAssistantOverlay();
+          updateAll();
+          if (isTicketsPricesMenuOpen()) renderTicketPricesMenu();
+          await saveGameState(worldId, playerId, gameState);
+        });
+
+        card.appendChild(btn);
+        grid.appendChild(card);
+      });
+    }
+
+    function openAssistantOverlay(){
+      renderAssistantOverlay();
+      document.getElementById("assistant-overlay").style.display = "flex";
+    }
+    function closeAssistantOverlay(){
+      document.getElementById("assistant-overlay").style.display = "none";
+    }
+
+    function getAssistantProjectionActual(){
+      gameState.interest = computeGlobalInterestFromMarketing();
+      const suitability = computesuitability();
+      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, {
+        mutate: false,
+        deterministic: true,
+      });
+      const objectIncome = Number(computeIncome() || 0);
+      const ticketIncome = Number(preview.ticketIncome || 0);
+      return {
+        objectIncome,
+        ticketIncome,
+        total: objectIncome + ticketIncome,
+        newSales: vec3(preview.newSales),
+        priceReasonableness: Number(preview.priceReasonablenessRes || 0),
+      };
+    }
+
+    async function createAssistantProjection(){
+      if (!isAssistantActive()) return;
+      const turn = Number(gameState.turn || 0);
+      if (gameState.assistantProjectionTurn === turn && gameState.assistantProjection) return;
+
+      const actual = getAssistantProjectionActual();
+      const variancePct = randomBetween(0.15, 0.30);
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      const estimate = Math.max(0, Math.round(actual.total * (1 + direction * variancePct)));
+      gameState.assistantProjectionTurn = turn;
+      gameState.assistantProjection = {
+        turn,
+        estimate,
+        modelValue: Math.round(actual.total),
+        objectIncome: Math.round(actual.objectIncome),
+        ticketIncome: Math.round(actual.ticketIncome),
+        variancePct: Math.round(variancePct * 100),
+        direction,
+        newSales: actual.newSales,
+        priceReasonableness: actual.priceReasonableness,
+      };
+      renderAssistantProjectionBox();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    function renderAssistantProjectionBox(){
+      const box = document.getElementById("assistant-projection-box");
+      if (!box || !gameState) return;
+      const assistant = getHiredAssistant();
+      if (!assistant) {
+        box.classList.remove("is-visible");
+        box.innerHTML = "";
+        return;
+      }
+
+      box.classList.add("is-visible");
+      if (!isAssistantActive()) {
+        box.innerHTML = `
+          <div class="assistant-projection-card">
+            <div class="assistant-mini-avatar">${assistant.initials}</div>
+            <div class="assistant-projection-body">
+              <strong>Assistant projection</strong>
+              ${assistant.name} will start projecting revenue from the next turn.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const turn = Number(gameState.turn || 0);
+      const projection = gameState.assistantProjectionTurn === turn ? gameState.assistantProjection : null;
+      if (projection) {
+        box.innerHTML = `
+          <div class="assistant-projection-card">
+            <div class="assistant-mini-avatar">${assistant.initials}</div>
+            <div class="assistant-projection-body">
+              <strong>${assistant.name}'s projection</strong>
+              Estimated next-turn revenue from objects + tickets:
+              <div class="assistant-projection-value">${formatEuro(projection.estimate)}</div>
+              <div class="assistant-projection-meta">Includes a ${projection.variancePct}% assistant uncertainty twist. One projection per turn.</div>
+            </div>
+          </div>
+        `;
+      } else {
+        box.innerHTML = `
+          <div class="assistant-projection-card">
+            <div class="assistant-mini-avatar">${assistant.initials}</div>
+            <div class="assistant-projection-body">
+              <strong>Assistant projection</strong>
+              Ask ${assistant.name} for a once-per-turn revenue estimate based on current objects, ticket price and demand.
+              <button id="get-assistant-projection-btn" class="btn small primary full" type="button">Get Assistant Projection</button>
+            </div>
+          </div>
+        `;
+      }
     }
 
     function renderInsightsOverlay(){
