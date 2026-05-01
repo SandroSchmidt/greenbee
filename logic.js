@@ -30,7 +30,7 @@ function weightedRecentAverage(values, recencyDecay = 0.7) {
 
   // assumes values are ordered oldest -> newest
   for (let i = values.length - 1; i >= 0; i--) {
-    const value = clamp(values[i], 0, 1.2);
+    const value = clamp(values[i], 0, 2.0);
     total += value * weight;
     weightTotal += weight;
     weight *= recencyDecay;
@@ -92,7 +92,7 @@ function calculateTicketPriceReasonableness({
   minOptimalPrice = 1,
 
   // Higher = expensive tickets get punished faster.
-  priceSteepness = 2,
+  priceSteepness = 1.8,
 
   // How much previous rounds matter.
   historySensitivity = 0.25,
@@ -103,9 +103,9 @@ function calculateTicketPriceReasonableness({
   const price = Math.max(0, Number(ticketPrice || 0));
 
   // Free tickets are maximally attractive, but still capped so the game cannot explode.
-  if (price <= 0) return 1.2;
+  if (price <= 0) return 2.0;
 
-  const maxFactor = 1.2;
+  const maxFactor = 2.0;
   const idealFactor = 1.0;
   const safeDivisor = Math.max(1, Number(infrastructureDivisor || 1));
   const optimalPrice = Math.max(
@@ -115,7 +115,7 @@ function calculateTicketPriceReasonableness({
 
   const priceRatio = price / optimalPrice;
 
-  // priceRatio = 1 => 1.0, cheaper approaches 1.2, expensive approaches 0.
+  // priceRatio = 1 => 1.0, cheaper approaches 2.0, expensive approaches 0.
   const curveA = maxFactor / idealFactor - 1;
   let infrastructureFactor = maxFactor / (1 + curveA * Math.pow(priceRatio, priceSteepness));
   infrastructureFactor = clamp(infrastructureFactor, 0, maxFactor);
@@ -141,7 +141,6 @@ function calculateTicketPriceReasonableness({
 
 function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, globalSettings, options = {}) {
   const opts = options || {};
-  const shouldMutate = opts.mutate !== false;
 
   const groupPopulation = Array.isArray(worldSettings && worldSettings.population)
     ? worldSettings.population.map(v => Math.max(0, Number(v) || 0))
@@ -153,10 +152,6 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
 
   const marketingScore = Array.isArray(gameState && gameState.interest)
     ? gameState.interest.map(v => Math.max(0, Number(v) || 0))
-    : [0, 0, 0];
-
-  const suitabilityScore = Array.isArray(suitabilityVec)
-    ? suitabilityVec.map(v => Math.max(0, Number(v) || 0))
     : [0, 0, 0];
 
   const infrastructureDivisor = Number(opts.infrastructureDivisor || getInfrastructureDivisor(worldSettings, gameState, {
@@ -181,12 +176,8 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
   const remaining = groupPopulation.map((total, i) => Math.max(0, total - (sold[i] || 0)));
   const rules = (globalSettings && globalSettings.baseRules) || {};
   const marketingK = Number(rules.marketingSaturationK || 50);
-  const suitabilityK = Number(rules.suitabilitySaturationK || 50);
-  const baseDemand = Number(rules.ticketBaseDemand ?? 0.03);
   const marketingWeight = Number(rules.ticketMarketingWeight ?? 0.40);
-  const suitabilityWeight = Number(rules.ticketSuitabilityWeight ?? 0.45);
-  const synergyWeight = Number(rules.ticketSynergyWeight ?? 0.15);
-  const maxDemand = Number(rules.ticketMaxDemand ?? 0.95);
+  const maxDemand = Number(rules.ticketMaxDemand ?? 1.0);
 
   const maxTurns = Number((worldSettings && worldSettings.maxTurns) || 10);
   const currentTurn = Number((gameState && gameState.turn) || 0);
@@ -203,15 +194,9 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
     }
 
     const marketingFactor = saturate(marketingScore[i], marketingK);
-    const suitabilityFactor = saturate(suitabilityScore[i], suitabilityK);
-    const synergyFactor = marketingFactor * suitabilityFactor;
 
-    let demand = baseDemand
-      + marketingWeight * marketingFactor
-      + suitabilityWeight * suitabilityFactor
-      + synergyWeight * synergyFactor;
 
-    demand = clamp(demand * priceReasonablenessFactor, 0, maxDemand);
+    const demand = clamp(marketingFactor * priceReasonablenessFactor, 0, maxDemand);
 
     const baseSalesPace = remaining[i] / turnsLeft;
     const tickets = Math.min(remaining[i], Math.round(baseSalesPace * demand));
@@ -223,9 +208,9 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
   const totalNewSales = newSales.reduce((acc, itm) => acc + itm, 0);
   const ticketIncome = totalNewSales * Math.max(0, Number(gameState && gameState.ticketPrice || 0));
 
-  if (shouldMutate && gameState) {
-    gameState.ticketSales = ticketSalesRes;
-  }
+ 
+  gameState.ticketSales = ticketSalesRes;
+  
 
   return {
     ticketSalesRes,
