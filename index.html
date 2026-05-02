@@ -12,6 +12,9 @@
   <!-- Dein firebase.initializeApp(...) hier einfügen -->
   <script src="functions.js"></script>
   <script src="logic.js"></script>
+  <script src="components/controlMenuButton.js"></script>
+  <script src="components/turnSummaryModal.js"></script>
+  <script src="components/rightStatusMenu.js"></script>
 </head>
 <style>
   /* =========================================================
@@ -516,6 +519,16 @@
      SHOP / RIGHT PANEL
      ========================================================= */
   #panel-shop{ overflow: hidden; }
+  #right-status-menu{
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+  }
+  #right-status-menu .gp-panel{
+    flex: 1;
+    min-height: 0;
+  }
   #shop-container{
     flex: 1;
     overflow-y: auto;
@@ -1103,7 +1116,8 @@
 
   <!-- OVERLAY: SUMMARY -->
   <div id="summary-overlay">
-    <div class="overlay-panel summary-panel">
+    <div class="overlay-panel summary-panel"
+    >
       <div class="overlay-header">
         <h2 id="summary-title">Event summary</h2>
         <button id="summary-close" class="btn small ghost" type="button">Close</button>
@@ -1162,16 +1176,99 @@
     <div class="row-grid">
 
       <!-- LEFT: Marketing -->
-      <section class="panel" id="panel-info">
-        <h2>Marketing</h2>
+      <section style="padding:8px !important;" class="panel" id="panel-info">
+        <h2>Control board</h2>
 
-        <div class="marketing-actions">
-          <button id="request-credit" class="btn small full" type="button">Request credit</button>
-          <button id="hire-sales-btn"  class="btn small full" type="button">Hire sales team</button>
-          <button id="hire-assistant-btn"  class="btn small full" type="button">Hire assistant</button>
-          <button id="ticket-prices-btn"  class="btn small full" type="button" aria-expanded="false" aria-controls="ticket-prices-menu">Ticket prices</button>
+        <div class="gb-rows">
+          <button id="hire-sales-btn" class="gb-row" type="button" data-action="sales-team">
+            <span class="gb-row__icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="5.5" r="2.2" />
+                <path d="M2 13c0-2.4 1.8-3.8 4-3.8s4 1.4 4 3.8" />
+                <circle cx="11" cy="6" r="1.7" />
+                <path d="M14 12.5c0-1.7-1.2-2.8-3-2.8" />
+              </svg>
+            </span>
+            <span class="gb-row__label">Sales team</span>
+            <span class="gb-row__value">-</span>
+            <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3.5 2L7 5l-3.5 3" />
+            </svg>
+          </button>
+        
+          <!-- Assistant: single-person silhouette -->
+          <button id="hire-assistant-btn" class="gb-row" type="button" data-action="assistant">
+            <span class="gb-row__icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="5.5" r="2.4" />
+                <path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" />
+              </svg>
+            </span>
+            <span class="gb-row__label">Assistant</span>
+            <span class="gb-row__value">-</span>
+            <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3.5 2L7 5l-3.5 3" />
+            </svg>
+          </button>
+        
+          <!-- Ticket price: ticket stub with perforated tear -->
+          <button id="ticket-prices-btn" class="gb-row" type="button" data-action="ticket-price">
+            <span class="gb-row__icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                  d="M2 5.5V4a1 1 0 011-1h10a1 1 0 011 1v1.5a1.5 1.5 0 000 3V12a1 1 0 01-1 1H3a1 1 0 01-1-1V8.5a1.5 1.5 0 000-3z" />
+                <path d="M6.5 4.5v7" stroke-dasharray="1 1.5" />
+              </svg>
+            </span>
+            <span class="gb-row__label">Ticket price</span>
+            <span class="gb-row__value">€0</span>
+            <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3.5 2L7 5l-3.5 3" />
+            </svg>
+          </button>
+        
+          <!-- Marketing channels: megaphone -->
+          <button id="marketing-tools-btn" class="gb-row" type="button" data-action="channels">
+            <span class="gb-row__icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6.5v3l9 3V3.5z" />
+                <path d="M5 10v2.5" />
+                <path d="M13.5 6c.5.5.5 2.5 0 3" />
+              </svg>
+            </span>
+            <span class="gb-row__label">Marketing channels</span>
+            <span class="gb-row__value">0 active</span>
+            <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3.5 2L7 5l-3.5 3" />
+            </svg>
+          </button>
+        
+          <!-- Credit: bank card (utility variant) -->
+          <button id="request-credit"  class="gb-row gb-row--utility" type="button" data-action="credit">
+            <span class="gb-row__icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4.5" width="12" height="8" rx="1.2" />
+                <path d="M2 7.5h12" />
+              </svg>
+            </span>
+            <span class="gb-row__label">Credit</span>
+            <span class="gb-row__value">-</span>
+            <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3.5 2L7 5l-3.5 3" />
+            </svg>
+          </button>
         </div>
-
+        
         <div id="ticket-prices-menu" class="ticket-prices-menu" aria-hidden="true">
             <div class="ticket-prices-menu-head">
               <h3>Ticket prices</h3>
@@ -1209,16 +1306,13 @@
           </div>
         </div>
 
-        <div class="panel-section" style="flex:1; display:flex; flex-direction:column; min-height:0;">
-          <p class="panel-section-label">Channel spend</p>
-          <button id="marketing-tools-btn" class="btn small full" type="button" aria-expanded="false" aria-controls="marketing-tools-menu">Marketing Tools</button>
           <div id="marketing-tools-menu" class="marketing-tools-menu" aria-hidden="true">
             <div class="marketing-tools-menu-head">
               <h3>Marketing Tools</h3>
             </div>
             <div id="marketing-sliders" class="marketing-sliders"></div>
           </div>
-        </div>
+        
       </section>
 
       <!-- CENTER: BOARD -->
@@ -1227,34 +1321,8 @@
       </section>
 
       <!-- RIGHT: SHOP -->
-      <section class="panel" id="panel-shop" style="display:flex; flex-direction:column; justify-content:space-between;">
-        <div style="display:flex; flex-direction:column; min-height:0; flex:1;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;">
-            <h2 id="turn-display" style="margin:0 !important;">Info</h2>
-          </div>
-
-          <div class="shop-actions-top">
-            <button id="get-insights-btn" class="btn small primary full" type="button" style="display:none;">
-              Get sales insights
-            </button>
-          </div>
-
-          <div id="shop-container">
-            <div id="shop-hover-info" class="hover-info">
-              <div id="hover-text">Hover over a tile or a chart to see details.</div>
-              <div id="budget-mini" class="budget-mini">
-                <div><span class="muted">Current budget</span><span id="ui-current-budget">€0</span></div>
-                <div id="assistant-projection-box" class="assistant-projection-box"></div>
-              </div>
-            </div>
-            <div id="shop-dynamic"></div>
-          </div>
-        </div>
-
-        <div class="shop-footer-actions">
-          <button id="restart-btn"  class="btn">Restart</button>
-          <button id="nextturn-btn" class="btn primary">Next turn</button>
-        </div>
+      <section style="padding: 0 !important" class="panel" id="panel-shop">
+        <div id="right-status-menu"></div>
       </section>
 
     </div>
@@ -1397,6 +1465,7 @@
     let studentRecord = null;
 
     let gameState = null;
+    let rightStatusMenu = null;
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
     function createEmptyGameState() {
@@ -1537,10 +1606,74 @@
       return state;
     }
 
+    function getLastBudgetDelta() {
+      if (!gameState || !Array.isArray(gameState.incomeHistory)) return null;
+      const turn = Number(gameState.turn || 0);
+      if (turn <= 0) return null;
+      return Number(gameState.incomeHistory[turn - 1] || 0);
+    }
+
+    function buildRightStatusBodyHtml() {
+      return `
+        <div class="shop-actions-top">
+          <button id="get-insights-btn" class="btn small primary full" type="button" style="display:none;">
+            Get sales insights
+          </button>
+        </div>
+        <div id="shop-container">
+          <div id="shop-hover-info" class="hover-info">
+            <div id="hover-text">Hover over a tile or a chart to see details.</div>
+            <div id="budget-mini" class="budget-mini">
+              <div><span class="muted">Current budget</span><span id="ui-current-budget">€0</span></div>
+              <div id="assistant-projection-box" class="assistant-projection-box"></div>
+            </div>
+          </div>
+          <div id="shop-dynamic"></div>
+        </div>
+      `;
+    }
+
+    function initRightStatusMenu() {
+      const host = document.getElementById("right-status-menu");
+      if (!host || typeof StatusMenu === "undefined") return;
+      if (rightStatusMenu) rightStatusMenu.destroy();
+
+      rightStatusMenu = new StatusMenu({
+        turnNumber: Number(gameState && gameState.turn || 0),
+        totalTurns: Number(worldSettings && worldSettings.maxTurns || 0) || null,
+        budget: Number(gameState && gameState.budget || 0),
+        budgetDelta: getLastBudgetDelta(),
+        body: { type: "custom", html: buildRightStatusBodyHtml() },
+        nextTurnDisabled: isGameFinished(),
+        onNextTurn: () => nextTurn(),
+        onRestart: () => restartGame(),
+        onProjection: () => createAssistantProjection(),
+      });
+      rightStatusMenu.mount(host);
+    }
+
+    function renderRightStatusMenu() {
+      if (!rightStatusMenu) {
+        initRightStatusMenu();
+        return;
+      }
+
+      rightStatusMenu.update({
+        turnNumber: Number(gameState && gameState.turn || 0),
+        totalTurns: Number(worldSettings && worldSettings.maxTurns || 0) || null,
+        budget: Number(gameState && gameState.budget || 0),
+        budgetDelta: getLastBudgetDelta(),
+        body: { type: "custom", html: buildRightStatusBodyHtml() },
+        nextTurnDisabled: isGameFinished(),
+      });
+    }
+
 
     // ===== UI Updates =====
     function updateInfoPanel() {
-      document.getElementById("turn-display").textContent = "Turn " + (gameState.turn || 0);
+      const turnDisplay = document.getElementById("turn-display");
+      if (turnDisplay) turnDisplay.textContent = "Turn " + (gameState.turn || 0);
+      renderRightStatusMenu();
       const cur = Number(gameState.budget || 0);
       const elCur = document.getElementById("ui-current-budget");
       if (elCur) elCur.textContent = formatEuro(cur);
@@ -1674,8 +1807,8 @@
             refreshInfrastructureSpendingsFromBoard();
             overlayEl.style.display = "none";
             renderBoard();
-            renderShop(null, false);
             updateAll();
+            renderShop(null, false);
             await saveGameState(worldId, playerId, gameState);
           });
 
@@ -1700,8 +1833,8 @@
               refreshInfrastructureSpendingsFromBoard();
               overlayEl.style.display = "none";
               renderBoard();
-              renderShop(null, false);
               updateAll();
+              renderShop(null, false);
               await saveGameState(worldId, playerId, gameState);
             });
 
@@ -2058,7 +2191,7 @@
 
     document.getElementById("buy-close").addEventListener("click", () => {
       document.getElementById("buy-overlay").style.display = "none";
-      d3.select("#shop-container").html("");
+      d3.select("#shop-dynamic").html("");
     });
     document.getElementById("marketing-tools-btn").addEventListener("click", (e) => {
       e.stopPropagation();
@@ -2120,10 +2253,10 @@
     document.getElementById("assistant-overlay").addEventListener("click", (e) => {
       if (e.target.id === "assistant-overlay") closeAssistantOverlay();
     });
-    document.getElementById("budget-mini").addEventListener("click", (e) => {
+    document.addEventListener("click", (e) => {
       if (e.target && e.target.id === "get-assistant-projection-btn") createAssistantProjection();
+      if (e.target && e.target.id === "get-insights-btn") openInsightsOverlay();
     });
-    document.getElementById("get-insights-btn").addEventListener("click", openInsightsOverlay);
     document.getElementById("insights-close").addEventListener("click", closeInsightsOverlay);
     document.getElementById("insights-overlay").addEventListener("click", (e) => {
       if (e.target.id === "insights-overlay") closeInsightsOverlay();
@@ -2208,17 +2341,17 @@
       if (!confirm("Restart game? This will reset your board.")) return;
       gameState = createEmptyGameState();
       renderBoard();
-      renderShop(null,false);
       renderMarketingSliders();
       updateAll();
+      renderShop(null,false);
       resetHoverInfo();
       const nextBtn = document.getElementById("nextturn-btn");
       if (nextBtn) nextBtn.disabled = false;
       await saveGameState(worldId, playerId, gameState);
     }
 
-    document.getElementById("nextturn-btn").addEventListener("click", () => { nextTurn(); });
-    document.getElementById("restart-btn").addEventListener("click", () => { restartGame(); });
+    document.getElementById("nextturn-btn")?.addEventListener("click", () => { nextTurn(); });
+    document.getElementById("restart-btn")?.addEventListener("click", () => { restartGame(); });
 
     // ===== Auswahl-Overlay =====
     async function showSelectionOverlay() {
@@ -2284,8 +2417,9 @@
       }
 
       renderBoard();
-      renderShop(null,false);
+      initRightStatusMenu();
       updateAll();
+      renderShop(null,false);
     }
 
     (async function init() {
@@ -2693,16 +2827,39 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       const title = document.getElementById("summary-title");
       if (!overlay || !content) return;
       if (title) title.textContent = isFinal ? "Final turn summary" : `Turn ${report.turn} summary`;
-      content.innerHTML = renderTurnReportHtml(report, isFinal);
-      overlay.style.display = "flex";
-      overlay.style.position = "fixed";
-      overlay.style.inset = "0";
-      overlay.style.alignItems = "center";
-      overlay.style.justifyContent = "center";
-      overlay.style.background = "rgba(0,0,0,.55)";
-      overlay.style.zIndex = "100";
-      overlay.style.padding = "16px";
-      const nextBtn = document.getElementById("nextturn-btn");
+      if(isFinal){
+        content.innerHTML = renderTurnReportHtml(report, isFinal);
+         overlay.style.display = "flex";
+        overlay.style.position = "fixed";
+        overlay.style.inset = "0";
+        overlay.style.alignItems = "center";
+        overlay.style.justifyContent = "center";
+        overlay.style.background = "rgba(0,0,0,.55)";
+        overlay.style.zIndex = "100";
+        overlay.style.padding = "16px";
+        const nextBtn = document.getElementById("nextturn-btn");
+      }
+      else {
+        const modal = new TurnSummaryModal({
+          turnNumber: report.turn,
+          openingBalance: report.openingBudget,
+          closingBalance: report.closingBudget,
+          objectIncome: report.objectIncome,
+          ticketIncome: report.ticketIncome,
+          groups: [
+              { name: 'Youth',    thisTurn: report.newSales[0], total: report.totalTicketSales[0], pace: report.salesEfficiency[0], suitability: report.suitability[0], interest: report.interest[0] },
+              { name: 'Families', thisTurn: report.newSales[1], total: report.totalTicketSales[1], pace: report.salesEfficiency[1], suitability: report.suitability[1], interest: report.interest[1] },
+              { name: 'Seniors',  thisTurn: report.newSales[2], total: report.totalTicketSales[2], pace: report.salesEfficiency[2], suitability: report.suitability[2], interest: report.interest[2]},
+          ],
+          ticketPrice: report.ticketPrice,
+          reasonableness: { current: report.priceReasonableness, target: 1.0 },
+          onContinue: () => { modal.close(); startNextTurn(); },
+          onClose:    () => console.log('summary dismissed'),
+     });
+
+          modal.show();
+      }
+      
       if (nextBtn) nextBtn.disabled = !!isFinal;
     }
 
