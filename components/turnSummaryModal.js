@@ -1,4 +1,5 @@
 
+
 const TURN_SUMMARY_STYLES = `
 .ts-modal-backdrop {
   position: fixed;

@@ -15,13 +15,14 @@
   <script src="components/controlMenuButton.js"></script>
   <script src="components/turnSummaryModal.js"></script>
   <script src="components/rightStatusMenu.js"></script>
+  <script src="components/marketingToolsPanel.js"></script>
 </head>
 <style>
   /* =========================================================
      DESIGN SYSTEM TOKENS (scoped overrides – styles.css untouched)
      ========================================================= */
   :root{
-    --gb-radius:       4px;
+    --gb-radius:       6px;
     --gb-radius-sm:    8px;
     --gb-radius-pill:  100px;
 
@@ -50,6 +51,7 @@
     --gb-info:         #3b82f6;
 
     --gb-tx:           160ms cubic-bezier(.4, 0, .2, 1);
+    --gb-news-reports: #2a2a2a;
   }
 
   body.theme-dark{
@@ -70,6 +72,8 @@
     --gb-surface-sunk: #0f172a;
     --gb-border:       rgba(255, 255, 255, .08);
     --gb-border-strong:rgba(255, 255, 255, .14);
+
+    --gb-news-reports: #101824;
   }
 
   body{
@@ -182,11 +186,21 @@
   }
   #ticket-prices-btn:hover,
   #marketing-tools-btn:hover,
+  #hire-sales-btn:hover,
+  #hire-assistant-btn:hover,
+  #request-credit:hover,
   #ticket-prices-btn[aria-expanded="true"],
   #marketing-tools-btn[aria-expanded="true"]{
     border-color: var(--gb-accent);
     color: var(--gb-accent-ink);
     background: var(--gb-accent-soft);
+  }
+  #news-reports-btn:hover{
+    background: #0a4e45;
+  }
+  #news-reports-btn{
+    background-color: var(--gb-news-reports, rgba(15,23,42,.03));
+    border: 1px solid rgba(255, 255, 255, 0.097) !important;
   }
   #ticket-prices-btn[aria-expanded="true"],
   #marketing-tools-btn[aria-expanded="true"]{
@@ -240,8 +254,7 @@
     margin-bottom: 14px;
   }
 
-  .ticket-prices-menu,
-  .marketing-tools-menu{
+  .ticket-prices-menu{
     position: fixed;
     display: none;
     width: min(360px, calc(100vw - 32px));
@@ -254,6 +267,38 @@
     box-shadow: var(--gb-shadow-lg);
     z-index: 75;
   }
+
+  .marketing-tools-menu{
+    position: fixed;
+    display: none;
+    width: min(360px, calc(100vw - 32px));
+    max-height: min(82vh, 660px);
+    overflow-y: auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: var(--gb-radius);
+    box-shadow: var(--gb-shadow-lg);
+    z-index: 75;
+    --mt-bg: var(--gb-surface);
+    --mt-surface: var(--gb-surface-soft);
+    --mt-border: var(--gb-border);
+    --mt-text: var(--gb-text);
+    --mt-text-secondary: var(--gb-text-muted);
+    --mt-text-tertiary: var(--gb-text-subtle);
+    --mt-accent-bg: var(--gb-accent-soft);
+    --mt-accent-text: var(--gb-accent-ink);
+    --mt-accent-strong: var(--gb-accent);
+    --mt-accent-strong-hover: var(--gb-accent-hover);
+    --mt-radius-sm: var(--gb-radius-sm);
+    --mt-radius-md: var(--gb-radius-sm);
+    --mt-radius-lg: var(--gb-radius);
+  }
+
+  .marketing-tools-menu .mt-panel{
+    box-shadow: var(--gb-shadow-lg);
+  }
+
   .ticket-prices-menu.is-open,
   .marketing-tools-menu.is-open{
     display: block;
@@ -1176,9 +1221,10 @@
     <div class="row-grid">
 
       <!-- LEFT: Marketing -->
-      <section style="padding:8px !important;" class="panel" id="panel-info">
+      <section style="padding:8px !important; display:flex; flex-direction: column;" class="panel" id="panel-info">
         <h2>Control board</h2>
 
+        <div style="flex: 1 1 auto;">
         <div class="gb-rows">
           <button id="hire-sales-btn" class="gb-row" type="button" data-action="sales-team">
             <span class="gb-row__icon">
@@ -1226,7 +1272,7 @@
               </svg>
             </span>
             <span class="gb-row__label">Ticket price</span>
-            <span class="gb-row__value">€0</span>
+            <span id="ticket-price-row-value" class="gb-row__value">€0</span>
             <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3.5 2L7 5l-3.5 3" />
@@ -1268,6 +1314,23 @@
             </svg>
           </button>
         </div>
+        </div>
+        <div class="" style="padding: 5px 0px;">
+          <button id="news-reports-btn" class="" style="width: 100%; font-size: 14px; 
+          display: flex; text-align: left; gap:12px; align-items:center; color:#f1f5f9; padding: 10px 16px; 
+          border-radius: 8px; font-weight: 400; cursor: pointer;">
+            <span class="gb-row__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="svg-icon" style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;" viewBox="0 0 1024 1024" version="1.1"><path d="M948.735317 609.719602c-3.562129 3.63376-6.732331 6.949272-9.549493 10.144034-2.837628 3.189645-5.335519 5.857405-7.451716 7.998161-2.842745 2.886747-5.310959 4.984524-7.4159 6.383384l-90.278119-89.465614c4.238534-3.586688 9.003048-7.831362 14.314007-12.772908 5.310959-5.02341 9.729595-8.915044 13.294794-11.753695 8.481162-7.828292 17.683754-11.149944 27.608801-10.145058 9.886161 1.091868 18.035772 3.409656 24.420179 6.950296 7.081279 3.585665 14.688537 9.79304 22.843264 18.632359 8.128121 8.919137 14.344706 18.277272 18.563798 28.29544 2.13564 5.640464 3.560082 12.768815 4.281513 21.293979C960.057177 593.762165 956.500165 601.979314 948.735317 609.719602L948.735317 609.719602 948.735317 609.719602 948.735317 609.719602zM785.153682 772.752746l-73.275887 73.487711c-9.925047 9.925047-18.23327 18.494213-24.965601 25.575492-6.730285 7.0383-10.446933 10.969842-11.169387 11.670807-3.520173 2.843768-7.407714 5.858428-11.6749 9.096169-4.219091 3.140527-8.503675 5.858428-12.744255 7.954159-4.241604 2.14178-10.778484 4.765537-19.62599 8.042163-8.858762 3.189645-17.884322 6.164397-27.087938 9.008164-9.202593 2.843768-18.059308 5.336542-26.560936 7.433296-8.481162 2.185782-14.872732 3.584642-19.10308 4.282536-8.53028 1.449002-14.192234 0.357134-17.011442-3.184529-2.838651-3.550873-3.541663-9.583263-2.119267-18.10331 0.719384-4.282536 2.119267-10.671037 4.241604-19.152199 2.140757-8.56405 4.614088-17.270339 7.456832-26.098401 2.816139-8.92016 5.462408-17.269315 7.973602-25.096585 2.452865-7.780197 4.41659-13.114692 5.79396-15.914458 4.28663-9.267061 9.945513-17.397229 17.011442-24.52251l13.836123-13.860682 26.5374-26.625404c10.627035-10.671037 22.297842-22.556739 35.042097-35.675524 12.743232-13.114692 25.484418-26.097378 38.2123-38.865169 30.472012-30.5549 64.817238-64.660672 103.054097-102.258988l89.185228 89.451288L785.153682 772.752746 785.153682 772.752746 785.153682 772.752746zM696.507736 219.197304c0-14.559601-11.799744-26.361391-26.338878-26.361391l-52.702316 0 0-52.682873 105.409748 0c14.539134 0 26.340925 11.758812 26.340925 26.360368l0 358.368994-52.709479 57.993832L696.507736 219.197304 696.507736 219.197304 696.507736 219.197304 696.507736 219.197304zM564.753993 245.557672l-26.361391 0c-14.538111 0-26.340925-11.80179-26.340925-26.360368L512.051677 113.787556c0-14.557554 11.802814-26.360368 26.340925-26.360368l26.361391 0c14.539134 0 26.346041 11.802814 26.346041 26.360368l0 105.409748C591.100034 233.754858 579.293127 245.557672 564.753993 245.557672L564.753993 245.557672 564.753993 245.557672zM327.577199 140.15304l158.113087 0 0 52.682873L327.577199 192.835913 327.577199 140.15304 327.577199 140.15304zM274.869766 245.557672l-26.340925 0c-14.557554 0-26.365484-11.80179-26.365484-26.360368L222.163357 113.787556c0-14.557554 11.80793-26.360368 26.365484-26.360368l26.340925 0c14.539134 0 26.367531 11.802814 26.367531 26.360368l0 105.409748C301.236274 233.754858 289.408901 245.557672 274.869766 245.557672L274.869766 245.557672 274.869766 245.557672zM116.753609 219.197304l0 579.784826c0 14.558577 11.80793 26.361391 26.365484 26.361391l332.979744 0-47.920406 52.68185L90.389148 878.025371c-14.535041 0-26.341948-11.757788-26.341948-26.317389L64.0472 166.513408c0-14.602579 11.80793-26.360368 26.341948-26.360368l105.433284 0 0 52.682873-52.702316 0C128.556423 192.835913 116.753609 204.637704 116.753609 219.197304L116.753609 219.197304 116.753609 219.197304 116.753609 219.197304zM617.465518 654.048203c0 7.262404-5.9055 13.162788-13.183254 13.162788L208.98522 667.210991c-7.281847 0-13.163811-5.901407-13.163811-13.162788l0-26.356274c0-7.306406 5.881964-13.162788 13.163811-13.162788l395.297045 0c7.27673 0 13.183254 5.857405 13.183254 13.162788L617.465518 654.048203 617.465518 654.048203zM604.283288 456.376145 208.98522 456.376145c-7.281847 0-13.163811-5.9055-13.163811-13.163811l0-26.360368c0-7.300266 5.881964-13.158694 13.163811-13.158694l395.297045 0c7.27673 0 13.183254 5.858428 13.183254 13.158694l0 26.360368C617.465518 450.470645 611.560018 456.376145 604.283288 456.376145L604.283288 456.376145 604.283288 456.376145 604.283288 456.376145zM604.283288 456.376145"/></svg>
+            </span>
+            <span style="flex: 1; overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; line-height: 1.3;">News and Reports</span>
+            <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
+              stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3.5 2L7 5l-3.5 3" />
+            </svg>
+          </button>
+        </div>
         
         <div id="ticket-prices-menu" class="ticket-prices-menu" aria-hidden="true">
             <div class="ticket-prices-menu-head">
@@ -1286,7 +1349,7 @@
             </div>
           </div>
 
-        <div class="panel-section">
+        <!--<div class="panel-section">
           <p class="panel-section-label">Sales partner</p>
           <div id="sales-team-status" class="sales-team-status">
             <div class="sts-left">
@@ -1304,14 +1367,9 @@
             </div>
             <span style="color:var(--gb-text-subtle); font-size:11px;">—</span>
           </div>
-        </div>
+        </div> -->
 
-          <div id="marketing-tools-menu" class="marketing-tools-menu" aria-hidden="true">
-            <div class="marketing-tools-menu-head">
-              <h3>Marketing Tools</h3>
-            </div>
-            <div id="marketing-sliders" class="marketing-sliders"></div>
-          </div>
+          <div id="marketing-tools-menu" class="marketing-tools-menu" aria-hidden="true"></div>
         
       </section>
 
@@ -1466,7 +1524,9 @@
 
     let gameState = null;
     let rightStatusMenu = null;
+    let marketingToolsPanel = null;
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const MARKETING_WEBSITE_PRICE = 1200;
 
     function createEmptyGameState() {
       const startBudget = worldSettings.startBudget || 0;
@@ -1484,6 +1544,7 @@
         priceReasonablenessProgress: [],
         marketingBudgetHistory: [0],
         marketingPlan: {},
+        website: false,
         interest: [0,0,0],
         requestedCredits: [],
         finalCreditRepaymentsApplied: false,
@@ -1505,7 +1566,6 @@
       let income = 0;
       Object.values(gameState.board || {}).forEach(key => {
         const o = objs[key];
-        console.log(`Object ${key}: `, o);
         if (o && o.income) income += o.income;
       });
       return income;
@@ -1591,6 +1651,7 @@
       if (!Array.isArray(state.priceReasonablenessProgress)) state.priceReasonablenessProgress = [];
       if (!Array.isArray(state.marketingBudgetHistory)) state.marketingBudgetHistory = [0];
       if (!state.marketingPlan) state.marketingPlan = {};
+      if (typeof state.website !== "boolean") state.website = false;
       if (!Array.isArray(state.interest)) state.interest = [0,0,0];
       state.interest = vec3(state.interest);
       if (!Array.isArray(state.requestedCredits)) state.requestedCredits = [];
@@ -1633,21 +1694,55 @@
       `;
     }
 
+
+    function getRightMenuBodyType() {
+      const assistant = getHiredAssistant();
+      if(!assistant) {
+        return {type: 'hint', text: 'Hire personal assistant to get valuable insights.'}
+      }
+      if(!isAssistantActive()){
+        return {type: 'hint', text: "Assistant assesment would be available on the next turn"}
+      }
+      console.log("GAME STATE ASSISTANT PROJ: ", gameState.assistantProjection);
+      console.log("GAME STATE: ", gameState);
+      if(!!gameState?.assistantProjection && (gameState.assistantProjection.turn == gameState.turn)){
+        const hintText = gameState.assistantProjection.priceReasonableness < 0.5 ? 
+        "My research says the ticket price is too high, we should go for something more reasonable" : 
+        gameState.assistantProjection.priceReasonableness > 1.5 ? "My research says the ticket price is too cheap, we can easily go for more" :
+        "This is my rough estimate based on my personal research"; 
+        return {type: 'projection-result', amount: gameState.assistantProjection.estimate, byline: assistant.name, hint: hintText}
+      }
+      else {
+        return {type: 'projection-card', byline: assistant.name}
+      }
+    }
+
     function initRightStatusMenu() {
       const host = document.getElementById("right-status-menu");
       if (!host || typeof StatusMenu === "undefined") return;
       if (rightStatusMenu) rightStatusMenu.destroy();
+      const assistant = getHiredAssistant();
+      let isActiveAssistant = false;
+      if(!!assistant){
+         isActiveAssistant = isAssistantActive();
+      }
 
+      const menuBodyType = getRightMenuBodyType();
       rightStatusMenu = new StatusMenu({
         turnNumber: Number(gameState && gameState.turn || 0),
         totalTurns: Number(worldSettings && worldSettings.maxTurns || 0) || null,
         budget: Number(gameState && gameState.budget || 0),
         budgetDelta: getLastBudgetDelta(),
-        body: { type: "custom", html: buildRightStatusBodyHtml() },
+        //body: { type: "custom", html: buildRightStatusBodyHtml() },
+        body: menuBodyType,
         nextTurnDisabled: isGameFinished(),
         onNextTurn: () => nextTurn(),
         onRestart: () => restartGame(),
-        onProjection: () => createAssistantProjection(),
+        onProjection: async () => {
+         const newBodyType = await createAssistantProjection();
+         console.log("NEW BODY TYPE: ", JSON.stringify(newBodyType));
+         rightStatusMenu.setBody(newBodyType);
+        },
       });
       rightStatusMenu.mount(host);
     }
@@ -1658,18 +1753,27 @@
         return;
       }
 
+      const menuBodyType = getRightMenuBodyType();
+
       rightStatusMenu.update({
         turnNumber: Number(gameState && gameState.turn || 0),
         totalTurns: Number(worldSettings && worldSettings.maxTurns || 0) || null,
         budget: Number(gameState && gameState.budget || 0),
         budgetDelta: getLastBudgetDelta(),
-        body: { type: "custom", html: buildRightStatusBodyHtml() },
+        body: menuBodyType,
+        //body: { type: "custom", html: buildRightStatusBodyHtml() },
         nextTurnDisabled: isGameFinished(),
       });
     }
 
 
     // ===== UI Updates =====
+    function updateTicketPriceRowValue() {
+      const el = document.getElementById("ticket-price-row-value");
+      if (!el || !gameState) return;
+      el.textContent = formatEuro(gameState.ticketPrice || 0);
+    }
+
     function updateInfoPanel() {
       const turnDisplay = document.getElementById("turn-display");
       if (turnDisplay) turnDisplay.textContent = "Turn " + (gameState.turn || 0);
@@ -1677,7 +1781,9 @@
       const cur = Number(gameState.budget || 0);
       const elCur = document.getElementById("ui-current-budget");
       if (elCur) elCur.textContent = formatEuro(cur);
-      renderAssistantProjectionBox();
+      updateTicketPriceRowValue();
+      updateMarketingToolsRowValue();
+      syncMarketingToolsPanelState();
     }
 
     function renderBoard() {
@@ -2013,7 +2119,6 @@
       renderTicketChart();
       renderSalesTeamStatus();
       renderAssistantStatus();
-      renderAssistantProjectionBox();
       updateInsightsButtonVisibility();
     }
 
@@ -2082,6 +2187,7 @@
       if (!gameState || !input || !insight) return;
 
       input.value = Number(gameState.ticketPrice || 0);
+      updateTicketPriceRowValue();
       const assistant = getHiredAssistant();
       if (!assistant) {
         insight.innerHTML = `
@@ -2141,7 +2247,7 @@
       const btn = document.getElementById("marketing-tools-btn");
       if (!menu || !btn) return;
       closeTicketsPricesMenu();
-      renderMarketingSliders();
+      renderMarketingToolsPanel();
       menu.classList.add("is-open");
       menu.setAttribute("aria-hidden", "false");
       btn.setAttribute("aria-expanded", "true");
@@ -2205,6 +2311,7 @@
       if (!gameState) return;
       const raw = Number(e.target.value);
       gameState.ticketPrice = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+      updateTicketPriceRowValue();
     });
     document.getElementById("ticket-price-input").addEventListener("change", async (e) => {
       if (!gameState) return;
@@ -2212,6 +2319,7 @@
       const price = Number.isFinite(raw) ? Math.max(0, raw) : 0;
       gameState.ticketPrice = price;
       e.target.value = price;
+      updateTicketPriceRowValue();
       await saveGameState(worldId, playerId, gameState);
     });
     document.addEventListener("click", (e) => {
@@ -2253,8 +2361,7 @@
     document.getElementById("assistant-overlay").addEventListener("click", (e) => {
       if (e.target.id === "assistant-overlay") closeAssistantOverlay();
     });
-    document.addEventListener("click", (e) => {
-      if (e.target && e.target.id === "get-assistant-projection-btn") createAssistantProjection();
+    document.addEventListener("click", async (e) => {
       if (e.target && e.target.id === "get-insights-btn") openInsightsOverlay();
     });
     document.getElementById("insights-close").addEventListener("click", closeInsightsOverlay);
@@ -2303,7 +2410,22 @@
       gameState.objectIncomeHistory[currentTurn] = objectIncome;
       gameState.ticketIncomeHistory[currentTurn] = ticketIncome;
       gameState.turn = turnAfter;
-      gameState.budget = openingBudget + totalIncome;
+
+
+      const spendings = Object.keys(gameState.marketingPlan).reduce((accumulator, itm)=>accumulator+gameState.marketingPlan[itm], 0);
+      console.log("MARKETING SPENDINGS: ", spendings);
+      gameState.budget = openingBudget + totalIncome - spendings;
+      if(gameState.budget<0){
+        console.log("Bankrupcy");
+      }
+
+      if(spendings>totalIncome){
+        rightStatusMenu.setWarning('Previous turn got more spendings than you earned. Time to reconsider strategy!')
+      }
+
+      if(spendings>gameState.budget){
+        rightStatusMenu.setWarning('Your last bill was higher than your current budget. Time to reconsider strategy!','danger')
+      }
 
       let creditRepayment = 0;
       if ((gameState.turn || 0) >= maxT) {
@@ -2341,7 +2463,7 @@
       if (!confirm("Restart game? This will reset your board.")) return;
       gameState = createEmptyGameState();
       renderBoard();
-      renderMarketingSliders();
+      renderMarketingToolsPanel();
       updateAll();
       renderShop(null,false);
       resetHoverInfo();
@@ -2408,7 +2530,7 @@
       if (!existing) { existing = createEmptyGameState(); await saveGameState(worldId, playerId, existing); }
       gameState = ensureGameStateShape(existing);
       refreshInfrastructureSpendingsFromBoard();
-      renderMarketingSliders();
+      renderMarketingToolsPanel();
 
       const currentTurn = gameState.turn || 0;
       const currentObjectIncome = computeIncome();
@@ -2523,74 +2645,108 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     suitPanel.addEventListener("mouseenter", showSuitabilityPanelInfo);
     suitPanel.addEventListener("mouseleave", resetHoverInfo);
 
-    // ===== Marketing sliders – rebuilt layout =====
-    function renderMarketingSliders() {
-      const host = document.getElementById("marketing-sliders");
-      if (!host) return;
+    // ===== Marketing tools panel =====
+    function getMarketingPanelChannels() {
       const channels = (globalSettings && globalSettings.marketingChannels) || {};
-      host.innerHTML = "";
       if (!gameState.marketingPlan) gameState.marketingPlan = {};
 
-      const keys = Object.keys(channels);
-      if (keys.length === 0) {
-        host.innerHTML = `<div style="font-size:12px; color:var(--gb-text-muted);">No marketingChannels found in globalsettings.</div>`;
-        return;
-      }
-
-      keys.forEach(key => {
+      return Object.keys(channels).map(key => {
         const ch = channels[key] || {};
+        console.log("CHANNEL KEY: ", key);
         const label = ch.label || key;
         const maxSpend = Math.max(0, Number(ch.maxSpend || 0));
 
         if (typeof gameState.marketingPlan[key] !== "number") gameState.marketingPlan[key] = 0;
         if (gameState.marketingPlan[key] > maxSpend) gameState.marketingPlan[key] = maxSpend;
 
-        const row = document.createElement("div");
-        row.className = "mkt-row";
-
-        // head: label + value pill
-        const head = document.createElement("div");
-        head.className = "mkt-row-head";
-        const lab = document.createElement("div");
-        lab.className = "mkt-label";
-        lab.textContent = label;
-        const val = document.createElement("div");
-        val.className = "mkt-value";
-        val.textContent = `€${gameState.marketingPlan[key] || 0}`;
-        head.appendChild(lab);
-        head.appendChild(val);
-
-        // slider
-        const slider = document.createElement("input");
-        slider.className = "mkt-slider";
-        slider.type = "range";
-        slider.min = "0";
-        slider.max = String(maxSpend);
-        slider.step = "1";
-        slider.value = String(gameState.marketingPlan[key] || 0);
-        slider.setAttribute("aria-label", label);
-
-        // meta row: 0 / max
-        //const meta = document.createElement("div");
-        //meta.className = "mkt-meta";
-        //const metaLeft = document.createElement("span");
-        //metaLeft.textContent = "€0";
-        //const metaRight = document.createElement("span");
-        //metaRight.textContent = `Max €${maxSpend}`;
-        //meta.appendChild(metaLeft);
-        //meta.appendChild(metaRight);
-
-        slider.addEventListener("input", () => {
-          const v = parseInt(slider.value, 10) || 0;
-          gameState.marketingPlan[key] = v;
-          val.textContent = `€${v}`;
-        });
-
-        row.appendChild(head);
-        row.appendChild(slider);
-        //row.appendChild(meta);
-        host.appendChild(row);
+        return {
+          id: key,
+          label,
+          value: Number(gameState.marketingPlan[key] || 0),
+          min: 0,
+          max: maxSpend,
+          step: 1,
+          icon: ch.icon || null,
+        };
       });
+    }
+
+    function getMarketingPanelAssets() {
+      return [{
+        id: "website",
+        label: "Website",
+        blurb: "Permanent boost to reach",
+        price: MARKETING_WEBSITE_PRICE,
+        owned: !!(gameState && gameState.website),
+      }];
+    }
+
+    function getMarketingToolsPanelOptions() {
+      return {
+        mountTo: document.getElementById("marketing-tools-menu"),
+        title: "Marketing tools",
+        subtitle: "Adjust spend per channel or buy assets",
+        channels: getMarketingPanelChannels(),
+        assets: getMarketingPanelAssets(),
+        budget: Number(gameState && gameState.budget || 0),
+        currency: "€",
+        onChannelChange: (id, value) => {
+          if (!gameState || !id) return;
+          if (!gameState.marketingPlan) gameState.marketingPlan = {};
+          gameState.marketingPlan[id] = Math.max(0, Math.round(Number(value) || 0));
+          gameState.interest = computeGlobalInterestFromMarketing();
+          updateMarketingToolsRowValue();
+          rendersuitabilityChart();
+        },
+        onAssetBuy: async (id) => {
+          if (id !== "website" || !gameState || gameState.website) return;
+          const price = MARKETING_WEBSITE_PRICE;
+          if (Number(gameState.budget || 0) < price) {
+            alert("Not enough budget.");
+            return;
+          }
+          gameState.budget = Number(gameState.budget || 0) - price;
+          gameState.website = true;
+          renderMarketingToolsPanel();
+          updateAll();
+          await saveGameState(worldId, playerId, gameState);
+          requestAnimationFrame(positionMarketingToolsMenu);
+        },
+      };
+    }
+
+    function renderMarketingToolsPanel() {
+      const host = document.getElementById("marketing-tools-menu");
+      if (!host || !gameState || typeof MarketingToolsPanel === "undefined") return;
+      const options = getMarketingToolsPanelOptions();
+
+      if (!marketingToolsPanel) {
+        host.innerHTML = "";
+        marketingToolsPanel = new MarketingToolsPanel(options);
+        marketingToolsPanel.show();
+      } else {
+        marketingToolsPanel.update(options);
+        if (!marketingToolsPanel.rootEl) marketingToolsPanel.show();
+      }
+
+      updateMarketingToolsRowValue();
+      if (isMarketingToolsMenuOpen()) requestAnimationFrame(positionMarketingToolsMenu);
+    }
+
+    function syncMarketingToolsPanelState() {
+      if (!marketingToolsPanel || !gameState) return;
+      marketingToolsPanel.update(getMarketingToolsPanelOptions());
+      if (isMarketingToolsMenuOpen()) requestAnimationFrame(positionMarketingToolsMenu);
+    }
+
+    function updateMarketingToolsRowValue() {
+      if (!gameState) return;
+      const btn = document.getElementById("marketing-tools-btn");
+      const el = btn && btn.querySelector(".gb-row__value");
+      if (!el) return;
+      const plan = gameState.marketingPlan || {};
+      const activeCount = Object.values(plan).filter(v => Number(v || 0) > 0).length;
+      el.textContent = `${activeCount} active`;
     }
 
     // ===== Credit logic (unchanged) =====
@@ -3113,12 +3269,13 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     }
 
     async function createAssistantProjection(){
-      if (!isAssistantActive()) return;
+      if (!isAssistantActive()) return getRightMenuBodyType();
+      console.log("PROJECTING...");
       const turn = Number(gameState.turn || 0);
-      if (gameState.assistantProjectionTurn === turn && gameState.assistantProjection) return;
+      if (gameState.assistantProjectionTurn === turn && gameState.assistantProjection) return getRightMenuBodyType();
 
       const actual = getAssistantProjectionActual();
-      const variancePct = randomBetween(0.15, 0.30);
+      const variancePct = randomBetween(0.10, 0.30);
       const direction = Math.random() < 0.5 ? -1 : 1;
       const estimate = Math.max(0, Math.round(actual.total * (1 + direction * variancePct)));
       gameState.assistantProjectionTurn = turn;
@@ -3133,60 +3290,10 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         newSales: actual.newSales,
         priceReasonableness: actual.priceReasonableness,
       };
-      renderAssistantProjectionBox();
+      //renderAssistantProjectionBox();
+      const newBodyType = getRightMenuBodyType();
       await saveGameState(worldId, playerId, gameState);
-    }
-
-    function renderAssistantProjectionBox(){
-      const box = document.getElementById("assistant-projection-box");
-      if (!box || !gameState) return;
-      const assistant = getHiredAssistant();
-      if (!assistant) {
-        box.classList.remove("is-visible");
-        box.innerHTML = "";
-        return;
-      }
-
-      box.classList.add("is-visible");
-      if (!isAssistantActive()) {
-        box.innerHTML = `
-          <div class="assistant-projection-card">
-            <div class="assistant-mini-avatar">${assistant.initials}</div>
-            <div class="assistant-projection-body">
-              <strong>Assistant projection</strong>
-              ${assistant.name} will start projecting revenue from the next turn.
-            </div>
-          </div>
-        `;
-        return;
-      }
-
-      const turn = Number(gameState.turn || 0);
-      const projection = gameState.assistantProjectionTurn === turn ? gameState.assistantProjection : null;
-      if (projection) {
-        box.innerHTML = `
-          <div class="assistant-projection-card">
-            <div class="assistant-mini-avatar">${assistant.initials}</div>
-            <div class="assistant-projection-body">
-              <strong>${assistant.name}'s projection</strong>
-              Estimated next-turn revenue from objects + tickets:
-              <div class="assistant-projection-value">${formatEuro(projection.estimate)}</div>
-              <div class="assistant-projection-meta">Includes a ${projection.variancePct}% assistant uncertainty twist. One projection per turn.</div>
-            </div>
-          </div>
-        `;
-      } else {
-        box.innerHTML = `
-          <div class="assistant-projection-card">
-            <div class="assistant-mini-avatar">${assistant.initials}</div>
-            <div class="assistant-projection-body">
-              <strong>Assistant projection</strong>
-              Ask ${assistant.name} for a once-per-turn revenue estimate based on current objects, ticket price and demand.
-              <button id="get-assistant-projection-btn" class="btn small primary full" type="button">Get Assistant Projection</button>
-            </div>
-          </div>
-        `;
-      }
+      return newBodyType;
     }
 
     function renderInsightsOverlay(){

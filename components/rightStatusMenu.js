@@ -1,9 +1,11 @@
+
+
 const GAME_PANEL_STYLES = `
 .gp-panel {
   --gp-bg: #ffffff;
   --gp-surface: #fafaf9;
   --gp-border: rgba(0, 0, 0, 0.1);
-  --gp-text: #1a1a1a;
+  --gp-text: #2a2a2a;
   --gp-text-secondary: #525252;
   --gp-text-tertiary: #9a9a9a;
   --gp-success: #16a34a;
@@ -23,14 +25,15 @@ const GAME_PANEL_STYLES = `
                     "Helvetica Neue", sans-serif;
 
   background: var(--gp-bg);
-  border: 0.5px solid var(--gp-border);
-  border-radius: var(--gp-radius-lg);
+  
   font-family: var(--gp-font-family);
   color: var(--gp-text);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   box-sizing: border-box;
 }
 .gp-panel *, .gp-panel *::before, .gp-panel *::after {
@@ -56,6 +59,7 @@ body.theme-dark .gp-panel,
 /* ---------- Header ---------- */
 .gp-panel__head {
   padding: 16px 20px 14px;
+  flex: 0 0 auto;
 }
 .gp-panel__turn-row {
   display: flex;
@@ -122,16 +126,19 @@ body.theme-dark .gp-panel,
 .gp-panel__divider {
   height: 0.5px;
   background: var(--gp-border);
+  flex: 0 0 auto;
 }
 
 /* ---------- Body ---------- */
 .gp-panel__body {
-  padding: 18px 20px;
-  flex: 1;
+  padding: 12px 14px;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 140px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .gp-panel__hint {
   font-size: 12px;
@@ -277,6 +284,7 @@ body.theme-dark .gp-panel,
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex: 0 0 auto;
 }
 .gp-panel__restart {
   background: transparent;
