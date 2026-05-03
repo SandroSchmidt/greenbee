@@ -248,7 +248,7 @@ body {
    =============================== */
 
 #main-header {
-  height: 74px;
+  height: 64px;
   padding: 0 22px;
   background: rgba(255,255,255,0.88);
   border-bottom: 1px solid rgba(20, 35, 26, 0.1);
@@ -558,7 +558,7 @@ body.theme-dark .icon-trigger .empty-icon {
   </header>
 
   <main class="page-wrap">
-    <section class="panel">
+    <!--<section class="panel">
   <h2>Population</h2>
   <p class="text-muted">Number of people by group</p>
 
@@ -578,7 +578,7 @@ body.theme-dark .icon-trigger .empty-icon {
     </thead>
     <tbody></tbody>
   </table>
-</section>
+</section>-->
     <section class="panel">
       <h2>Objects</h2>
       <p class="text-muted">Alle Bauelemente des Spiels mit Preis, Einkommen, Farbe und Interessens-Werten.</p>
@@ -814,10 +814,6 @@ body.theme-dark .icon-trigger .empty-icon {
       localGlobal = JSON.parse(JSON.stringify(localGlobal)); // Kopie
       renderObjectsTable();
       if (!localGlobal.marketingChannels) localGlobal.marketingChannels = {};
-      if (!localGlobal.population) localGlobal.population = [3000, 3000, 3000];
-      document.querySelector('[data-field="population-youth"]').value = localGlobal.population[0];
-      document.querySelector('[data-field="population-families"]').value = localGlobal.population[1];
-      document.querySelector('[data-field="population-seniors"]').value = localGlobal.population[2];
       renderMarketingTable();
       document.getElementById("base-suitability-k").value =
         (localGlobal.baseRules && localGlobal.baseRules.suitabilitySaturationK) || "";
@@ -871,11 +867,6 @@ mrows.forEach(tr => {
 
 localGlobal.marketingChannels = channels;
 
-      localGlobal.population = [
-        parseFloat(document.querySelector('[data-field="population-youth"]').value) || 0,
-        parseFloat(document.querySelector('[data-field="population-families"]').value) || 0,
-        parseFloat(document.querySelector('[data-field="population-seniors"]').value) || 0
-      ];
       localGlobal.baseRules = {
         suitabilitySaturationK: parseFloat(document.getElementById("base-suitability-k").value) || 0
       };

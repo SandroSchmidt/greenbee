@@ -47,13 +47,13 @@ async function loadGlobalSettings() {
 
   if (!val.groups) {
     // Minimal-Default: kann später per Admin-UI überschrieben werden
-    val.groups = ["youth", "families", "seniors"];
+    val.groups = ["Youth", "Families", "Seniors"];
   }
   if (!val.objects) {
-    val.objects = {}; // Admin legt alles an
+    val.objects = []; // Admin legt alles an
   }
   if (!val.baseRules) {
-    val.baseRules = {}; // optional, kann leer sein
+    val.baseRules = []; // optional, kann leer sein
   }
 
   globalsettingsCache = val;
@@ -82,9 +82,10 @@ async function loadWorldSettings(worldId) {
 
   // Nichts weiter hardcoden – Lehrer/Admin füllen alles über UI.
   // Wir stellen nur sicher, dass einige Strukturen existieren.
-  if (!ws.tickets) ws.tickets = {};
-  if (!ws.students) ws.students = {};
-  if (!ws.objectsEnabled) ws.objectsEnabled = {};
+  // if (!ws.tickets) ws.tickets = {};
+  if (!ws.population) ws.population = [];
+  if (!ws.students) ws.students = [];
+  if (!ws.objectsEnabled) ws.objectsEnabled = [];
 
   worldsettingsCache[worldId] = ws;
   return ws;
