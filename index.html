@@ -1563,6 +1563,18 @@
 
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     const MARKETING_WEBSITE_PRICE = 1200;
+    const VENDOR_ORGANIZATION_NAMES = [
+      "Local Brewery",
+      "Harvest Kitchen Co.",
+      "North Gate Snacks",
+      "Sunfield Coffee",
+      "Riverbend Crafts",
+      "Little Lantern Foods",
+      "Urban Treats Collective",
+      "Meadow Market",
+      "Oak & Honey",
+      "Festival Supply Co."
+    ];
 
     function createEmptyGameState() {
       const startBudget = worldSettings.startBudget || 0;
@@ -1583,6 +1595,7 @@
         website: false,
         interest: [0,0,0],
         requestedCredits: [],
+        proposals: [],
         finalCreditRepaymentsApplied: false,
         salesTeam: null,
         assistant: null,
@@ -1592,6 +1605,7 @@
         objectIncomeHistory: [0],
         ticketIncomeHistory: [0],
         turnReports: [],
+        rentedBooths: [],
         infrastructuralSpendings: 0,
       };
     }
@@ -1636,10 +1650,15 @@
     function computesuitability() {
       const objs = globalSettings.objects || {};
       const res = [0,0,0];
-      Object.values(gameState.board || {}).forEach(key => {
+      Object.entries(gameState.board || {}).forEach(([tile, key]) => {
         const o = objs[key];
         if (!o || !Array.isArray(o.suitability)) return;
         o.suitability.forEach((v,i) => { res[i] += (v||0); });
+        const booth = (gameState?.rentedBooths ?? []).find(itm => itm.tile === tile);
+        const vendorSuitability = booth && (booth.vendorSuitabilityByGroup || booth.suitability);
+        if (Array.isArray(vendorSuitability)){
+          vendorSuitability.forEach((v, i) => { res[i] += Number(v || 0); });
+        }
       });
       return res;
     }
@@ -1651,6 +1670,11 @@
     function vec3(value, fallback = [0,0,0]) {
       const src = Array.isArray(value) ? value : fallback;
       return [0, 1, 2].map(i => Math.max(0, Number(src[i] || 0)));
+    }
+
+    function signedVec3(value, fallback = [0,0,0]) {
+      const src = Array.isArray(value) ? value : fallback;
+      return [0, 1, 2].map(i => Number(src[i] || 0));
     }
 
     function getGroupLabels() {
@@ -1691,6 +1715,7 @@
       if (!Array.isArray(state.interest)) state.interest = [0,0,0];
       state.interest = vec3(state.interest);
       if (!Array.isArray(state.requestedCredits)) state.requestedCredits = [];
+      if (!Array.isArray(state.proposals)) state.proposals = [];
       if (typeof state.finalCreditRepaymentsApplied !== "boolean") state.finalCreditRepaymentsApplied = false;
       if (typeof state.ticketPrice === "undefined") state.ticketPrice = 0;
       if (typeof state.salesTeam === "undefined") state.salesTeam = null;
@@ -1699,6 +1724,7 @@
       if (typeof state.assistantProjectionTurn === "undefined") state.assistantProjectionTurn = null;
       if (typeof state.assistantProjection === "undefined") state.assistantProjection = null;
       if (!Array.isArray(state.turnReports)) state.turnReports = [];
+      if (!Array.isArray(state.rentedBooths)) state.rentedBooths = [];
       if (typeof state.infrastructuralSpendings !== "number") state.infrastructuralSpendings = 0;
       return state;
     }
@@ -1962,6 +1988,7 @@
         const grid = content.append("div").attr("class", "shop-object-grid");
 
         Object.keys(objs).forEach(key => {
+          console.log("KEY: ", globalSettings.objects[key]);
           if (!enabled[key]) return;
           const o = objs[key];
           const btn = grid.append("button")
@@ -2494,7 +2521,8 @@
 
       const currentTurn = Number(gameState.turn || 0);
       const openingBudget = Number(gameState.budget || 0);
-      const objectIncome = Number(computeIncome() || 0);
+      //const objectIncome = Number(computeIncome() || 0);
+      const objectIncome = 0;
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
@@ -2572,6 +2600,8 @@
       };
       gameState.turnReports.push(report);
       console.log("GAME STATE: ", gameState);
+      addGeneratedProposalsToGameState(generateProposals(gameState, worldSettings, globalSettings));
+      if (deskMenu || isDeskMenuOpen()) renderDeskMenu();
       updateAll();
       await saveGameState(worldId, playerId, gameState);
       showTurnReport(report, (gameState.turn || 0) >= maxT);
@@ -2851,36 +2881,134 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       if (isMarketingToolsMenuOpen()) requestAnimationFrame(positionMarketingToolsMenu);
     }
 
+    function pickVendorName(seed) {
+      const names = VENDOR_ORGANIZATION_NAMES;
+      if (!names.length) return "Vendor";
+      const str = String(seed || "");
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+      }
+      return names[Math.abs(hash) % names.length];
+    }
+
+    function getProposalId(proposal, fallbackIndex = 0) {
+      if (proposal && proposal.id) return proposal.id;
+      if (proposal && proposal.vendorId) return proposal.vendorId;
+      return `proposal-${proposal && proposal.tile || "tile"}-${gameState && gameState.turn || 0}-${fallbackIndex}`;
+    }
+
+    function normalizeVendorProposal(rawProposal, index = 0) {
+      const id = getProposalId(rawProposal, index);
+      return {
+        id,
+        price: Math.max(0, Number(rawProposal && rawProposal.price || 0)),
+        obj_key: String(rawProposal && rawProposal.obj_key || ""),
+        tile: String(rawProposal && rawProposal.tile || ""),
+        vendorSuitabilityByGroup: signedVec3(rawProposal && rawProposal.vendorSuitabilityByGroup),
+        vendorId: rawProposal && rawProposal.vendorId ? String(rawProposal.vendorId) : id,
+        vendorName: rawProposal && rawProposal.vendorName ? String(rawProposal.vendorName) : pickVendorName(id),
+        turn: Number(gameState && gameState.turn || 0),
+        status: rawProposal && rawProposal.status ? rawProposal.status : "pending",
+      };
+    }
+
+    function addGeneratedProposalsToGameState(rawProposals) {
+      if (!gameState) return;
+      if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
+      const existingIds = new Set(gameState.proposals.map(p => p && p.id).filter(Boolean));
+
+      (Array.isArray(rawProposals) ? rawProposals : []).forEach((rawProposal, index) => {
+        const proposal = normalizeVendorProposal(rawProposal, index);
+        if (!proposal.tile || !proposal.obj_key || existingIds.has(proposal.id)) return;
+        gameState.proposals.push(proposal);
+        existingIds.add(proposal.id);
+      });
+    }
+
+    function getDeskProposalItems() {
+      const proposals = Array.isArray(gameState && gameState.proposals) ? gameState.proposals : [];
+      return proposals.map((proposal, index) => {
+        const id = getProposalId(proposal, index);
+        const status = proposal.status || "pending";
+        const suitability = signedVec3(proposal.vendorSuitabilityByGroup);
+        const sign = v => Number(v || 0) >= 0 ? `+${Number(v || 0)}` : `${Number(v || 0)}`;
+
+        return {
+          id,
+          type: "proposal",
+          sender: proposal.vendorName || pickVendorName(id),
+          turn: Number(proposal.turn || 0),
+          title: `Booth rental for ${proposal.tile}`,
+          preview: `${formatEuro(proposal.price)} one-time offer for ${proposal.obj_key}.`,
+          body: `${proposal.vendorName || pickVendorName(id)} wants to rent booth ${proposal.tile}. Accepting pays immediately and reserves this square for that vendor.`,
+          status,
+          terms: [
+            { label: "Payment", value: formatEuro(proposal.price) },
+            { label: "Booth", value: proposal.tile },
+            { label: "Object", value: proposal.obj_key },
+            { label: "Suitability", value: suitability.map(sign).join(" / ") },
+          ],
+        };
+      });
+    }
+
+    async function acceptVendorProposal(proposalId) {
+      if (!gameState || !proposalId) return;
+      if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
+      if (!Array.isArray(gameState.rentedBooths)) gameState.rentedBooths = [];
+
+      const proposal = gameState.proposals.find(p => getProposalId(p) === proposalId);
+      if (!proposal || proposal.status === "accepted" || proposal.status === "declined") return;
+      if (gameState.rentedBooths.some(booth => booth.tile === proposal.tile)) {
+        gameState.proposals.forEach(p => {
+          if (p.tile === proposal.tile && p.status === "pending") p.status = "declined";
+        });
+        renderDeskMenu();
+        await saveGameState(worldId, playerId, gameState);
+        return;
+      }
+
+      proposal.status = "accepted";
+      gameState.budget = Number(gameState.budget || 0) + Math.max(0, Number(proposal.price || 0));
+      gameState.rentedBooths.push({
+        price: Math.max(0, Number(proposal.price || 0)),
+        obj_key: proposal.obj_key,
+        tile: proposal.tile,
+        vendorSuitabilityByGroup: signedVec3(proposal.vendorSuitabilityByGroup),
+        vendorId: proposal.vendorId,
+        vendorName: proposal.vendorName,
+        acceptedTurn: Number(gameState.turn || 0),
+        proposalId,
+      });
+
+      gameState.proposals.forEach(p => {
+        if (p.tile === proposal.tile && getProposalId(p) !== proposalId && p.status === "pending") {
+          p.status = "declined";
+        }
+      });
+
+      gameState.interest = computeGlobalInterestFromMarketing();
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function declineVendorProposal(proposalId) {
+      if (!gameState || !Array.isArray(gameState.proposals)) return;
+      const proposal = gameState.proposals.find(p => getProposalId(p) === proposalId);
+      if (!proposal || proposal.status !== "pending") return;
+      proposal.status = "declined";
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
     function getDeskMenuOptions() {
       return {
         mountTo: document.getElementById("desk-menu"),
-        items: [
-          {
-            id: 'r-1',
-            type: 'report',
-            sender: 'Assistant',
-            turn: 12,
-            title: 'Marketing channel insight',
-            preview: 'Your billboards are underperforming…',
-            body: 'Full report text shown when expanded.',
-          },
-          {
-            id: 'p-1',
-            type: 'proposal',
-            sender: 'Local brewery',
-            turn: 12,
-            title: 'Sponsor deal — €400 per turn',
-            body: 'Logo placement on Booth #2 for 5 turns.',
-            expiresInTurns: 2,
-            terms: [
-              { label: 'Income',   value: '€400/turn' },
-              { label: 'Duration', value: '5 turns'   },
-              { label: 'Booth',    value: '#2'        },
-            ],
-          },
-        ],
-        onAccept:   (id) => { console.log("ACCEPTED LOGIC TO BE ADDED"); deskMenu.setItemStatus(id, 'accepted'); },
-        onDecline:  (id) => deskMenu.setItemStatus(id, 'declined'),
+        items: getDeskProposalItems(),
+        onAccept:   (id) => acceptVendorProposal(id),
+        onDecline:  (id) => declineVendorProposal(id),
         onItemRead: (id) => {console.log("MARK READ Logic tb added");},
         onClose:    () => closeDeskMenu(),
       };
