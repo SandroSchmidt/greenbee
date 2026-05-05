@@ -330,8 +330,6 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
         vendorId: createVendorId(stand.tile, gameState.turn, i),
       })
     }
-    console.log("PROPOSALS: ", proposals);
-    console.log("check: ", arrProps);
   });
 
 
@@ -358,7 +356,9 @@ function calculateVendorOfferPrice({
   const objects = globalSettings?.objects || {};
   const obj = objects[stand.obj_key] || {};
 
-  const addRandomToBasePrice = randomInt(-10,25);
+  const low_high = (gameState?.salesTeam && gameState?.salesTeam == 'havenfield') ? [10, 50] : [-10, 25];
+  
+  const addRandomToBasePrice = randomInt(low_high);
   const basePrice = Math.max(1, Number(obj.price + addRandomToBasePrice || 0));
 
   // Ticket sales make vendors more confident.

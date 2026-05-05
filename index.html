@@ -229,6 +229,22 @@
     max-width: 100%;
     max-height: 100%;
   }
+  #panel-board .board-hover-text{
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    max-width: min(320px, calc(100% - 24px));
+    padding: 8px 10px;
+    border-radius: var(--gb-radius-sm);
+    border: 1px solid var(--gb-border);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: var(--gb-shadow-sm);
+    pointer-events: none;
+  }
+  body.theme-dark #panel-board .board-hover-text{
+    background: rgba(15, 23, 42, 0.82);
+  }
 
   /* =========================================================
      MARKETING PANEL – fully rebuilt layout
@@ -1409,6 +1425,7 @@
 
       <!-- CENTER: BOARD -->
       <section class="panel" id="panel-board">
+        <div id="hover-text" class="board-hover-text">Hover over a tile or a chart to see details.</div>
         <svg id="game-board"></svg>
       </section>
 
@@ -1489,30 +1506,30 @@
         name: "Ironpath Sales Co.",
         initials: "IS",
         color: "#0f172a",
-        tagline: "Premium & senior segments",
-        bio: "Veteran B2B agency with strong relationships in cultural and senior community networks. Best for premium ticket conversion and trust-driven outreach.",
-        stats: ["Senior +", "Premium +", "Established"],
-        price: 1200
+        tagline: "Ticket yield specialists",
+        bio: "Commercial ticketing specialists who are strong at positioning the event as higher-value. Best when you want to improve ticket conversion and support a slightly stronger ticket price.",
+        stats: ["Ticket sales boost", "Slight ticket price lift"],
+        price: 250
       },
       {
         id: "northwave",
         name: "Northwave Outreach",
         initials: "NW",
         color: "#2563eb",
-        tagline: "Youth & digital first",
-        bio: "Modern, data-driven outreach with paid social and influencer reach. Best when targeting youth segments and creating early buzz.",
-        stats: ["Youth +", "Digital +", "Fast"],
-        price: 850
+        tagline: "Audience growth specialists",
+        bio: "A modern marketing team focused on reach, campaign efficiency and channel mix. Best when you want stronger awareness and more visitors coming through the gate.",
+        stats: ["Marketing boost", "More visitor demand"],
+        price: 250
       },
       {
         id: "havenfield",
         name: "Havenfield Partners",
         initials: "HF",
         color: "#16a34a",
-        tagline: "Families & community",
-        bio: "Community-rooted partner with deep ties to schools, parent groups and local organisations. Best when family conversion and word-of-mouth matter.",
-        stats: ["Family +", "Community +", "Trust"],
-        price: 1000
+        tagline: "Vendor relations specialists",
+        bio: "A partnership-led team with a strong network of local vendors and exhibitors. Best when you want to attract more stand offers and negotiate better proposal quality for board placements.",
+        stats: ["More vendor interest", "Better stand offers"],
+        price: 250
       }
     ];
 
@@ -1560,6 +1577,9 @@
     let rightStatusMenu = null;
     let marketingToolsPanel = null;
     let deskMenu = null;
+    let objectMenu = null;
+
+    
 
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     const MARKETING_WEBSITE_PRICE = 1200;
@@ -1918,12 +1938,13 @@
         g.append("polygon")
           .attr("points", points.map(p => p.join(",")).join(" "))
           .attr("fill", color)
+          .attr("data-base-fill", color)
           .attr("stroke", "#111827")
           .attr("stroke-width", 1)
           .style("cursor", "pointer")
           .on("click", () => onCellClicked(id))
-          .on("mouseover", () => showTileInfo(id))
-          .on("mouseout", () => clearTileInfo());
+          .on("mouseover", () => showTileInfo(id, g))
+          .on("mouseout", () => clearTileInfo(g));
 
         if (obj.icon) {
           g.append("image")
@@ -1932,8 +1953,8 @@
             .attr("y", cy - hexH * 1.4)
             .attr("width", hexW * 1.6)
             .attr("height", hexH * 2.2)
-            .on("mouseover", () => showTileInfo(id))
-            .on("mouseout", () => clearTileInfo())
+            .on("mouseover", () => showTileInfo(id, g))
+            .on("mouseout", () => clearTileInfo(g))
             .style("pointer-events", "none");
         }
       });
@@ -2559,6 +2580,15 @@
       console.log("MARKETING SPENDINGS: ", spendings);
       spendings += loanPayment;
       console.log("SPEDINGS AFTER LOAN INTEREST: ", spendings);
+      if(gameState?.salesTeam){
+        const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
+        if(salesTeam){
+          spendings+= salesTeam.price;
+        }
+        else {
+          console.log("Problem with hired sales team logic");
+        }
+      }
       gameState.budget = openingBudget + totalIncome - spendings;
       if(gameState.budget<0){
         console.log("Bankrupcy");
@@ -2723,7 +2753,9 @@
     }
 
     // ===== Hover info =====
-    function showTileInfo(id) {
+    function showTileInfo(id,g) {
+      const tileShape = g.select("polygon");
+      tileShape.attr("fill", "#0096FF");
       const board = (gameState && gameState.board) ? gameState.board : {};
       const objs = globalSettings.objects || {};
       const objKey = board[id];
@@ -2733,27 +2765,41 @@
         const price = (o.price ?? 0);
         const income = (o.income ?? 0);
         const suit = Array.isArray(o.suitability) ? o.suitability : [0,0,0];
-        setHoverInfo(
-`Board – Tile ${id}
-Object: ${objKey}
-
-${desc}
-
-Cost: €${price}
-Income/turn: €${income}
-Suitability (G1/G2/G3): ${suit[0]||0} / ${suit[1]||0} / ${suit[2]||0}`
-        );
+        const rentedBooth = gameState?.rentedBooths.find(itm=>itm.tile == id);
+        console.log("RENTED BOOTH: ", rentedBooth)
+        if(rentedBooth){
+          for(let i=0; i<3; i++){
+            suit[i]+=rentedBooth.vendorSuitabilityByGroup[i];
+          }
+        }
+        let hoverInfo = `Board - Tile ${id}`
+        hoverInfo+= `\nObject: ${objKey}`
+        hoverInfo+= `\nCost: €${price}`
+        hoverInfo+= `\nSuitability (G1/G2/G3): ${suit[0]||0} / ${suit[1]||0} / ${suit[2]||0}`
+        if(rentedBooth){
+          hoverInfo+= `\nRented for: €${rentedBooth.price}`
+        }
+        setHoverInfo(hoverInfo);
       } else {
-        setHoverInfo(
-`Board – Tile ${id}
-Empty tile.
-
-${DEFAULT_DESCRIPTIONS.empty || "You can build something here."}`
-        );
+        let hoverInfo = `Board - Tile ${id}`
+        hoverInfo+= `\nEmpty tile.`
+        hoverInfo+=`\nYou can build here.`
+        setHoverInfo(hoverInfo);
       }
     }
-    function clearTileInfo() { resetHoverInfo(); }
-    function setHoverInfo(text) { const el = document.getElementById("hover-text"); if (el) el.textContent = text || ""; }
+
+
+    function clearTileInfo(g) {
+      if (g) {
+        const tileShape = g.select("polygon");
+        const baseFill = tileShape.attr("data-base-fill");
+        if (baseFill) tileShape.attr("fill", baseFill);
+      }
+      resetHoverInfo();
+    }
+    function setHoverInfo(text) {
+      document.querySelectorAll("#hover-text").forEach(el => { el.textContent = text || ""; });
+    }
     function resetHoverInfo() { setHoverInfo("Hover over a tile or a chart to see details."); }
 
     function showBudgetInfo() {
@@ -2916,6 +2962,9 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function addGeneratedProposalsToGameState(rawProposals) {
       if (!gameState) return;
       if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
+      console.log("Proposals before: ", gameState.proposals);
+      gameState.proposals = gameState.proposals.filter(itm => itm.status == 'accepted');
+      console.log("Proposals after: ", gameState.proposals);
       const existingIds = new Set(gameState.proposals.map(p => p && p.id).filter(Boolean));
 
       (Array.isArray(rawProposals) ? rawProposals : []).forEach((rawProposal, index) => {
@@ -3418,7 +3467,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           </div>
           <div class="hire-foot">
             <div>
-              <span class="hire-price-value">€${team.price}</span><span class="hire-price-label">flat</span>
+              <span class="hire-price-value">€${team.price}</span><span class="hire-price-label">Per Turn</span>
             </div>
           </div>
         `;
@@ -3433,7 +3482,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.addEventListener("click", async () => {
           if (!gameState || gameState.salesTeam) return;
           if (Number(gameState.budget || 0) < Number(team.price || 0)) { alert("Not enough budget."); return; }
-          gameState.budget = Number(gameState.budget || 0) - Number(team.price || 0);
+          //gameState.budget = Number(gameState.budget || 0) - Number(team.price || 0);
           gameState.salesTeam = team.id;
           renderHireOverlay();
           renderSalesTeamStatus();

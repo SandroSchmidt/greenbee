@@ -481,13 +481,14 @@ class InboxPanel {
     this.options = Object.assign({
       title: 'Inbox',
       items: [],
-      filters: ['all', 'reports', 'proposals', 'news'],
+      filters: ['all', 'reports', 'proposals', 'news', 'accepted'],
       activeFilter: 'all',
       filterLabels: {
-        all: 'All',
+        all: 'All active',
         reports: 'Reports',
         proposals: 'Proposals',
         news: 'News',
+        accepted: 'Accepted'
       },
       emptyText: 'Nothing to see here — check back next turn.',
       dismissible: true,        // ESC + backdrop click
@@ -586,6 +587,8 @@ class InboxPanel {
     const item = this._findItem(id);
     if (!item) return;
     item.status = status;
+    this._renderHeader();
+    this._renderFilters();
     this._renderItems();
   }
 
@@ -727,11 +730,13 @@ class InboxPanel {
     const filters = this.options.filters || ['all'];
     const labels = this.options.filterLabels || {};
 
+    const isAccepted = i => i.type === 'proposal' && i.status === 'accepted';
     const counts = {
-      all:       items.length,
+      all:       items.filter(i => !isAccepted(i)).length,
       reports:   items.filter(i => i.type === 'report').length,
-      proposals: items.filter(i => i.type === 'proposal').length,
+      proposals: items.filter(i => i.type === 'proposal' && !isAccepted(i)).length,
       news:      items.filter(i => i.type === 'news').length,
+      accepted:  items.filter(isAccepted).length,
     };
 
     const pillsHtml = filters.map(f => {
@@ -749,17 +754,20 @@ class InboxPanel {
   }
 
   _filteredItems() {
-    if (this._activeFilter === 'all') return this.options.items.slice();
+    const isAccepted = i => i.type === 'proposal' && i.status === 'accepted';
+    if (this._activeFilter === 'all') return this.options.items.filter(i => !isAccepted(i));
+    if (this._activeFilter === 'accepted') return this.options.items.filter(isAccepted);
     const typeMap = { reports: 'report', proposals: 'proposal', news: 'news' };
     const targetType = typeMap[this._activeFilter];
     if (!targetType) return this.options.items.slice();
+    if (this._activeFilter === 'proposals') return this.options.items.filter(i => i.type === 'proposal' && !isAccepted(i));
     return this.options.items.filter(i => i.type === targetType);
   }
 
   _buildItemsHtml() {
     const items = this._filteredItems();
     if (items.length === 0) {
-      return `<div class="inbox__empty">${this._escape(this.options.emptyText)}</div>`;
+      return `<div style="height:240px;" class="inbox__empty">${this._escape(this.options.emptyText)}</div>`;
     }
     return `<div style="height:240px; overflow-y:auto;">${items.map(i => this._buildItemHtml(i)).join('')}</div>`;
   }
