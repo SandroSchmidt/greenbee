@@ -36,7 +36,8 @@
  *     // Mode-specific data — pass whatever's relevant for this object
  *     speakers: [
  *       { id: 'sp1', name: 'Marko Petrović', topic: 'Local history',
- *         initials: 'MP', color: 'green', appeal: ['Seniors','Families'], fee: 80 },
+ *         initials: 'MP', color: 'green', appeal: ['Seniors','Families'], fee: 80,
+ *         icon: 'icons/speakers/speaker_male_1.png' },
  *     ],
  *     appointedSpeaker: null,           // when set, 'speaker' mode shows the appointed view
  *
@@ -232,6 +233,7 @@ const OBJECT_ACTION_PANEL_STYLES = `
 }
 .oap-panel__body {
   overflow-y: auto;
+  max-height:230px;
   min-height: 0;
 }
 .oap-panel__empty {
@@ -277,6 +279,17 @@ const OBJECT_ACTION_PANEL_STYLES = `
 .oap-avatar--rose  { background: #F8E1E1; color: #8B2929; }
 .oap-avatar--gray  { background: #F1EFE8; color: #5F5E5A; }
 .oap-avatar--purple { background: #E9E2F0; color: #4B2A75; }
+.oap-avatar--image {
+  overflow: hidden;
+  background: var(--oap-surface, #f5f5f5);
+  border: 0.5px solid var(--oap-border, rgba(0, 0, 0, 0.1));
+}
+.oap-avatar--image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 /* ─── Pills ─── */
 .oap-pill {
@@ -313,6 +326,9 @@ const OBJECT_ACTION_PANEL_STYLES = `
   background: var(--oap-surface, #f5f5f5);
   border-bottom: 0.5px solid var(--oap-border, rgba(0, 0, 0, 0.1));
 }
+.oap-speaker--appointed .oap-speaker__name {
+  font-weight: 650;
+}
 .oap-speaker__info {
   flex: 1;
   min-width: 0;
@@ -340,6 +356,17 @@ const OBJECT_ACTION_PANEL_STYLES = `
   margin-top: 6px;
   font-variant-numeric: tabular-nums;
 }
+.oap-speaker__status {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 7px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--oap-accent-bg, #EAF3DE);
+  color: var(--oap-accent-text, #27500A);
+  font-size: 10px;
+  font-weight: 600;
+}
 .oap-speaker__action {
   display: flex;
   flex-direction: column;
@@ -352,6 +379,16 @@ const OBJECT_ACTION_PANEL_STYLES = `
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--oap-text, #1a1a1a);
+}
+.oap-speaker__warning {
+  max-width: 112px;
+  padding: 5px 7px;
+  border-radius: var(--oap-radius-sm, 6px);
+  background: var(--oap-danger-bg, #FAE3E3);
+  color: var(--oap-danger-text, #8B2929);
+  font-size: 10.5px;
+  line-height: 1.25;
+  text-align: right;
 }
 
 /* ─── Requests ─── */
@@ -676,33 +713,31 @@ const OAP_ICONS = {
 const OAP_DEFAULT_ACTIONS_BY_TYPE = {
   stage:      [
     { id: 'delete',  label: 'Delete',  icon: 'trash',   danger: true },
-    { id: 'upgrade', label: 'Upgrade', icon: 'upgrade' },
-    { id: 'replace', label: 'Replace', icon: 'replace' },
+    //{ id: 'upgrade', label: 'Upgrade', icon: 'upgrade' },
     { id: 'speaker', label: 'Speaker', icon: 'mic' },
   ],
   booth:      [
     { id: 'delete',   label: 'Delete',   icon: 'trash',   danger: true },
-    { id: 'upgrade',  label: 'Upgrade',  icon: 'upgrade' },
-    { id: 'replace',  label: 'Replace',  icon: 'replace' },
+    //{ id: 'upgrade',  label: 'Upgrade',  icon: 'upgrade' },
     { id: 'requests', label: 'Requests', icon: 'inbox'   },
   ],
   bar:        [
     { id: 'delete',   label: 'Delete',   icon: 'trash',   danger: true },
     { id: 'upgrade',  label: 'Upgrade',  icon: 'upgrade' },
-    { id: 'replace',  label: 'Replace',  icon: 'replace' },
-    { id: 'requests', label: 'Requests', icon: 'inbox'   },
+    //{ id: 'replace',  label: 'Replace',  icon: 'replace' },
+    //{ id: 'requests', label: 'Requests', icon: 'inbox'   },
   ],
   bench:      [
     { id: 'delete',  label: 'Delete',  icon: 'trash',   danger: true },
-    { id: 'replace', label: 'Replace', icon: 'replace' },
+    //{ id: 'replace', label: 'Replace', icon: 'replace' },
   ],
   decoration: [
     { id: 'delete',  label: 'Delete',  icon: 'trash',   danger: true },
-    { id: 'replace', label: 'Replace', icon: 'replace' },
+    //{ id: 'replace', label: 'Replace', icon: 'replace' },
   ],
   default:    [
     { id: 'delete',  label: 'Delete',  icon: 'trash',   danger: true },
-    { id: 'replace', label: 'Replace', icon: 'replace' },
+    //{ id: 'replace', label: 'Replace', icon: 'replace' },
   ],
 };
 
@@ -716,8 +751,10 @@ class ObjectActionPanel {
 
       speakers:        [],
       appointedSpeaker: null,
+      speakerError:    null,
 
       requests:        [],
+      leaseInfo:       null,
 
       currentTier:     null,
       upgradeOptions:  [],
@@ -841,6 +878,15 @@ class ObjectActionPanel {
   /** Convenience: flip 'speaker' mode between select + appointed views. */
   setAppointedSpeaker(speaker) {
     this.options.appointedSpeaker = speaker || null;
+    this.options.speakerError = null;
+    if (this._rootEl && this._mode === 'speaker') {
+      this._rerender();
+    }
+  }
+
+  /** Show inline feedback for one speaker appointment attempt. */
+  setSpeakerError(speakerId, message) {
+    this.options.speakerError = message ? { speakerId, message } : null;
     if (this._rootEl && this._mode === 'speaker') {
       this._rerender();
     }
@@ -960,32 +1006,40 @@ class ObjectActionPanel {
 
   _buildSpeakerCardHtml(speaker, variant) {
     const initials = speaker.initials || this._initialsFrom(speaker.name);
-    const colorClass = `oap-avatar--${speaker.color || 'green'}`;
+    const colorName = String(speaker.color || 'green').toLowerCase();
+    const colorClass = `oap-avatar--${colorName}`;
+    const avatarHtml = this._buildSpeakerAvatarHtml(speaker, variant === 'appointed', initials, colorClass);
     const appealHtml = (speaker.appeal || []).map(a =>
       `<span class="oap-pill">${this._escape(a)}</span>`
     ).join('');
-    const fee = `${this._formatMoney(speaker.fee)}/turn`;
+    const fee = this._formatMoney(speaker.fee);
 
     if (variant === 'appointed') {
       const since = speaker.appointedTurn != null
-        ? `Appointed since turn ${Math.round(speaker.appointedTurn)} · ${fee}`
+        ? `Appointed since turn ${Math.round(speaker.appointedTurn)} · Fee ${fee}`
         : `Fee ${fee}`;
       return `
         <div class="oap-speaker oap-speaker--appointed">
-          <div class="oap-avatar oap-avatar--lg ${colorClass}">${this._escape(initials)}</div>
+          ${avatarHtml}
           <div class="oap-speaker__info">
             <div class="oap-speaker__name">${this._escape(speaker.name)}</div>
             <div class="oap-speaker__topic">${this._escape(speaker.topic || '')}</div>
             ${appealHtml ? `<div class="oap-speaker__appeal">${appealHtml}</div>` : ''}
+            <div class="oap-speaker__status">Appointed to this stage</div>
             <div class="oap-speaker__since">${this._escape(since)}</div>
           </div>
         </div>
       `;
     }
 
+    const speakerError = this.options.speakerError;
+    const warningHtml = speakerError && speakerError.speakerId === speaker.id
+      ? `<div class="oap-speaker__warning">${this._escape(speakerError.message)}</div>`
+      : '';
+
     return `
       <div class="oap-speaker">
-        <div class="oap-avatar ${colorClass}">${this._escape(initials)}</div>
+        ${avatarHtml}
         <div class="oap-speaker__info">
           <div class="oap-speaker__name">${this._escape(speaker.name)}</div>
           <div class="oap-speaker__topic">${this._escape(speaker.topic || '')}</div>
@@ -998,6 +1052,7 @@ class ObjectActionPanel {
             class="oap-btn oap-btn--primary oap-btn--small"
             data-oap-appoint="${this._escape(speaker.id)}"
           >Appoint</button>
+          ${warningHtml}
         </div>
       </div>
     `;
@@ -1009,10 +1064,6 @@ class ObjectActionPanel {
     const sp = this.options.appointedSpeaker;
     return `
       ${this._buildSpeakerCardHtml(sp, 'appointed')}
-      <div class="oap-actions-row">
-        <button type="button" class="oap-btn oap-btn--primary"   data-oap-replace-speaker>Replace</button>
-        <button type="button" class="oap-btn oap-btn--secondary" data-oap-dismiss-speaker>Dismiss</button>
-      </div>
     `;
   }
 
@@ -1020,8 +1071,12 @@ class ObjectActionPanel {
 
   _buildRequestsHtml() {
     const reqs = this.options.requests || [];
-    if (reqs.length === 0) {
+    const leaseInfo = this.options.leaseInfo;
+    if (reqs.length === 0 && !leaseInfo) {
       return `<div class="oap-panel__empty">No active requests.</div>`;
+    }
+    if (reqs.length === 0 && leaseInfo) {
+        return `<div class="oap-panel__empty">This booth is already leased to ${leaseInfo.vendorName} for ${leaseInfo.price}</div>`
     }
     return reqs.map(r => this._buildRequestHtml(r)).join('');
   }
@@ -1201,7 +1256,7 @@ class ObjectActionPanel {
     const target = e.target;
     if (!(target instanceof Element)) return;
 
-    const objectId = this.options.object?.id;
+    const objectId = this.options.object?.id; //this is actually tile id, ie "E7" or "A1"
     const opts = this.options;
 
     // Bar action button → toggle/open mode
@@ -1227,7 +1282,14 @@ class ObjectActionPanel {
     if (appointBtn) {
       const speakerId = appointBtn.getAttribute('data-oap-appoint');
       if (typeof opts.onAppointSpeaker === 'function') {
-        opts.onAppointSpeaker(speakerId, objectId);
+        const result = opts.onAppointSpeaker(speakerId, objectId);
+        if (result && typeof result.then === 'function') {
+          result
+            .then(res => this._handleSpeakerAppointmentResult(res, speakerId))
+            .catch(() => this.setSpeakerError(speakerId, 'Could not appoint this speaker.'));
+        } else {
+          this._handleSpeakerAppointmentResult(result, speakerId);
+        }
       }
       return;
     }
@@ -1300,6 +1362,20 @@ class ObjectActionPanel {
     }
   }
 
+  _handleSpeakerAppointmentResult(result, speakerId) {
+    if (!result) return;
+    if (result.error) {
+      this.setSpeakerError(speakerId, result.error);
+      return;
+    }
+    if (result.speaker) {
+      this.setAppointedSpeaker(result.speaker);
+      return;
+    }
+    this.options.speakerError = null;
+    if (this._rootEl && this._mode === 'speaker') this._rerender();
+  }
+
   _handleKeyDown(e) {
     if (e.key !== 'Escape' || !this.options.dismissible) return;
     e.stopPropagation();
@@ -1364,13 +1440,13 @@ class ObjectActionPanel {
       left = anchorRect.left - gap - totalWidth;
       if (left < margin) left = margin;
     } else {
-      left = anchorRect.right + gap;
+      left = anchorRect.right + gap - 35;
       if (left + totalWidth > viewportW - margin) {
         left = Math.max(margin, viewportW - totalWidth - margin);
       }
     }
 
-    let top = anchorRect.top;
+    let top = anchorRect.top - 20;
     if (top + totalHeight > viewportH - margin) {
       top = viewportH - totalHeight - margin;
     }
@@ -1409,6 +1485,21 @@ class ObjectActionPanel {
   }
 
   // ───────── helpers ─────────
+
+  _buildSpeakerAvatarHtml(speaker, isLarge, initials, colorClass) {
+    const classes = ['oap-avatar'];
+    if (isLarge) classes.push('oap-avatar--lg');
+    if (speaker.icon) {
+      classes.push('oap-avatar--image');
+      return `
+        <div class="${classes.join(' ')}">
+          <img src="${this._escape(speaker.icon)}" alt="">
+        </div>
+      `;
+    }
+    classes.push(colorClass);
+    return `<div class="${classes.join(' ')}">${this._escape(initials)}</div>`;
+  }
 
   _escape(value) {
     const div = document.createElement('div');

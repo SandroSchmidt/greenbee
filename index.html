@@ -17,6 +17,8 @@
   <script src="components/rightStatusMenu.js"></script>
   <script src="components/marketingToolsPanel.js"></script>
   <script src="components/deskMenu.js"></script>
+  <script src="components/objectActionPanel.js"></script>
+  <script src="data/speakers.js"></script>
 </head>
 <style>
   /* =========================================================
@@ -244,6 +246,22 @@
   }
   body.theme-dark #panel-board .board-hover-text{
     background: rgba(15, 23, 42, 0.82);
+  }
+  .oap-root{
+    --oap-bg: var(--gb-surface);
+    --oap-surface: var(--gb-surface-soft);
+    --oap-border: var(--gb-border);
+    --oap-text: var(--gb-text);
+    --oap-text-secondary: var(--gb-text-muted);
+    --oap-text-tertiary: var(--gb-text-subtle);
+    --oap-accent-bg: var(--gb-accent-soft);
+    --oap-accent-text: var(--gb-accent-ink);
+    --oap-accent-strong: var(--gb-accent);
+    --oap-accent-strong-hover: var(--gb-accent-hover);
+    --oap-radius-sm: var(--gb-radius-sm);
+    --oap-radius-md: var(--gb-radius-sm);
+    --oap-radius-lg: var(--gb-radius);
+    --oap-z-index: 80;
   }
 
   /* =========================================================
@@ -1578,11 +1596,14 @@
     let marketingToolsPanel = null;
     let deskMenu = null;
     let objectMenu = null;
+    let selectedTileId = null;
 
     
 
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     const MARKETING_WEBSITE_PRICE = 1200;
+    const SELECTED_CELL_COLOR = "#ff2c2c";
+    const OBJECT_ACTION_PANEL_KEYS = new Set(["Premium Stand", "Stand", "Stage"]);
     const VENDOR_ORGANIZATION_NAMES = [
       "Local Brewery",
       "Harvest Kitchen Co.",
@@ -1627,6 +1648,7 @@
         turnReports: [],
         rentedBooths: [],
         infrastructuralSpendings: 0,
+        appointedSpeakers: [],
       };
     }
 
@@ -1678,6 +1700,15 @@
         const vendorSuitability = booth && (booth.vendorSuitabilityByGroup || booth.suitability);
         if (Array.isArray(vendorSuitability)){
           vendorSuitability.forEach((v, i) => { res[i] += Number(v || 0); });
+        }
+
+        //adding suitability points that speaker brings to the table
+        const speakerAppointment = (gameState?.appointedSpeakers ?? []).find(itm => itm.tileId == tile);
+        if(speakerAppointment){
+          const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id == speakerAppointment.speakerId);
+          if (appointedSpeaker && Array.isArray(appointedSpeaker.suitability)) {
+            appointedSpeaker.suitability.forEach((v, i)=> {res[i] += Number(v || 0); });
+          }
         }
       });
       return res;
@@ -1746,6 +1777,17 @@
       if (!Array.isArray(state.turnReports)) state.turnReports = [];
       if (!Array.isArray(state.rentedBooths)) state.rentedBooths = [];
       if (typeof state.infrastructuralSpendings !== "number") state.infrastructuralSpendings = 0;
+      if (!Array.isArray(state.appointedSpeakers)) {
+        state.appointedSpeakers = Array.isArray(state.speakers) ? state.speakers : [];
+      }
+      state.appointedSpeakers = state.appointedSpeakers
+        .filter(appointment => appointment && appointment.speakerId && appointment.tileId)
+        .map(appointment => ({
+          appointmentId: appointment.appointmentId || `${appointment.speakerId}-${appointment.tileId}`,
+          speakerId: appointment.speakerId,
+          tileId: appointment.tileId,
+          appointedTurn: appointment.appointedTurn ?? null,
+        }));
       return state;
     }
 
@@ -1869,6 +1911,7 @@
     }
 
     function renderBoard() {
+      closeObjectActionPanel();
       const svg = d3.select("#game-board");
       svg.selectAll("*").remove();
 
@@ -1946,6 +1989,8 @@
           .on("mouseover", () => showTileInfo(id, g))
           .on("mouseout", () => clearTileInfo(g));
 
+        if (id === selectedTileId) applySelectedTileFill(id);
+
         if (obj.icon) {
           g.append("image")
             .attr("href", obj.icon)
@@ -1960,6 +2005,301 @@
       });
     }
 
+    function isObjectActionPanelObject(objKey) {
+      return OBJECT_ACTION_PANEL_KEYS.has(objKey);
+    }
+
+    function getObjectActionPanelType(objKey) {
+      if (objKey === "Stage") return "stage";
+      if (objKey === "Stand" || objKey === "Premium Stand") return "booth";
+      return "default";
+    }
+
+    function getObjectActionPanelAnchor(tileId) {
+      if (!tileId) return null;
+      return document.querySelector(`#game-board [data-id="${tileId}"]`);
+    }
+
+    function getTileShapeSelection(tileId) {
+      if (!tileId) return d3.select(null);
+      return d3.select(`#game-board g[data-id="${tileId}"] polygon`);
+    }
+
+    function applyTileBaseFill(tileId) {
+      const tileShape = getTileShapeSelection(tileId);
+      if (tileShape.empty()) return;
+      const baseFill = tileShape.attr("data-base-fill");
+      if (baseFill) tileShape.attr("fill", baseFill);
+    }
+
+    function applySelectedTileFill(tileId) {
+      const tileShape = getTileShapeSelection(tileId);
+      if (tileShape.empty()) return;
+      tileShape.attr("fill", SELECTED_CELL_COLOR);
+    }
+
+    function setSelectedTile(tileId) {
+      if (selectedTileId && selectedTileId !== tileId) {
+        applyTileBaseFill(selectedTileId);
+      }
+      selectedTileId = tileId || null;
+      if (selectedTileId) applySelectedTileFill(selectedTileId);
+    }
+
+    function clearSelectedTile() {
+      if (!selectedTileId) return;
+      applyTileBaseFill(selectedTileId);
+      selectedTileId = null;
+    }
+
+    function getObjectStats(obj) {
+      const suitability = Array.isArray(obj.suitability) ? obj.suitability : [0, 0, 0];
+      return [
+        { label: "Price", value: formatEuro(obj.price || 0) },
+        { label: "Income / turn", value: formatEuro(obj.income || 0) },
+        { label: "Suitability", value: suitability.map(v => Number(v || 0)).join(" / ") },
+      ];
+    }
+
+    function getObjectActionPanelRequests(tileId) {
+      const proposals = Array.isArray(gameState && gameState.proposals) ? gameState.proposals : [];
+      const sign = v => Number(v || 0) >= 0 ? `+${Number(v || 0)}` : `${Number(v || 0)}`;
+
+      return proposals
+        .filter(proposal => proposal && proposal.tile === tileId && (proposal.status || "pending") === "pending")
+        .map((proposal, index) => {
+          const id = getProposalId(proposal, index);
+          const suitability = signedVec3(proposal.vendorSuitabilityByGroup);
+          return {
+            id,
+            sender: proposal.vendorName || pickVendorName(id),
+            title: `${formatEuro(proposal.price)} rental offer`,
+            body: `One-time booth rental offer for ${proposal.obj_key}. Accepting pays immediately and reserves this square.`,
+            terms: [
+              { label: "Payment", value: formatEuro(proposal.price) },
+              { label: "Object", value: proposal.obj_key },
+              { label: "Suitability", value: suitability.map(sign).join(" / ") },
+            ],
+          };
+        });
+    }
+
+    function getLeaseInfo(tileId) {
+      const rentedObject = gameState.rentedBooths.find(itm=>itm.tile == tileId);
+      if(rentedObject){
+        return rentedObject;
+      }
+      return null;
+    }
+
+    function getObjectUpgradeOptions(objKey, obj) {
+      const objects = globalSettings.objects || {};
+      const enabled = worldSettings.objectsEnabled || {};
+      if (objKey !== "Stand" || !objects["Premium Stand"] || enabled["Premium Stand"] === false) return [];
+
+      const premiumStand = objects["Premium Stand"];
+      const cost = Math.max(0, Number(premiumStand.price || 0) - Number(obj.price || 0));
+      return [{
+        id: "Premium Stand",
+        name: "Premium Stand",
+        cost,
+        stats: getObjectStats(premiumStand),
+        benefits: ["Higher-quality booth placement", "Stronger audience suitability"],
+      }];
+    }
+
+    function getObjectReplaceOptions(objKey, obj) {
+      const objects = globalSettings.objects || {};
+      const enabled = worldSettings.objectsEnabled || {};
+      const refund = Math.round(Number(obj.price || 0) / 2);
+
+      return Object.keys(objects)
+        .filter(key => key !== objKey && enabled[key] !== false)
+        .map(key => {
+          const replacement = objects[key] || {};
+          return {
+            id: key,
+            name: key,
+            costDelta: Number(replacement.price || 0) - refund,
+            description: replacement.descriptionEn || DEFAULT_DESCRIPTIONS[key] || "Swap this object into the selected field.",
+          };
+        });
+    }
+
+    async function sellObjectFromTile(tileId) {
+      const objKey = gameState && gameState.board ? gameState.board[tileId] : null;
+      if (!objKey) return;
+      const obj = (globalSettings.objects || {})[objKey] || {};
+      const sellPrice = Math.round(Number(obj.price || 0) / 2);
+
+      gameState.budget = Number(gameState.budget || 0) + sellPrice;
+      delete gameState.board[tileId];
+      refreshInfrastructureSpendingsFromBoard();
+      closeObjectActionPanel();
+      document.getElementById("buy-overlay").style.display = "none";
+      renderBoard();
+      updateAll();
+      renderShop(null, false);
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function upgradeObjectOnTile(upgradeId, tileId) {
+      const objKey = gameState && gameState.board ? gameState.board[tileId] : null;
+      if (!objKey || !upgradeId) return;
+      const objects = globalSettings.objects || {};
+      const current = objects[objKey] || {};
+      const next = objects[upgradeId];
+      if (!next) return;
+
+      const cost = Math.max(0, Number(next.price || 0) - Number(current.price || 0));
+      if (Number(gameState.budget || 0) < cost) {
+        alert("Not enough budget.");
+        return;
+      }
+
+      gameState.budget = Number(gameState.budget || 0) - cost;
+      gameState.board[tileId] = upgradeId;
+      refreshInfrastructureSpendingsFromBoard();
+      closeObjectActionPanel();
+      renderBoard();
+      updateAll();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    function getSpeakerAppointmentForTile(tileId) {
+      const appointments = Array.isArray(gameState && gameState.appointedSpeakers)
+        ? gameState.appointedSpeakers
+        : [];
+      return appointments.find(appointment => appointment && appointment.tileId === tileId) || null;
+    }
+
+    function getAppointedSpeakerForTile(tileId) {
+      const appointment = getSpeakerAppointmentForTile(tileId);
+      if (!appointment) return null;
+      const speaker = SPEAKERS_LIST.find(item => item.id === appointment.speakerId);
+      if (!speaker) return null;
+      return Object.assign({}, speaker, {
+        appointmentId: appointment.appointmentId,
+        appointedTurn: appointment.appointedTurn,
+        tileId: appointment.tileId,
+      });
+    }
+
+    function getAvailableSpeakersForStage(tileId) {
+      const appointments = Array.isArray(gameState && gameState.appointedSpeakers)
+        ? gameState.appointedSpeakers
+        : [];
+      const unavailableSpeakerIds = new Set(
+        appointments
+          .filter(appointment => appointment && appointment.tileId !== tileId)
+          .map(appointment => appointment.speakerId)
+      );
+      return SPEAKERS_LIST.filter(speaker => !unavailableSpeakerIds.has(speaker.id));
+    }
+
+    async function onAppointSpeaker(speakerId, tileId){
+      ensureGameStateShape(gameState);
+      const existingAppointment = getSpeakerAppointmentForTile(tileId);
+      if (existingAppointment) {
+        return {
+          speaker: getAppointedSpeakerForTile(tileId),
+        };
+      }
+
+      const speaker = SPEAKERS_LIST.find(itm => itm.id == speakerId);
+      if(!speaker){
+        return {error: 'Speaker not found.'};
+      }
+
+      const isSpeakerAlreadyBooked = (gameState.appointedSpeakers || [])
+        .some(appointment => appointment && appointment.speakerId === speakerId);
+      if (isSpeakerAlreadyBooked) {
+        return {error: 'This speaker is already appointed to another stage.'};
+      }
+
+      const fee = Number(speaker.fee || 0);
+      if(fee > Number(gameState.budget || 0)) {
+        return {error: `Not enough budget. ${speaker.name} costs ${formatEuro(fee)}.`};
+      }
+
+      gameState.budget = Number(gameState.budget || 0) - fee;
+
+      const appointment = {
+        appointmentId: `${speakerId}-${tileId}`,
+        speakerId: speakerId,
+        tileId: tileId,
+        appointedTurn: Number(gameState.turn || 0),
+      };
+      gameState.appointedSpeakers.push(appointment);
+
+      updateAll();
+      await saveGameState(worldId, playerId, gameState);
+
+      return {
+        speaker: getAppointedSpeakerForTile(tileId),
+      };
+    }
+
+
+    function closeObjectActionPanel(options = {}) {
+      if (!objectMenu) return;
+      const panel = objectMenu;
+      objectMenu = null;
+      panel.__preserveSelectionOnClose = !!options.preserveSelection;
+      panel.close();
+    }
+
+    function renderObjectActionPanel(tileId, objKey, obj) {
+      const anchor = getObjectActionPanelAnchor(tileId);
+      if (!anchor || typeof ObjectActionPanel === "undefined") return false;
+
+      closeObjectActionPanel({ preserveSelection: true });
+      let panel = null;
+      panel = new ObjectActionPanel({
+        speakers: getAvailableSpeakersForStage(tileId),
+        appointedSpeaker: getAppointedSpeakerForTile(tileId),
+        anchorTo: anchor,
+        object: {
+          id: tileId,
+          name: objKey,
+          type: getObjectActionPanelType(objKey),
+        },
+        currentTier: {
+          name: objKey,
+          stats: getObjectStats(obj),
+        },
+        upgradeOptions: getObjectUpgradeOptions(objKey, obj),
+        replaceOptions: getObjectReplaceOptions(objKey, obj),
+        requests: getObjectActionPanelRequests(tileId),
+        leaseInfo: getLeaseInfo(tileId),
+        deleteConfig: {
+          refund: Math.round(Number(obj.price || 0) / 2),
+          warning: "This removes the object from the board.",
+        },
+        onDelete: (objectId) => sellObjectFromTile(objectId),
+        onUpgrade: (upgradeId, objectId) => upgradeObjectOnTile(upgradeId, objectId),
+        onReplace: (replaceId, objectId) => console.log("onReplace()"),
+        onAppointSpeaker: (speakerId, objectId) => onAppointSpeaker(speakerId, objectId),
+        onAcceptRequest: async (requestId) => {
+          await acceptVendorProposal(requestId);
+          if (objectMenu) objectMenu.update({ requests: getObjectActionPanelRequests(tileId) });
+        },
+        onDeclineRequest: async (requestId) => {
+          await declineVendorProposal(requestId);
+          if (objectMenu) objectMenu.update({ requests: getObjectActionPanelRequests(tileId) });
+        },
+        onClose: () => {
+          const preserveSelection = !!(panel && panel.__preserveSelectionOnClose);
+          if (objectMenu === panel) objectMenu = null;
+          if (panel) panel.__preserveSelectionOnClose = false;
+          if (!preserveSelection && selectedTileId === tileId) renderShop(null, false);
+        },
+      });
+      objectMenu = panel;
+      objectMenu.show();
+      return true;
+    }
+
     function renderShop(selectedId, hasObject) {
       const overlayEl = document.getElementById("buy-overlay");
       const content = d3.select("#buy-content");
@@ -1970,6 +2310,8 @@
       shopInfo.html("");
 
       if (!selectedId) {
+        clearSelectedTile();
+        closeObjectActionPanel();
         overlayEl.style.display = "none";
         shopInfo.append("div").style("color", "var(--gb-text-muted)").style("font-size","12.5px").text("Click on a tile to build.");
         return;
@@ -1977,12 +2319,19 @@
 
       title.text("Field " + selectedId);
       shopInfo.append("div").style("font-size","12.5px").text("Selected: " + selectedId);
-      overlayEl.style.display = "flex";
 
       if (hasObject) {
         const objKey = gameState.board[selectedId];
         const obj = (globalSettings.objects || {})[objKey] || {};
         const sellPrice = Math.round((obj.price || 0) / 2);
+
+        if (isObjectActionPanelObject(objKey) && renderObjectActionPanel(selectedId, objKey, obj)) {
+          overlayEl.style.display = "none";
+          return;
+        }
+
+        closeObjectActionPanel();
+        overlayEl.style.display = "flex";
 
         content.append("p").style("margin-bottom","6px").text(`You built: ${objKey}`);
         content.append("p").style("margin-bottom","12px").style("color","var(--gb-text-muted)").style("font-size","13px").text(`Sell for €${sellPrice}?`);
@@ -2002,6 +2351,8 @@
           });
 
       } else {
+        closeObjectActionPanel();
+        overlayEl.style.display = "flex";
         content.append("p").style("margin-bottom","10px").style("color","var(--gb-text-muted)").style("font-size","13px").text("Choose an object to build:");
 
         const objs = globalSettings.objects || {};
@@ -2050,6 +2401,7 @@
 
     function onCellClicked(id) {
       const hasObject = !!gameState.board[id];
+      setSelectedTile(id);
       renderShop(id, hasObject);
     }
 
@@ -2442,8 +2794,7 @@
 
 
     document.getElementById("buy-close").addEventListener("click", () => {
-      document.getElementById("buy-overlay").style.display = "none";
-      d3.select("#shop-dynamic").html("");
+      renderShop(null, false);
     });
     document.getElementById("marketing-tools-btn").addEventListener("click", (e) => {
       e.stopPropagation();
@@ -2755,7 +3106,7 @@
     // ===== Hover info =====
     function showTileInfo(id,g) {
       const tileShape = g.select("polygon");
-      tileShape.attr("fill", "#0096FF");
+      tileShape.attr("fill", SELECTED_CELL_COLOR);
       const board = (gameState && gameState.board) ? gameState.board : {};
       const objs = globalSettings.objects || {};
       const objKey = board[id];
@@ -2788,12 +3139,19 @@
       }
     }
 
+    function backToBaseFill(g) {
+      if (g) {
+        const tileId = g.attr("data-id");
+        if (tileId === selectedTileId) applySelectedTileFill(tileId);
+        else applyTileBaseFill(tileId);
+      }
+    }
 
     function clearTileInfo(g) {
       if (g) {
-        const tileShape = g.select("polygon");
-        const baseFill = tileShape.attr("data-base-fill");
-        if (baseFill) tileShape.attr("fill", baseFill);
+        const tileId = g.attr("data-id");
+        if (tileId === selectedTileId) applySelectedTileFill(tileId);
+        else applyTileBaseFill(tileId);
       }
       resetHoverInfo();
     }

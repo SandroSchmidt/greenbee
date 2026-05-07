@@ -161,6 +161,8 @@ export interface GameState {
   turnReports: TurnReport[];
   infrastructuralSpendings: number;
   rentedBooths: RentedBooth[];
+
+  appointedSpeakers: SpeakerAppointments[];
 }
 
 /**
@@ -169,6 +171,13 @@ export interface GameState {
  */
 export interface PersistedGameState extends GameState {
   lastUpdate: TimestampMs;
+}
+
+export interface SpeakerAppointments{
+    appointmentId: string,
+    speakerId: string,
+    tileId: string,
+    appointedTurn?: number | null,
 }
 
 export interface RequestedCredit {
