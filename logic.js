@@ -358,33 +358,38 @@ function calculateVendorOfferPrice({
 
   const low_high = (gameState?.salesTeam && gameState?.salesTeam == 'havenfield') ? [10, 50] : [-10, 25];
   
-  const addRandomToBasePrice = randomInt(low_high);
+  const addRandomToBasePrice = randomInt(low_high[0], low_high[1]);
   const basePrice = Math.max(1, Number(obj.price + addRandomToBasePrice || 0));
-
+  console.log("Base price> ", basePrice)
   // Ticket sales make vendors more confident.
   // Range roughly: 0.85x -> 1.35x
   const ticketSalesMultiplier =
     0.85 + smoothstep(totalSoldTicketsPercentage) * 0.5;
 
+    console.log("Ticket sales multiplier> ", ticketSalesMultiplier);
   // Recent sales efficiency also affects offer quality.
   // Range roughly: 0.50x -> 1.80x
   const salesFactorMultiplier =
     0.6 + clamp01(avgSalesFactor || 0) * 0.8;
 
+    console.log("Sales factor multiplier> ", salesFactorMultiplier);
   // Marketing attracts vendors.
   // Range roughly: 0.5x -> 1.5x
   const marketingMultiplier =
     0.6 + clamp01(marketingFactor) * 0.8;
 
+    console.log("Marketing multiplier> ", marketingMultiplier)
   // Sales team negotiates better lease prices.
   // Between +20% to +50%.
   const salesTeamMultiplier = gameState?.salesTeam
     ? randomBetween(1.2, 1.5)
     : 1;
 
+    console.log("Sales multiplier> ", salesTeamMultiplier)
   // Small natural randomness so offers do not feel robotic.
   const marketNoise = randomBetween(0.9, 1.2);
 
+    console.log("Market noise> ", marketNoise);
   let price =
     basePrice *
     ticketSalesMultiplier *
@@ -393,7 +398,9 @@ function calculateVendorOfferPrice({
     proximityMultiplier *
     salesTeamMultiplier *
     marketNoise;
+    
 
+    console.log("Final price> ", roundToNearest(Math.max(1, price), roundPriceTo));
   return roundToNearest(Math.max(1, price), roundPriceTo);
 }
 
