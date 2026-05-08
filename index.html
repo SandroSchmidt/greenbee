@@ -17,6 +17,8 @@
   <script src="components/rightStatusMenu.js"></script>
   <script src="components/marketingToolsPanel.js"></script>
   <script src="components/deskMenu.js"></script>
+  <script src="components/objectActionPanel.js"></script>
+  <script src="data/speakers.js"></script>
 </head>
 <style>
   /* =========================================================
@@ -228,6 +230,38 @@
     height: 100%;
     max-width: 100%;
     max-height: 100%;
+  }
+  #panel-board .board-hover-text{
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    max-width: min(320px, calc(100% - 24px));
+    padding: 8px 10px;
+    border-radius: var(--gb-radius-sm);
+    border: 1px solid var(--gb-border);
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: var(--gb-shadow-sm);
+    pointer-events: none;
+  }
+  body.theme-dark #panel-board .board-hover-text{
+    background: rgba(15, 23, 42, 0.82);
+  }
+  .oap-root{
+    --oap-bg: var(--gb-surface);
+    --oap-surface: var(--gb-surface-soft);
+    --oap-border: var(--gb-border);
+    --oap-text: var(--gb-text);
+    --oap-text-secondary: var(--gb-text-muted);
+    --oap-text-tertiary: var(--gb-text-subtle);
+    --oap-accent-bg: var(--gb-accent-soft);
+    --oap-accent-text: var(--gb-accent-ink);
+    --oap-accent-strong: var(--gb-accent);
+    --oap-accent-strong-hover: var(--gb-accent-hover);
+    --oap-radius-sm: var(--gb-radius-sm);
+    --oap-radius-md: var(--gb-radius-sm);
+    --oap-radius-lg: var(--gb-radius);
+    --oap-z-index: 80;
   }
 
   /* =========================================================
@@ -1014,6 +1048,13 @@
     border-radius: 14px;
     font-size: 22px;
   }
+  .assistant-avatar img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
+  }
   .assistant-mini-avatar{
     width: 30px;
     height: 30px;
@@ -1409,6 +1450,7 @@
 
       <!-- CENTER: BOARD -->
       <section class="panel" id="panel-board">
+        <div id="hover-text" class="board-hover-text">Hover over a tile or a chart to see details.</div>
         <svg id="game-board"></svg>
       </section>
 
@@ -1489,30 +1531,30 @@
         name: "Ironpath Sales Co.",
         initials: "IS",
         color: "#0f172a",
-        tagline: "Premium & senior segments",
-        bio: "Veteran B2B agency with strong relationships in cultural and senior community networks. Best for premium ticket conversion and trust-driven outreach.",
-        stats: ["Senior +", "Premium +", "Established"],
-        price: 1200
+        tagline: "Ticket yield specialists",
+        bio: "Commercial ticketing specialists who are strong at positioning the event as higher-value. Best when you want to improve ticket conversion and support a slightly stronger ticket price.",
+        stats: ["Ticket sales boost", "Slight ticket price lift"],
+        fee: 250
       },
       {
         id: "northwave",
         name: "Northwave Outreach",
         initials: "NW",
         color: "#2563eb",
-        tagline: "Youth & digital first",
-        bio: "Modern, data-driven outreach with paid social and influencer reach. Best when targeting youth segments and creating early buzz.",
-        stats: ["Youth +", "Digital +", "Fast"],
-        price: 850
+        tagline: "Audience growth specialists",
+        bio: "A modern marketing team focused on reach, campaign efficiency and channel mix. Best when you want stronger awareness and more visitors coming through the gate.",
+        stats: ["Marketing boost", "More visitor demand"],
+        fee: 250
       },
       {
         id: "havenfield",
         name: "Havenfield Partners",
         initials: "HF",
         color: "#16a34a",
-        tagline: "Families & community",
-        bio: "Community-rooted partner with deep ties to schools, parent groups and local organisations. Best when family conversion and word-of-mouth matter.",
-        stats: ["Family +", "Community +", "Trust"],
-        price: 1000
+        tagline: "Vendor relations specialists",
+        bio: "A partnership-led team with a strong network of local vendors and exhibitors. Best when you want to attract more stand offers and negotiate better proposal quality for board placements.",
+        stats: ["More vendor interest", "Better stand offers"],
+        fee: 250
       }
     ];
 
@@ -1525,7 +1567,8 @@
         tagline: "Ticket pricing & demand",
         bio: "Mira studies your current ticket price, infrastructure and audience response, then gives practical pricing advice from the next turn onward.",
         stats: ["Price insight", "Projection", "Demand model"],
-        price: 700
+        icon: "/icons/assistants/assistant_female_1.png",
+        fee: 150
       },
       {
         id: "leo",
@@ -1535,7 +1578,8 @@
         tagline: "Balanced revenue planning",
         bio: "Leo focuses on turning object income and ticket sales into a realistic budget forecast with a cautious business tone.",
         stats: ["Revenue", "Budget", "Cautious"],
-        price: 900
+        icon: "/icons/assistants/assistant_male_1.png",
+        fee: 150
       },
       {
         id: "nora",
@@ -1545,7 +1589,8 @@
         tagline: "Audience-first advice",
         bio: "Nora reads group sales momentum and points out whether your current price is blocking demand or leaving money on the table.",
         stats: ["Audience", "Momentum", "Friendly"],
-        price: 800
+        icon: "/icons/assistants/assistant_female_2.png",
+        fee: 150
       }
     ];
 
@@ -1560,9 +1605,27 @@
     let rightStatusMenu = null;
     let marketingToolsPanel = null;
     let deskMenu = null;
+    let objectMenu = null;
+    let selectedTileId = null;
+
+    
 
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     const MARKETING_WEBSITE_PRICE = 1200;
+    const SELECTED_CELL_COLOR = "#ff2c2c";
+    const OBJECT_ACTION_PANEL_KEYS = new Set(["Premium Stand", "Stand", "Stage"]);
+    const VENDOR_ORGANIZATION_NAMES = [
+      "Local Brewery",
+      "Harvest Kitchen Co.",
+      "North Gate Snacks",
+      "Sunfield Coffee",
+      "Riverbend Crafts",
+      "Little Lantern Foods",
+      "Urban Treats Collective",
+      "Meadow Market",
+      "Oak & Honey",
+      "Festival Supply Co."
+    ];
 
     function createEmptyGameState() {
       const startBudget = worldSettings.startBudget || 0;
@@ -1583,29 +1646,22 @@
         website: false,
         interest: [0,0,0],
         requestedCredits: [],
+        proposals: [],
         finalCreditRepaymentsApplied: false,
         salesTeam: null,
         assistant: null,
         assistantHiredTurn: null,
         assistantProjectionTurn: null,
         assistantProjection: null,
-        objectIncomeHistory: [0],
-        ticketIncomeHistory: [0],
+        objectIncomeHistory: [],
+        ticketIncomeHistory: [],
         turnReports: [],
+        rentedBooths: [],
         infrastructuralSpendings: 0,
+        appointedSpeakers: [],
       };
     }
 
-
-    function computeIncome() {
-      const objs = globalSettings.objects || {};
-      let income = 0;
-      Object.values(gameState.board || {}).forEach(key => {
-        const o = objs[key];
-        if (o && o.income) income += o.income;
-      });
-      return income;
-    }
 
     function computeGlobalInterestFromMarketing() {
       const channels = (globalSettings && globalSettings.marketingChannels) || {};
@@ -1636,10 +1692,24 @@
     function computesuitability() {
       const objs = globalSettings.objects || {};
       const res = [0,0,0];
-      Object.values(gameState.board || {}).forEach(key => {
+      Object.entries(gameState.board || {}).forEach(([tile, key]) => {
         const o = objs[key];
         if (!o || !Array.isArray(o.suitability)) return;
         o.suitability.forEach((v,i) => { res[i] += (v||0); });
+        const booth = (gameState?.rentedBooths ?? []).find(itm => itm.tile === tile);
+        const vendorSuitability = booth && (booth.vendorSuitabilityByGroup || booth.suitability);
+        if (Array.isArray(vendorSuitability)){
+          vendorSuitability.forEach((v, i) => { res[i] += Number(v || 0); });
+        }
+
+        //adding suitability points that speaker brings to the table
+        const speakerAppointment = (gameState?.appointedSpeakers ?? []).find(itm => itm.tileId == tile);
+        if(speakerAppointment){
+          const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id == speakerAppointment.speakerId);
+          if (appointedSpeaker && Array.isArray(appointedSpeaker.suitability)) {
+            appointedSpeaker.suitability.forEach((v, i)=> {res[i] += Number(v || 0); });
+          }
+        }
       });
       return res;
     }
@@ -1651,6 +1721,11 @@
     function vec3(value, fallback = [0,0,0]) {
       const src = Array.isArray(value) ? value : fallback;
       return [0, 1, 2].map(i => Math.max(0, Number(src[i] || 0)));
+    }
+
+    function signedVec3(value, fallback = [0,0,0]) {
+      const src = Array.isArray(value) ? value : fallback;
+      return [0, 1, 2].map(i => Number(src[i] || 0));
     }
 
     function getGroupLabels() {
@@ -1691,6 +1766,7 @@
       if (!Array.isArray(state.interest)) state.interest = [0,0,0];
       state.interest = vec3(state.interest);
       if (!Array.isArray(state.requestedCredits)) state.requestedCredits = [];
+      if (!Array.isArray(state.proposals)) state.proposals = [];
       if (typeof state.finalCreditRepaymentsApplied !== "boolean") state.finalCreditRepaymentsApplied = false;
       if (typeof state.ticketPrice === "undefined") state.ticketPrice = 0;
       if (typeof state.salesTeam === "undefined") state.salesTeam = null;
@@ -1699,7 +1775,19 @@
       if (typeof state.assistantProjectionTurn === "undefined") state.assistantProjectionTurn = null;
       if (typeof state.assistantProjection === "undefined") state.assistantProjection = null;
       if (!Array.isArray(state.turnReports)) state.turnReports = [];
+      if (!Array.isArray(state.rentedBooths)) state.rentedBooths = [];
       if (typeof state.infrastructuralSpendings !== "number") state.infrastructuralSpendings = 0;
+      if (!Array.isArray(state.appointedSpeakers)) {
+        state.appointedSpeakers = Array.isArray(state.speakers) ? state.speakers : [];
+      }
+      state.appointedSpeakers = state.appointedSpeakers
+        .filter(appointment => appointment && appointment.speakerId && appointment.tileId)
+        .map(appointment => ({
+          appointmentId: appointment.appointmentId || `${appointment.speakerId}-${appointment.tileId}`,
+          speakerId: appointment.speakerId,
+          tileId: appointment.tileId,
+          appointedTurn: appointment.appointedTurn ?? null,
+        }));
       return state;
     }
 
@@ -1823,6 +1911,7 @@
     }
 
     function renderBoard() {
+      closeObjectActionPanel();
       const svg = d3.select("#game-board");
       svg.selectAll("*").remove();
 
@@ -1892,12 +1981,15 @@
         g.append("polygon")
           .attr("points", points.map(p => p.join(",")).join(" "))
           .attr("fill", color)
+          .attr("data-base-fill", color)
           .attr("stroke", "#111827")
           .attr("stroke-width", 1)
           .style("cursor", "pointer")
           .on("click", () => onCellClicked(id))
-          .on("mouseover", () => showTileInfo(id))
-          .on("mouseout", () => clearTileInfo());
+          .on("mouseover", () => showTileInfo(id, g))
+          .on("mouseout", () => clearTileInfo(g));
+
+        if (id === selectedTileId) applySelectedTileFill(id);
 
         if (obj.icon) {
           g.append("image")
@@ -1906,11 +1998,306 @@
             .attr("y", cy - hexH * 1.4)
             .attr("width", hexW * 1.6)
             .attr("height", hexH * 2.2)
-            .on("mouseover", () => showTileInfo(id))
-            .on("mouseout", () => clearTileInfo())
+            .on("mouseover", () => showTileInfo(id, g))
+            .on("mouseout", () => clearTileInfo(g))
             .style("pointer-events", "none");
         }
       });
+    }
+
+    function isObjectActionPanelObject(objKey) {
+      return OBJECT_ACTION_PANEL_KEYS.has(objKey);
+    }
+
+    function getObjectActionPanelType(objKey) {
+      if (objKey === "Stage") return "stage";
+      if (objKey === "Stand" || objKey === "Premium Stand") return "booth";
+      return "default";
+    }
+
+    function getObjectActionPanelAnchor(tileId) {
+      if (!tileId) return null;
+      return document.querySelector(`#game-board [data-id="${tileId}"]`);
+    }
+
+    function getTileShapeSelection(tileId) {
+      if (!tileId) return d3.select(null);
+      return d3.select(`#game-board g[data-id="${tileId}"] polygon`);
+    }
+
+    function applyTileBaseFill(tileId) {
+      const tileShape = getTileShapeSelection(tileId);
+      if (tileShape.empty()) return;
+      const baseFill = tileShape.attr("data-base-fill");
+      if (baseFill) tileShape.attr("fill", baseFill);
+    }
+
+    function applySelectedTileFill(tileId) {
+      const tileShape = getTileShapeSelection(tileId);
+      if (tileShape.empty()) return;
+      tileShape.attr("fill", SELECTED_CELL_COLOR);
+    }
+
+    function setSelectedTile(tileId) {
+      if (selectedTileId && selectedTileId !== tileId) {
+        applyTileBaseFill(selectedTileId);
+      }
+      selectedTileId = tileId || null;
+      if (selectedTileId) applySelectedTileFill(selectedTileId);
+    }
+
+    function clearSelectedTile() {
+      if (!selectedTileId) return;
+      applyTileBaseFill(selectedTileId);
+      selectedTileId = null;
+    }
+
+    function getObjectStats(obj) {
+      const suitability = Array.isArray(obj.suitability) ? obj.suitability : [0, 0, 0];
+      return [
+        { label: "Price", value: formatEuro(obj.price || 0) },
+        { label: "Income / turn", value: formatEuro(obj.income || 0) },
+        { label: "Suitability", value: suitability.map(v => Number(v || 0)).join(" / ") },
+      ];
+    }
+
+    function getObjectActionPanelRequests(tileId) {
+      const proposals = Array.isArray(gameState && gameState.proposals) ? gameState.proposals : [];
+      const sign = v => Number(v || 0) >= 0 ? `+${Number(v || 0)}` : `${Number(v || 0)}`;
+
+      return proposals
+        .filter(proposal => proposal && proposal.tile === tileId && (proposal.status || "pending") === "pending")
+        .map((proposal, index) => {
+          const id = getProposalId(proposal, index);
+          const suitability = signedVec3(proposal.vendorSuitabilityByGroup);
+          return {
+            id,
+            sender: proposal.vendorName || pickVendorName(id),
+            title: `${formatEuro(proposal.price)} rental offer`,
+            body: `One-time booth rental offer for ${proposal.obj_key}. Accepting pays immediately and reserves this square.`,
+            terms: [
+              { label: "Payment", value: formatEuro(proposal.price) },
+              { label: "Object", value: proposal.obj_key },
+              { label: "Suitability", value: suitability.map(sign).join(" / ") },
+            ],
+          };
+        });
+    }
+
+    function getLeaseInfo(tileId) {
+      const rentedObject = gameState.rentedBooths.find(itm=>itm.tile == tileId);
+      if(rentedObject){
+        return rentedObject;
+      }
+      return null;
+    }
+
+    function getObjectUpgradeOptions(objKey, obj) {
+      const objects = globalSettings.objects || {};
+      const enabled = worldSettings.objectsEnabled || {};
+      if (objKey !== "Stand" || !objects["Premium Stand"] || enabled["Premium Stand"] === false) return [];
+
+      const premiumStand = objects["Premium Stand"];
+      const cost = Math.max(0, Number(premiumStand.price || 0) - Number(obj.price || 0));
+      return [{
+        id: "Premium Stand",
+        name: "Premium Stand",
+        cost,
+        stats: getObjectStats(premiumStand),
+        benefits: ["Higher-quality booth placement", "Stronger audience suitability"],
+      }];
+    }
+
+    function getObjectReplaceOptions(objKey, obj) {
+      const objects = globalSettings.objects || {};
+      const enabled = worldSettings.objectsEnabled || {};
+      const refund = Math.round(Number(obj.price || 0) / 2);
+
+      return Object.keys(objects)
+        .filter(key => key !== objKey && enabled[key] !== false)
+        .map(key => {
+          const replacement = objects[key] || {};
+          return {
+            id: key,
+            name: key,
+            costDelta: Number(replacement.price || 0) - refund,
+            description: replacement.descriptionEn || DEFAULT_DESCRIPTIONS[key] || "Swap this object into the selected field.",
+          };
+        });
+    }
+
+    async function sellObjectFromTile(tileId) {
+      const objKey = gameState && gameState.board ? gameState.board[tileId] : null;
+      if (!objKey) return;
+      const obj = (globalSettings.objects || {})[objKey] || {};
+      const sellPrice = Math.round(Number(obj.price || 0) / 2);
+
+      gameState.budget = Number(gameState.budget || 0) + sellPrice;
+      delete gameState.board[tileId];
+      refreshInfrastructureSpendingsFromBoard();
+      closeObjectActionPanel();
+      document.getElementById("buy-overlay").style.display = "none";
+      renderBoard();
+      updateAll();
+      renderShop(null, false);
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function upgradeObjectOnTile(upgradeId, tileId) {
+      const objKey = gameState && gameState.board ? gameState.board[tileId] : null;
+      if (!objKey || !upgradeId) return;
+      const objects = globalSettings.objects || {};
+      const current = objects[objKey] || {};
+      const next = objects[upgradeId];
+      if (!next) return;
+
+      const cost = Math.max(0, Number(next.price || 0) - Number(current.price || 0));
+      if (Number(gameState.budget || 0) < cost) {
+        alert("Not enough budget.");
+        return;
+      }
+
+      gameState.budget = Number(gameState.budget || 0) - cost;
+      gameState.board[tileId] = upgradeId;
+      refreshInfrastructureSpendingsFromBoard();
+      closeObjectActionPanel();
+      renderBoard();
+      updateAll();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    function getSpeakerAppointmentForTile(tileId) {
+      const appointments = Array.isArray(gameState && gameState.appointedSpeakers)
+        ? gameState.appointedSpeakers
+        : [];
+      return appointments.find(appointment => appointment && appointment.tileId === tileId) || null;
+    }
+
+    function getAppointedSpeakerForTile(tileId) {
+      const appointment = getSpeakerAppointmentForTile(tileId);
+      if (!appointment) return null;
+      const speaker = SPEAKERS_LIST.find(item => item.id === appointment.speakerId);
+      if (!speaker) return null;
+      return Object.assign({}, speaker, {
+        appointmentId: appointment.appointmentId,
+        appointedTurn: appointment.appointedTurn,
+        tileId: appointment.tileId,
+      });
+    }
+
+    function getAvailableSpeakersForStage(tileId) {
+      const appointments = Array.isArray(gameState && gameState.appointedSpeakers)
+        ? gameState.appointedSpeakers
+        : [];
+      const unavailableSpeakerIds = new Set(
+        appointments
+          .filter(appointment => appointment && appointment.tileId !== tileId)
+          .map(appointment => appointment.speakerId)
+      );
+      return SPEAKERS_LIST.filter(speaker => !unavailableSpeakerIds.has(speaker.id));
+    }
+
+    async function onAppointSpeaker(speakerId, tileId){
+      ensureGameStateShape(gameState);
+      const existingAppointment = getSpeakerAppointmentForTile(tileId);
+      if (existingAppointment) {
+        return {
+          speaker: getAppointedSpeakerForTile(tileId),
+        };
+      }
+
+      const speaker = SPEAKERS_LIST.find(itm => itm.id == speakerId);
+      if(!speaker){
+        return {error: 'Speaker not found.'};
+      }
+
+      const isSpeakerAlreadyBooked = (gameState.appointedSpeakers || [])
+        .some(appointment => appointment && appointment.speakerId === speakerId);
+      if (isSpeakerAlreadyBooked) {
+        return {error: 'This speaker is already appointed to another stage.'};
+      }
+
+      const fee = Number(speaker.fee || 0);
+      if(fee > Number(gameState.budget || 0)) {
+        return {error: `Not enough budget. ${speaker.name} costs ${formatEuro(fee)}.`};
+      }
+
+      gameState.budget = Number(gameState.budget || 0) - fee;
+
+      const appointment = {
+        appointmentId: `${speakerId}-${tileId}`,
+        speakerId: speakerId,
+        tileId: tileId,
+        appointedTurn: Number(gameState.turn || 0),
+      };
+      gameState.appointedSpeakers.push(appointment);
+
+      updateAll();
+      await saveGameState(worldId, playerId, gameState);
+
+      return {
+        speaker: getAppointedSpeakerForTile(tileId),
+      };
+    }
+
+
+    function closeObjectActionPanel(options = {}) {
+      if (!objectMenu) return;
+      const panel = objectMenu;
+      objectMenu = null;
+      panel.__preserveSelectionOnClose = !!options.preserveSelection;
+      panel.close();
+    }
+
+    function renderObjectActionPanel(tileId, objKey, obj) {
+      const anchor = getObjectActionPanelAnchor(tileId);
+      if (!anchor || typeof ObjectActionPanel === "undefined") return false;
+
+      closeObjectActionPanel({ preserveSelection: true });
+      let panel = null;
+      panel = new ObjectActionPanel({
+        speakers: getAvailableSpeakersForStage(tileId),
+        appointedSpeaker: getAppointedSpeakerForTile(tileId),
+        anchorTo: anchor,
+        object: {
+          id: tileId,
+          name: objKey,
+          type: getObjectActionPanelType(objKey),
+        },
+        currentTier: {
+          name: objKey,
+          stats: getObjectStats(obj),
+        },
+        upgradeOptions: getObjectUpgradeOptions(objKey, obj),
+        replaceOptions: getObjectReplaceOptions(objKey, obj),
+        requests: getObjectActionPanelRequests(tileId),
+        leaseInfo: getLeaseInfo(tileId),
+        deleteConfig: {
+          refund: Math.round(Number(obj.price || 0) / 2),
+          warning: "This removes the object from the board.",
+        },
+        onDelete: (objectId) => sellObjectFromTile(objectId),
+        onUpgrade: (upgradeId, objectId) => upgradeObjectOnTile(upgradeId, objectId),
+        onReplace: (replaceId, objectId) => console.log("onReplace()"),
+        onAppointSpeaker: (speakerId, objectId) => onAppointSpeaker(speakerId, objectId),
+        onAcceptRequest: async (requestId) => {
+          await acceptVendorProposal(requestId);
+          if (objectMenu) objectMenu.update({ requests: getObjectActionPanelRequests(tileId) });
+        },
+        onDeclineRequest: async (requestId) => {
+          await declineVendorProposal(requestId);
+          if (objectMenu) objectMenu.update({ requests: getObjectActionPanelRequests(tileId) });
+        },
+        onClose: () => {
+          const preserveSelection = !!(panel && panel.__preserveSelectionOnClose);
+          if (objectMenu === panel) objectMenu = null;
+          if (panel) panel.__preserveSelectionOnClose = false;
+          if (!preserveSelection && selectedTileId === tileId) renderShop(null, false);
+        },
+      });
+      objectMenu = panel;
+      objectMenu.show();
+      return true;
     }
 
     function renderShop(selectedId, hasObject) {
@@ -1923,6 +2310,8 @@
       shopInfo.html("");
 
       if (!selectedId) {
+        clearSelectedTile();
+        closeObjectActionPanel();
         overlayEl.style.display = "none";
         shopInfo.append("div").style("color", "var(--gb-text-muted)").style("font-size","12.5px").text("Click on a tile to build.");
         return;
@@ -1930,12 +2319,19 @@
 
       title.text("Field " + selectedId);
       shopInfo.append("div").style("font-size","12.5px").text("Selected: " + selectedId);
-      overlayEl.style.display = "flex";
 
       if (hasObject) {
         const objKey = gameState.board[selectedId];
         const obj = (globalSettings.objects || {})[objKey] || {};
         const sellPrice = Math.round((obj.price || 0) / 2);
+
+        if (isObjectActionPanelObject(objKey) && renderObjectActionPanel(selectedId, objKey, obj)) {
+          overlayEl.style.display = "none";
+          return;
+        }
+
+        closeObjectActionPanel();
+        overlayEl.style.display = "flex";
 
         content.append("p").style("margin-bottom","6px").text(`You built: ${objKey}`);
         content.append("p").style("margin-bottom","12px").style("color","var(--gb-text-muted)").style("font-size","13px").text(`Sell for €${sellPrice}?`);
@@ -1955,6 +2351,8 @@
           });
 
       } else {
+        closeObjectActionPanel();
+        overlayEl.style.display = "flex";
         content.append("p").style("margin-bottom","10px").style("color","var(--gb-text-muted)").style("font-size","13px").text("Choose an object to build:");
 
         const objs = globalSettings.objects || {};
@@ -1962,6 +2360,7 @@
         const grid = content.append("div").attr("class", "shop-object-grid");
 
         Object.keys(objs).forEach(key => {
+          console.log("KEY: ", globalSettings.objects[key]);
           if (!enabled[key]) return;
           const o = objs[key];
           const btn = grid.append("button")
@@ -2002,6 +2401,7 @@
 
     function onCellClicked(id) {
       const hasObject = !!gameState.board[id];
+      setSelectedTile(id);
       renderShop(id, hasObject);
     }
 
@@ -2085,8 +2485,7 @@
       const nextTurn = curTurn + 1;
       if (nextTurn <= CHART_X_MAX) {
         const curBudget = Number(gameState.budget || 0);
-        const incNext = Number(computeIncome() || 0);
-        const nextStart = curBudget + incNext;
+        const nextStart = curBudget;
 
         svg.append("line")
           .attr("x1", x(curTurn)).attr("y1", y(curBudget))
@@ -2288,9 +2687,9 @@
       let verdict;
       if (price <= 0) {
         verdict = "Your tickets are free. Demand will be strong, but you are leaving revenue on the table — I would increase the price.";
-      } else if (factor < 0.72) {
+      } else if (factor < 0.62) {
         verdict = "My analysis says the current ticket price is too high for the value visitors see right now. I would decrease it before the next turn.";
-      } else if (factor > 1.08) {
+      } else if (factor > 1.38) {
         verdict = "The current ticket price looks very affordable. You probably have room to increase it without hurting demand too much.";
       } else {
         verdict = "The current ticket price looks about right for your infrastructure and current demand signals.";
@@ -2394,8 +2793,7 @@
 
 
     document.getElementById("buy-close").addEventListener("click", () => {
-      document.getElementById("buy-overlay").style.display = "none";
-      d3.select("#shop-dynamic").html("");
+      renderShop(null, false);
     });
     document.getElementById("marketing-tools-btn").addEventListener("click", (e) => {
       e.stopPropagation();
@@ -2481,6 +2879,13 @@
       if (e.target.id === "insights-overlay") closeInsightsOverlay();
     });
 
+
+    function getObjectIncomeLastTurn(turn){
+      const objectsLeasedLastTurn = gameState.rentedBooths.filter(itm=>itm.acceptedTurn == turn);
+      const total = objectsLeasedLastTurn.reduce((acc, itm) => acc+ itm.price, 0);
+      return total;
+    }
+
     // ===== Turn-Logik =====
     async function nextTurn() {
       const maxT = (worldSettings && worldSettings.maxTurns) || 10;
@@ -2492,9 +2897,15 @@
       ensureGameStateShape(gameState);
       refreshInfrastructureSpendingsFromBoard();
 
+      const expensesThisTurn = {
+        "Loan Payment": 0,
+        "Marketing Fee": 0,
+        "Sales Team Fee": 0,
+        "Assistant Fee": 0,
+      };
       const currentTurn = Number(gameState.turn || 0);
       const openingBudget = Number(gameState.budget || 0);
-      const objectIncome = Number(computeIncome() || 0);
+      const objectIncome = getObjectIncomeLastTurn(gameState.turn-1);
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
@@ -2526,11 +2937,30 @@
       const loanPayment = getRequestedCredits().reduce((acc, itm) => getLoanPaymentAmount(itm) + acc, 0);
       console.log("CREDIT ITNEREST: ", loanPayment)
       console.log("ROUNDED: ", Math.round(loanPayment));
+      expensesThisTurn["Loan Payment"] = loanPayment;
 
       let spendings = Object.keys(gameState.marketingPlan).reduce((accumulator, itm)=>accumulator+gameState.marketingPlan[itm], 0);
       console.log("MARKETING SPENDINGS: ", spendings);
+      expensesThisTurn["Marketing Fee"] = spendings;
       spendings += loanPayment;
       console.log("SPEDINGS AFTER LOAN INTEREST: ", spendings);
+      if(gameState?.salesTeam){
+        const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
+        if(salesTeam){
+          spendings+= salesTeam.fee;
+          expensesThisTurn["Sales Team Fee"] = salesTeam.fee; 
+        }
+        else {
+          console.log("Problem with hired sales team logic");
+        }
+      }
+
+      const assistant = getHiredAssistant();
+      if(assistant){
+        console.log("assisstant: ", gameState.assistant);
+        spendings+= assistant.fee;
+        expensesThisTurn["Assistant Fee"] = assistant.fee;
+      }
       gameState.budget = openingBudget + totalIncome - spendings;
       if(gameState.budget<0){
         console.log("Bankrupcy");
@@ -2541,7 +2971,7 @@
       }
 
       if(spendings>gameState.budget){
-        rightStatusMenu.setWarning('Your last bill was higher than your current budget. Time to reconsider strategy!','danger')
+        rightStatusMenu.setWarning('Your last bill was higher than your current budget. Time to reconsider strategy!')
       }
 
       /*let creditRepayment = 0;
@@ -2556,6 +2986,12 @@
 
       const report = {
         turn: gameState.turn,
+        expenses: Object.keys(expensesThisTurn).map(itm=>{
+          return {
+            name: itm,
+            amount: expensesThisTurn[itm],
+          }
+        }),
         openingBudget,
         objectIncome,
         ticketIncome,
@@ -2572,6 +3008,9 @@
       };
       gameState.turnReports.push(report);
       console.log("GAME STATE: ", gameState);
+      console.log("Expenses: ", expensesThisTurn);
+      addGeneratedProposalsToGameState(generateProposals(gameState, worldSettings, globalSettings));
+      if (deskMenu || isDeskMenuOpen()) renderDeskMenu();
       updateAll();
       await saveGameState(worldId, playerId, gameState);
       showTurnReport(report, (gameState.turn || 0) >= maxT);
@@ -2651,7 +3090,8 @@
       renderMarketingToolsPanel();
 
       const currentTurn = gameState.turn || 0;
-      const currentObjectIncome = computeIncome();
+      
+      const currentObjectIncome = getObjectIncomeLastTurn(gameState?.turn ?? 0);
       if (typeof gameState.objectIncomeHistory[currentTurn] === "undefined") {
         gameState.objectIncomeHistory[currentTurn] = currentObjectIncome;
       }
@@ -2693,7 +3133,9 @@
     }
 
     // ===== Hover info =====
-    function showTileInfo(id) {
+    function showTileInfo(id,g) {
+      const tileShape = g.select("polygon");
+      tileShape.attr("fill", SELECTED_CELL_COLOR);
       const board = (gameState && gameState.board) ? gameState.board : {};
       const objs = globalSettings.objects || {};
       const objKey = board[id];
@@ -2702,28 +3144,60 @@
         const desc = o.descriptionEn || DEFAULT_DESCRIPTIONS[objKey] || "This object has no description yet.";
         const price = (o.price ?? 0);
         const income = (o.income ?? 0);
-        const suit = Array.isArray(o.suitability) ? o.suitability : [0,0,0];
-        setHoverInfo(
-`Board – Tile ${id}
-Object: ${objKey}
+        const baseSuit = Array.isArray(o.suitability)
+          ? o.suitability.map(value => Number(value || 0))
+          : [0,0,0];
+        const suit = [...baseSuit];
+        const rentedBooth = gameState?.rentedBooths.find(itm=>itm.tile == id);
+        console.log("RENTED BOOTH: ", rentedBooth)
+        if(rentedBooth){
+          for(let i=0; i<3; i++){
+            suit[i] = baseSuit[i] + Number(rentedBooth.vendorSuitabilityByGroup?.[i] || 0);
+          }
+        }
 
-${desc}
-
-Cost: €${price}
-Income/turn: €${income}
-Suitability (G1/G2/G3): ${suit[0]||0} / ${suit[1]||0} / ${suit[2]||0}`
-        );
+        const speakerAppointment = gameState?.appointedSpeakers.find(itm=>itm.tileId == id);
+        if(speakerAppointment){
+            const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id==speakerAppointment.speakerId);
+            for(let i=0; i<3; i++){
+                suit[i] += Number(appointedSpeaker?.suitability?.[i] || 0);
+            }
+        }
+        let hoverInfo = `Board - Tile ${id}`
+        hoverInfo+= `\nObject: ${objKey}`
+        hoverInfo+= `\nCost: €${price}`
+        hoverInfo+= `\nSuitability (G1/G2/G3): ${suit[0]||0} / ${suit[1]||0} / ${suit[2]||0}`
+        if(rentedBooth){
+          hoverInfo+= `\nRented for: €${rentedBooth.price}`
+        }
+        setHoverInfo(hoverInfo);
       } else {
-        setHoverInfo(
-`Board – Tile ${id}
-Empty tile.
-
-${DEFAULT_DESCRIPTIONS.empty || "You can build something here."}`
-        );
+        let hoverInfo = `Board - Tile ${id}`
+        hoverInfo+= `\nEmpty tile.`
+        hoverInfo+=`\nYou can build here.`
+        setHoverInfo(hoverInfo);
       }
     }
-    function clearTileInfo() { resetHoverInfo(); }
-    function setHoverInfo(text) { const el = document.getElementById("hover-text"); if (el) el.textContent = text || ""; }
+
+    function backToBaseFill(g) {
+      if (g) {
+        const tileId = g.attr("data-id");
+        if (tileId === selectedTileId) applySelectedTileFill(tileId);
+        else applyTileBaseFill(tileId);
+      }
+    }
+
+    function clearTileInfo(g) {
+      if (g) {
+        const tileId = g.attr("data-id");
+        if (tileId === selectedTileId) applySelectedTileFill(tileId);
+        else applyTileBaseFill(tileId);
+      }
+      resetHoverInfo();
+    }
+    function setHoverInfo(text) {
+      document.querySelectorAll("#hover-text").forEach(el => { el.textContent = text || ""; });
+    }
     function resetHoverInfo() { setHoverInfo("Hover over a tile or a chart to see details."); }
 
     function showBudgetInfo() {
@@ -2851,36 +3325,137 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       if (isMarketingToolsMenuOpen()) requestAnimationFrame(positionMarketingToolsMenu);
     }
 
+    function pickVendorName(seed) {
+      const names = VENDOR_ORGANIZATION_NAMES;
+      if (!names.length) return "Vendor";
+      const str = String(seed || "");
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+      }
+      return names[Math.abs(hash) % names.length];
+    }
+
+    function getProposalId(proposal, fallbackIndex = 0) {
+      if (proposal && proposal.id) return proposal.id;
+      if (proposal && proposal.vendorId) return proposal.vendorId;
+      return `proposal-${proposal && proposal.tile || "tile"}-${gameState && gameState.turn || 0}-${fallbackIndex}`;
+    }
+
+    function normalizeVendorProposal(rawProposal, index = 0) {
+      const id = getProposalId(rawProposal, index);
+      return {
+        id,
+        price: Math.max(0, Number(rawProposal && rawProposal.price || 0)),
+        obj_key: String(rawProposal && rawProposal.obj_key || ""),
+        tile: String(rawProposal && rawProposal.tile || ""),
+        vendorSuitabilityByGroup: signedVec3(rawProposal && rawProposal.vendorSuitabilityByGroup),
+        vendorId: rawProposal && rawProposal.vendorId ? String(rawProposal.vendorId) : id,
+        vendorName: rawProposal && rawProposal.vendorName ? String(rawProposal.vendorName) : pickVendorName(id),
+        turn: Number(gameState && gameState.turn || 0),
+        status: rawProposal && rawProposal.status ? rawProposal.status : "pending",
+      };
+    }
+
+    function addGeneratedProposalsToGameState(rawProposals) {
+      if (!gameState) return;
+      if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
+      console.log("Proposals before: ", gameState.proposals);
+      gameState.proposals = gameState.proposals.filter(itm => itm.status == 'accepted');
+      console.log("Proposals after: ", gameState.proposals);
+      const existingIds = new Set(gameState.proposals.map(p => p && p.id).filter(Boolean));
+
+      (Array.isArray(rawProposals) ? rawProposals : []).forEach((rawProposal, index) => {
+        const proposal = normalizeVendorProposal(rawProposal, index);
+        if (!proposal.tile || !proposal.obj_key || existingIds.has(proposal.id)) return;
+        gameState.proposals.push(proposal);
+        existingIds.add(proposal.id);
+      });
+    }
+
+    function getDeskProposalItems() {
+      const proposals = Array.isArray(gameState && gameState.proposals) ? gameState.proposals : [];
+      return proposals.map((proposal, index) => {
+        const id = getProposalId(proposal, index);
+        const status = proposal.status || "pending";
+        const suitability = signedVec3(proposal.vendorSuitabilityByGroup);
+        const sign = v => Number(v || 0) >= 0 ? `+${Number(v || 0)}` : `${Number(v || 0)}`;
+
+        return {
+          id,
+          type: "proposal",
+          sender: proposal.vendorName || pickVendorName(id),
+          turn: Number(proposal.turn || 0),
+          title: `Booth rental for ${proposal.tile}`,
+          preview: `${formatEuro(proposal.price)} one-time offer for ${proposal.obj_key}.`,
+          body: `${proposal.vendorName || pickVendorName(id)} wants to rent booth ${proposal.tile}. Accepting pays immediately and reserves this square for that vendor.`,
+          status,
+          terms: [
+            { label: "Payment", value: formatEuro(proposal.price) },
+            { label: "Booth", value: proposal.tile },
+            { label: "Object", value: proposal.obj_key },
+            { label: "Suitability", value: suitability.map(sign).join(" / ") },
+          ],
+        };
+      });
+    }
+
+    async function acceptVendorProposal(proposalId) {
+      if (!gameState || !proposalId) return;
+      if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
+      if (!Array.isArray(gameState.rentedBooths)) gameState.rentedBooths = [];
+
+      const proposal = gameState.proposals.find(p => getProposalId(p) === proposalId);
+      if (!proposal || proposal.status === "accepted" || proposal.status === "declined") return;
+      if (gameState.rentedBooths.some(booth => booth.tile === proposal.tile)) {
+        gameState.proposals.forEach(p => {
+          if (p.tile === proposal.tile && p.status === "pending") p.status = "declined";
+        });
+        renderDeskMenu();
+        await saveGameState(worldId, playerId, gameState);
+        return;
+      }
+
+      proposal.status = "accepted";
+      gameState.budget = Number(gameState.budget || 0) + Math.max(0, Number(proposal.price || 0));
+      gameState.rentedBooths.push({
+        price: Math.max(0, Number(proposal.price || 0)),
+        obj_key: proposal.obj_key,
+        tile: proposal.tile,
+        vendorSuitabilityByGroup: signedVec3(proposal.vendorSuitabilityByGroup),
+        vendorId: proposal.vendorId,
+        vendorName: proposal.vendorName,
+        acceptedTurn: Number(gameState.turn || 0),
+        proposalId,
+      });
+
+      gameState.proposals.forEach(p => {
+        if (p.tile === proposal.tile && getProposalId(p) !== proposalId && p.status === "pending") {
+          p.status = "declined";
+        }
+      });
+
+      gameState.interest = computeGlobalInterestFromMarketing();
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function declineVendorProposal(proposalId) {
+      if (!gameState || !Array.isArray(gameState.proposals)) return;
+      const proposal = gameState.proposals.find(p => getProposalId(p) === proposalId);
+      if (!proposal || proposal.status !== "pending") return;
+      proposal.status = "declined";
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
     function getDeskMenuOptions() {
       return {
         mountTo: document.getElementById("desk-menu"),
-        items: [
-          {
-            id: 'r-1',
-            type: 'report',
-            sender: 'Assistant',
-            turn: 12,
-            title: 'Marketing channel insight',
-            preview: 'Your billboards are underperforming…',
-            body: 'Full report text shown when expanded.',
-          },
-          {
-            id: 'p-1',
-            type: 'proposal',
-            sender: 'Local brewery',
-            turn: 12,
-            title: 'Sponsor deal — €400 per turn',
-            body: 'Logo placement on Booth #2 for 5 turns.',
-            expiresInTurns: 2,
-            terms: [
-              { label: 'Income',   value: '€400/turn' },
-              { label: 'Duration', value: '5 turns'   },
-              { label: 'Booth',    value: '#2'        },
-            ],
-          },
-        ],
-        onAccept:   (id) => { console.log("ACCEPTED LOGIC TO BE ADDED"); deskMenu.setItemStatus(id, 'accepted'); },
-        onDecline:  (id) => deskMenu.setItemStatus(id, 'declined'),
+        items: getDeskProposalItems(),
+        onAccept:   (id) => acceptVendorProposal(id),
+        onDecline:  (id) => declineVendorProposal(id),
         onItemRead: (id) => {console.log("MARK READ Logic tb added");},
         onClose:    () => closeDeskMenu(),
       };
@@ -3182,6 +3757,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           closingBalance: report.closingBudget,
           objectIncome: report.objectIncome,
           ticketIncome: report.ticketIncome,
+          expenses: report.expenses,
           groups: [
               { name: 'Youth',    thisTurn: report.newSales[0], total: report.totalTicketSales[0], pace: report.salesEfficiency[0], suitability: report.suitability[0], interest: report.interest[0] },
               { name: 'Families', thisTurn: report.newSales[1], total: report.totalTicketSales[1], pace: report.salesEfficiency[1], suitability: report.suitability[1], interest: report.interest[1] },
@@ -3290,7 +3866,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           </div>
           <div class="hire-foot">
             <div>
-              <span class="hire-price-value">€${team.price}</span><span class="hire-price-label">flat</span>
+              <span class="hire-price-value">€${team.fee}</span><span class="hire-price-label">Per Turn</span>
             </div>
           </div>
         `;
@@ -3304,8 +3880,8 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.disabled = isHired || alreadyHasTeam || isGameFinished();
         btn.addEventListener("click", async () => {
           if (!gameState || gameState.salesTeam) return;
-          if (Number(gameState.budget || 0) < Number(team.price || 0)) { alert("Not enough budget."); return; }
-          gameState.budget = Number(gameState.budget || 0) - Number(team.price || 0);
+          if (Number(gameState.budget || 0) < Number(team.fee || 0)) { alert("Not enough budget."); return; }
+          //gameState.budget = Number(gameState.budget || 0) - Number(team.price || 0);
           gameState.salesTeam = team.id;
           renderHireOverlay();
           renderSalesTeamStatus();
@@ -3380,7 +3956,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         card.innerHTML = `
           ${isHired ? `<div class="hire-card-badge">✓ Hired</div>` : ""}
           <div class="hire-head">
-            <div class="assistant-avatar">${assistant.initials}</div>
+            <div class="assistant-avatar">${assistant.icon ? `<img src="${assistant.icon}" alt="${assistant.name}">` : assistant.initials}</div>
             <div class="grow" style="min-width:0;">
               <div class="hire-name nowrap-ellipsis">${assistant.name}</div>
               <div class="hire-tagline">${assistant.tagline}</div>
@@ -3392,7 +3968,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           </div>
           <div class="hire-foot">
             <div>
-              <span class="hire-price-value">${formatEuro(assistant.price)}</span><span class="hire-price-label">flat</span>
+              <span class="hire-price-value">${formatEuro(assistant.fee)}</span><span class="hire-price-label">PER TURN</span>
             </div>
           </div>
         `;
@@ -3405,8 +3981,8 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.disabled = isHired || alreadyHasAssistant || isGameFinished();
         btn.addEventListener("click", async () => {
           if (!gameState || gameState.assistant) return;
-          if (Number(gameState.budget || 0) < Number(assistant.price || 0)) { alert("Not enough budget."); return; }
-          gameState.budget = Number(gameState.budget || 0) - Number(assistant.price || 0);
+          if (Number(gameState.budget || 0) < Number(assistant.fee || 0)) { alert("Not enough budget."); return; }
+          //gameState.budget = Number(gameState.budget || 0) - Number(assistant.price || 0);
           gameState.assistant = assistant.id;
           gameState.assistantHiredTurn = Number(gameState.turn || 0);
           gameState.assistantProjectionTurn = null;
@@ -3437,7 +4013,10 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         mutate: false,
         deterministic: true,
       });
-      const objectIncome = Number(computeIncome() || 0);
+
+      //add actual object income prediction mechanism
+      //const objectIncome = Number(computeIncome() || 0);
+      const objectIncome = 0;
       const ticketIncome = Number(preview.ticketIncome || 0);
       return {
         objectIncome,
