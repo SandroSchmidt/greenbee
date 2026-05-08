@@ -1048,6 +1048,13 @@
     border-radius: 14px;
     font-size: 22px;
   }
+  .assistant-avatar img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: inherit;
+  }
   .assistant-mini-avatar{
     width: 30px;
     height: 30px;
@@ -1527,7 +1534,7 @@
         tagline: "Ticket yield specialists",
         bio: "Commercial ticketing specialists who are strong at positioning the event as higher-value. Best when you want to improve ticket conversion and support a slightly stronger ticket price.",
         stats: ["Ticket sales boost", "Slight ticket price lift"],
-        price: 250
+        fee: 250
       },
       {
         id: "northwave",
@@ -1537,7 +1544,7 @@
         tagline: "Audience growth specialists",
         bio: "A modern marketing team focused on reach, campaign efficiency and channel mix. Best when you want stronger awareness and more visitors coming through the gate.",
         stats: ["Marketing boost", "More visitor demand"],
-        price: 250
+        fee: 250
       },
       {
         id: "havenfield",
@@ -1547,7 +1554,7 @@
         tagline: "Vendor relations specialists",
         bio: "A partnership-led team with a strong network of local vendors and exhibitors. Best when you want to attract more stand offers and negotiate better proposal quality for board placements.",
         stats: ["More vendor interest", "Better stand offers"],
-        price: 250
+        fee: 250
       }
     ];
 
@@ -1560,7 +1567,8 @@
         tagline: "Ticket pricing & demand",
         bio: "Mira studies your current ticket price, infrastructure and audience response, then gives practical pricing advice from the next turn onward.",
         stats: ["Price insight", "Projection", "Demand model"],
-        price: 700
+        icon: "/icons/assistants/assistant_female_1.png",
+        fee: 150
       },
       {
         id: "leo",
@@ -1570,7 +1578,8 @@
         tagline: "Balanced revenue planning",
         bio: "Leo focuses on turning object income and ticket sales into a realistic budget forecast with a cautious business tone.",
         stats: ["Revenue", "Budget", "Cautious"],
-        price: 900
+        icon: "/icons/assistants/assistant_male_1.png",
+        fee: 150
       },
       {
         id: "nora",
@@ -1580,7 +1589,8 @@
         tagline: "Audience-first advice",
         bio: "Nora reads group sales momentum and points out whether your current price is blocking demand or leaving money on the table.",
         stats: ["Audience", "Momentum", "Friendly"],
-        price: 800
+        icon: "/icons/assistants/assistant_female_2.png",
+        fee: 150
       }
     ];
 
@@ -1643,8 +1653,8 @@
         assistantHiredTurn: null,
         assistantProjectionTurn: null,
         assistantProjection: null,
-        objectIncomeHistory: [0],
-        ticketIncomeHistory: [0],
+        objectIncomeHistory: [],
+        ticketIncomeHistory: [],
         turnReports: [],
         rentedBooths: [],
         infrastructuralSpendings: 0,
@@ -1652,16 +1662,6 @@
       };
     }
 
-
-    function computeIncome() {
-      const objs = globalSettings.objects || {};
-      let income = 0;
-      Object.values(gameState.board || {}).forEach(key => {
-        const o = objs[key];
-        if (o && o.income) income += o.income;
-      });
-      return income;
-    }
 
     function computeGlobalInterestFromMarketing() {
       const channels = (globalSettings && globalSettings.marketingChannels) || {};
@@ -2485,8 +2485,7 @@
       const nextTurn = curTurn + 1;
       if (nextTurn <= CHART_X_MAX) {
         const curBudget = Number(gameState.budget || 0);
-        const incNext = Number(computeIncome() || 0);
-        const nextStart = curBudget + incNext;
+        const nextStart = curBudget;
 
         svg.append("line")
           .attr("x1", x(curTurn)).attr("y1", y(curBudget))
@@ -2688,9 +2687,9 @@
       let verdict;
       if (price <= 0) {
         verdict = "Your tickets are free. Demand will be strong, but you are leaving revenue on the table — I would increase the price.";
-      } else if (factor < 0.72) {
+      } else if (factor < 0.62) {
         verdict = "My analysis says the current ticket price is too high for the value visitors see right now. I would decrease it before the next turn.";
-      } else if (factor > 1.08) {
+      } else if (factor > 1.38) {
         verdict = "The current ticket price looks very affordable. You probably have room to increase it without hurting demand too much.";
       } else {
         verdict = "The current ticket price looks about right for your infrastructure and current demand signals.";
@@ -2880,6 +2879,13 @@
       if (e.target.id === "insights-overlay") closeInsightsOverlay();
     });
 
+
+    function getObjectIncomeLastTurn(turn){
+      const objectsLeasedLastTurn = gameState.rentedBooths.filter(itm=>itm.acceptedTurn == turn);
+      const total = objectsLeasedLastTurn.reduce((acc, itm) => acc+ itm.price, 0);
+      return total;
+    }
+
     // ===== Turn-Logik =====
     async function nextTurn() {
       const maxT = (worldSettings && worldSettings.maxTurns) || 10;
@@ -2891,10 +2897,15 @@
       ensureGameStateShape(gameState);
       refreshInfrastructureSpendingsFromBoard();
 
+      const expensesThisTurn = {
+        "Loan Payment": 0,
+        "Marketing Fee": 0,
+        "Sales Team Fee": 0,
+        "Assistant Fee": 0,
+      };
       const currentTurn = Number(gameState.turn || 0);
       const openingBudget = Number(gameState.budget || 0);
-      //const objectIncome = Number(computeIncome() || 0);
-      const objectIncome = 0;
+      const objectIncome = getObjectIncomeLastTurn(gameState.turn-1);
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
@@ -2926,19 +2937,29 @@
       const loanPayment = getRequestedCredits().reduce((acc, itm) => getLoanPaymentAmount(itm) + acc, 0);
       console.log("CREDIT ITNEREST: ", loanPayment)
       console.log("ROUNDED: ", Math.round(loanPayment));
+      expensesThisTurn["Loan Payment"] = loanPayment;
 
       let spendings = Object.keys(gameState.marketingPlan).reduce((accumulator, itm)=>accumulator+gameState.marketingPlan[itm], 0);
       console.log("MARKETING SPENDINGS: ", spendings);
+      expensesThisTurn["Marketing Fee"] = spendings;
       spendings += loanPayment;
       console.log("SPEDINGS AFTER LOAN INTEREST: ", spendings);
       if(gameState?.salesTeam){
         const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
         if(salesTeam){
-          spendings+= salesTeam.price;
+          spendings+= salesTeam.fee;
+          expensesThisTurn["Sales Team Fee"] = salesTeam.fee; 
         }
         else {
           console.log("Problem with hired sales team logic");
         }
+      }
+
+      const assistant = getHiredAssistant();
+      if(assistant){
+        console.log("assisstant: ", gameState.assistant);
+        spendings+= assistant.fee;
+        expensesThisTurn["Assistant Fee"] = assistant.fee;
       }
       gameState.budget = openingBudget + totalIncome - spendings;
       if(gameState.budget<0){
@@ -2950,7 +2971,7 @@
       }
 
       if(spendings>gameState.budget){
-        rightStatusMenu.setWarning('Your last bill was higher than your current budget. Time to reconsider strategy!','danger')
+        rightStatusMenu.setWarning('Your last bill was higher than your current budget. Time to reconsider strategy!')
       }
 
       /*let creditRepayment = 0;
@@ -2965,6 +2986,12 @@
 
       const report = {
         turn: gameState.turn,
+        expenses: Object.keys(expensesThisTurn).map(itm=>{
+          return {
+            name: itm,
+            amount: expensesThisTurn[itm],
+          }
+        }),
         openingBudget,
         objectIncome,
         ticketIncome,
@@ -2981,6 +3008,7 @@
       };
       gameState.turnReports.push(report);
       console.log("GAME STATE: ", gameState);
+      console.log("Expenses: ", expensesThisTurn);
       addGeneratedProposalsToGameState(generateProposals(gameState, worldSettings, globalSettings));
       if (deskMenu || isDeskMenuOpen()) renderDeskMenu();
       updateAll();
@@ -3062,7 +3090,8 @@
       renderMarketingToolsPanel();
 
       const currentTurn = gameState.turn || 0;
-      const currentObjectIncome = computeIncome();
+      
+      const currentObjectIncome = getObjectIncomeLastTurn(gameState?.turn ?? 0);
       if (typeof gameState.objectIncomeHistory[currentTurn] === "undefined") {
         gameState.objectIncomeHistory[currentTurn] = currentObjectIncome;
       }
@@ -3115,13 +3144,24 @@
         const desc = o.descriptionEn || DEFAULT_DESCRIPTIONS[objKey] || "This object has no description yet.";
         const price = (o.price ?? 0);
         const income = (o.income ?? 0);
-        const suit = Array.isArray(o.suitability) ? o.suitability : [0,0,0];
+        const baseSuit = Array.isArray(o.suitability)
+          ? o.suitability.map(value => Number(value || 0))
+          : [0,0,0];
+        const suit = [...baseSuit];
         const rentedBooth = gameState?.rentedBooths.find(itm=>itm.tile == id);
         console.log("RENTED BOOTH: ", rentedBooth)
         if(rentedBooth){
           for(let i=0; i<3; i++){
-            suit[i]+=rentedBooth.vendorSuitabilityByGroup[i];
+            suit[i] = baseSuit[i] + Number(rentedBooth.vendorSuitabilityByGroup?.[i] || 0);
           }
+        }
+
+        const speakerAppointment = gameState?.appointedSpeakers.find(itm=>itm.tileId == id);
+        if(speakerAppointment){
+            const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id==speakerAppointment.speakerId);
+            for(let i=0; i<3; i++){
+                suit[i] += Number(appointedSpeaker?.suitability?.[i] || 0);
+            }
         }
         let hoverInfo = `Board - Tile ${id}`
         hoverInfo+= `\nObject: ${objKey}`
@@ -3717,6 +3757,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           closingBalance: report.closingBudget,
           objectIncome: report.objectIncome,
           ticketIncome: report.ticketIncome,
+          expenses: report.expenses,
           groups: [
               { name: 'Youth',    thisTurn: report.newSales[0], total: report.totalTicketSales[0], pace: report.salesEfficiency[0], suitability: report.suitability[0], interest: report.interest[0] },
               { name: 'Families', thisTurn: report.newSales[1], total: report.totalTicketSales[1], pace: report.salesEfficiency[1], suitability: report.suitability[1], interest: report.interest[1] },
@@ -3825,7 +3866,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           </div>
           <div class="hire-foot">
             <div>
-              <span class="hire-price-value">€${team.price}</span><span class="hire-price-label">Per Turn</span>
+              <span class="hire-price-value">€${team.fee}</span><span class="hire-price-label">Per Turn</span>
             </div>
           </div>
         `;
@@ -3839,7 +3880,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.disabled = isHired || alreadyHasTeam || isGameFinished();
         btn.addEventListener("click", async () => {
           if (!gameState || gameState.salesTeam) return;
-          if (Number(gameState.budget || 0) < Number(team.price || 0)) { alert("Not enough budget."); return; }
+          if (Number(gameState.budget || 0) < Number(team.fee || 0)) { alert("Not enough budget."); return; }
           //gameState.budget = Number(gameState.budget || 0) - Number(team.price || 0);
           gameState.salesTeam = team.id;
           renderHireOverlay();
@@ -3915,7 +3956,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         card.innerHTML = `
           ${isHired ? `<div class="hire-card-badge">✓ Hired</div>` : ""}
           <div class="hire-head">
-            <div class="assistant-avatar">${assistant.initials}</div>
+            <div class="assistant-avatar">${assistant.icon ? `<img src="${assistant.icon}" alt="${assistant.name}">` : assistant.initials}</div>
             <div class="grow" style="min-width:0;">
               <div class="hire-name nowrap-ellipsis">${assistant.name}</div>
               <div class="hire-tagline">${assistant.tagline}</div>
@@ -3927,7 +3968,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           </div>
           <div class="hire-foot">
             <div>
-              <span class="hire-price-value">${formatEuro(assistant.price)}</span><span class="hire-price-label">flat</span>
+              <span class="hire-price-value">${formatEuro(assistant.fee)}</span><span class="hire-price-label">PER TURN</span>
             </div>
           </div>
         `;
@@ -3940,8 +3981,8 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.disabled = isHired || alreadyHasAssistant || isGameFinished();
         btn.addEventListener("click", async () => {
           if (!gameState || gameState.assistant) return;
-          if (Number(gameState.budget || 0) < Number(assistant.price || 0)) { alert("Not enough budget."); return; }
-          gameState.budget = Number(gameState.budget || 0) - Number(assistant.price || 0);
+          if (Number(gameState.budget || 0) < Number(assistant.fee || 0)) { alert("Not enough budget."); return; }
+          //gameState.budget = Number(gameState.budget || 0) - Number(assistant.price || 0);
           gameState.assistant = assistant.id;
           gameState.assistantHiredTurn = Number(gameState.turn || 0);
           gameState.assistantProjectionTurn = null;
@@ -3972,7 +4013,10 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         mutate: false,
         deterministic: true,
       });
-      const objectIncome = Number(computeIncome() || 0);
+
+      //add actual object income prediction mechanism
+      //const objectIncome = Number(computeIncome() || 0);
+      const objectIncome = 0;
       const ticketIncome = Number(preview.ticketIncome || 0);
       return {
         objectIncome,

@@ -1,4 +1,47 @@
-
+/**
+ * TurnSummaryModal — a self-contained turn summary popup for GreenBee.
+ *
+ * No dependencies. Vanilla JS + injected stylesheet. Themeable via CSS variables.
+ *
+ * USAGE
+ * -----
+ *   const modal = new TurnSummaryModal({
+ *     turnNumber: 2,
+ *     openingBalance: 505,
+ *     closingBalance: 705,
+ *     objectIncome: 200,
+ *     ticketIncome: 0,
+ *     expenses: [
+ *       { name: 'Assistant fee',  amount: 50 },
+ *       { name: 'Sales team fee', amount: 100 },
+ *       { name: 'Loan payment',   amount: 30 },
+ *       { name: 'Marketing fee',  amount: 80 },
+ *     ],
+ *     groups: [
+ *       { name: 'Youth',    thisTurn: 0, total: 0, pace: 0, suitability: 1, interest: 0 },
+ *       { name: 'Families', thisTurn: 0, total: 0, pace: 0, suitability: 3, interest: 0 },
+ *       { name: 'Seniors',  thisTurn: 0, total: 0, pace: 0, suitability: 2, interest: 0 },
+ *     ],
+ *     ticketPrice: 0,
+ *     reasonableness: { current: 2.0, target: 1.2 },
+ *     onContinue: () => { modal.close(); startNextTurn(); },
+ *     onClose:    () => console.log('summary dismissed'),
+ *   });
+ *   modal.show();
+ *
+ *   // later: modal.close();
+ *   // or update values without re-creating: modal.update({ closingBalance: 800 });
+ *
+ * THEMING
+ * -------
+ *   Override any of these CSS variables on :root or .ts-modal to fit your tokens:
+ *     --ts-bg, --ts-surface, --ts-border,
+ *     --ts-text, --ts-text-secondary, --ts-text-tertiary,
+ *     --ts-success, --ts-danger,
+ *     --ts-cta-bg, --ts-cta-text,
+ *     --ts-radius-md, --ts-radius-lg,
+ *     --ts-backdrop, --ts-z-index, --ts-font-family
+ */
 
 const TURN_SUMMARY_STYLES = `
 .ts-modal-backdrop {
@@ -120,6 +163,37 @@ const TURN_SUMMARY_STYLES = `
 .ts-modal__section {
   padding: 0 24px 20px;
 }
+.ts-modal__tabs {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 12px;
+  border-bottom: 0.5px solid var(--ts-border, rgba(0, 0, 0, 0.1));
+}
+.ts-modal__tab {
+  background: transparent;
+  border: none;
+  padding: 4px 0 8px;
+  margin-bottom: -0.5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ts-text-tertiary, #9a9a9a);
+  cursor: pointer;
+  border-bottom: 1.5px solid transparent;
+  transition: color 100ms ease, border-color 100ms ease;
+}
+.ts-modal__tab:hover {
+  color: var(--ts-text-secondary, #6b6b6b);
+}
+.ts-modal__tab--active {
+  color: var(--ts-text, #1a1a1a);
+  border-bottom-color: var(--ts-text, #1a1a1a);
+}
+.ts-modal__tab:focus-visible {
+  outline: 2px solid var(--ts-cta-bg, #1a1a1a);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 .ts-modal__lines {
   display: flex;
   flex-direction: column;
@@ -143,6 +217,9 @@ const TURN_SUMMARY_STYLES = `
   border-top: 0.5px solid var(--ts-border, rgba(0, 0, 0, 0.1));
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+.ts-modal__line--empty {
+  color: var(--ts-text-tertiary, #9a9a9a);
 }
 .ts-modal__table {
   width: 100%;
@@ -237,7 +314,8 @@ const TURN_SUMMARY_STYLES = `
 @media (prefers-reduced-motion: reduce) {
   .ts-modal-backdrop,
   .ts-modal,
-  .ts-modal__cta {
+  .ts-modal__cta,
+  .ts-modal__tab {
     transition: none;
   }
 }
@@ -254,18 +332,22 @@ class TurnSummaryModal {
       objectIncome: 0,
       ticketIncome: 0,
       totalIncome: null,       // auto = objectIncome + ticketIncome
+      expenses: [],            // [{ name, amount }]
+      totalExpenses: null,     // auto = sum of expenses[].amount
       groups: [],              // [{ name, thisTurn, total, pace, suitability, interest }]
       ticketPrice: 0,
       reasonableness: null,    // { current, target } or null to hide
       currency: '€',
       continueLabel: null,     // overrides "Plan turn N+1 →"
       showContinueButton: true,
+      defaultTab: 'income',    // 'income' | 'expenses'
       dismissible: true,       // ESC key + backdrop click
       onClose: null,
       onContinue: null,
     }, options);
 
     this.backdropEl = null;
+    this._activeTab = this.options.defaultTab === 'expenses' ? 'expenses' : 'income';
     this._previouslyFocused = null;
     this._handleKeyDown = this._handleKeyDown.bind(this);
   }
@@ -320,6 +402,14 @@ class TurnSummaryModal {
     this._attachHandlers();
   }
 
+  /** Programmatically switch the active tab. */
+  setTab(tab) {
+    if (tab !== 'income' && tab !== 'expenses') return;
+    if (tab === this._activeTab) return;
+    this._activeTab = tab;
+    this._refreshTabPanel();
+  }
+
   _handleKeyDown(e) {
     if (e.key === 'Escape' && this.options.dismissible) {
       e.stopPropagation();
@@ -355,11 +445,74 @@ class TurnSummaryModal {
     return backdrop;
   }
 
-  _buildModalHtml() {
+  _buildIncomePanelHtml() {
     const o = this.options;
     const totalIncome = o.totalIncome != null
       ? o.totalIncome
       : (Number(o.objectIncome) || 0) + (Number(o.ticketIncome) || 0);
+
+    return `
+      <div class="ts-modal__lines">
+        <div class="ts-modal__line">
+          <span class="ts-modal__line-name">Object income</span>
+          <span class="ts-modal__line-val">${this._formatMoney(o.objectIncome)}</span>
+        </div>
+        <div class="ts-modal__line">
+          <span class="ts-modal__line-name">Ticket income</span>
+          <span class="ts-modal__line-val">${this._formatMoney(o.ticketIncome)}</span>
+        </div>
+        <div class="ts-modal__line ts-modal__line--total">
+          <span>Total</span>
+          <span>${this._formatMoney(totalIncome)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  _buildExpensesPanelHtml() {
+    const o = this.options;
+    const expenses = Array.isArray(o.expenses) ? o.expenses : [];
+    const totalExpenses = o.totalExpenses != null
+      ? o.totalExpenses
+      : expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+
+    if (!expenses.length) {
+      return `
+        <div class="ts-modal__lines">
+          <div class="ts-modal__line ts-modal__line--empty">
+            <span class="ts-modal__line-name">No expenses this turn</span>
+            <span class="ts-modal__line-val">${this._formatMoney(0)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const linesHtml = expenses.map(e => `
+      <div class="ts-modal__line">
+        <span class="ts-modal__line-name">${this._escape(e.name)}</span>
+        <span class="ts-modal__line-val">${this._formatMoney(e.amount)}</span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="ts-modal__lines">
+        ${linesHtml}
+        <div class="ts-modal__line ts-modal__line--total">
+          <span>Total</span>
+          <span>${this._formatMoney(totalExpenses)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  _buildActivePanelHtml() {
+    return this._activeTab === 'expenses'
+      ? this._buildExpensesPanelHtml()
+      : this._buildIncomePanelHtml();
+  }
+
+  _buildModalHtml() {
+    const o = this.options;
     const delta = (Number(o.closingBalance) || 0) - (Number(o.openingBalance) || 0);
 
     const title = o.title || `Turn ${o.turnNumber} summary`;
@@ -395,6 +548,9 @@ class TurnSummaryModal {
     const deltaHtml = delta !== 0
       ? `<span class="ts-modal__delta ${deltaClass}">${this._formatDelta(delta)}</span>`
       : '';
+
+    const incomeActive = this._activeTab === 'income';
+    const expensesActive = this._activeTab === 'expenses';
 
     const groupsSectionHtml = (o.groups && o.groups.length) ? `
       <section class="ts-modal__section">
@@ -439,20 +595,22 @@ class TurnSummaryModal {
         </section>
 
         <section class="ts-modal__section">
-          <p class="ts-modal__label">Income</p>
-          <div class="ts-modal__lines">
-            <div class="ts-modal__line">
-              <span class="ts-modal__line-name">Object income</span>
-              <span class="ts-modal__line-val">${this._formatMoney(o.objectIncome)}</span>
-            </div>
-            <div class="ts-modal__line">
-              <span class="ts-modal__line-name">Ticket income</span>
-              <span class="ts-modal__line-val">${this._formatMoney(o.ticketIncome)}</span>
-            </div>
-            <div class="ts-modal__line ts-modal__line--total">
-              <span>Total</span>
-              <span>${this._formatMoney(totalIncome)}</span>
-            </div>
+          <div class="ts-modal__tabs" role="tablist" aria-label="Cash flow">
+            <button
+              class="ts-modal__tab ${incomeActive ? 'ts-modal__tab--active' : ''}"
+              type="button"
+              role="tab"
+              aria-selected="${incomeActive}"
+              data-ts-tab="income">Income</button>
+            <button
+              class="ts-modal__tab ${expensesActive ? 'ts-modal__tab--active' : ''}"
+              type="button"
+              role="tab"
+              aria-selected="${expensesActive}"
+              data-ts-tab="expenses">Expenses</button>
+          </div>
+          <div data-ts-tabpanel role="tabpanel">
+            ${this._buildActivePanelHtml()}
           </div>
         </section>
 
@@ -466,6 +624,20 @@ class TurnSummaryModal {
         </footer>
       </div>
     `;
+  }
+
+  _refreshTabPanel() {
+    if (!this.backdropEl) return;
+    const panel = this.backdropEl.querySelector('[data-ts-tabpanel]');
+    if (panel) {
+      panel.innerHTML = this._buildActivePanelHtml();
+    }
+    const tabs = this.backdropEl.querySelectorAll('[data-ts-tab]');
+    tabs.forEach(btn => {
+      const isActive = btn.getAttribute('data-ts-tab') === this._activeTab;
+      btn.classList.toggle('ts-modal__tab--active', isActive);
+      btn.setAttribute('aria-selected', String(isActive));
+    });
   }
 
   _attachHandlers() {
@@ -492,6 +664,17 @@ class TurnSummaryModal {
         }
       });
     }
+
+    const tabBtns = this.backdropEl.querySelectorAll('[data-ts-tab]');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.getAttribute('data-ts-tab');
+        if (tab && tab !== this._activeTab) {
+          this._activeTab = tab;
+          this._refreshTabPanel();
+        }
+      });
+    });
   }
 }
 

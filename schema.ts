@@ -251,7 +251,7 @@ export interface HireablePartnerDefinition {
   tagline: string;
   bio: string;
   stats: string[];
-  price: number;
+  fee: number;
 }
 
 export type SalesTeamDefinition = HireablePartnerDefinition;
