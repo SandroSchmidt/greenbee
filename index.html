@@ -14,6 +14,7 @@
   <script src="logic.js"></script>
   <script src="components/controlMenuButton.js"></script>
   <script src="components/turnSummaryModal.js"></script>
+  <script src="components/finalPopupModal.js"></script>
   <script src="components/rightStatusMenu.js"></script>
   <script src="components/marketingToolsPanel.js"></script>
   <script src="components/deskMenu.js"></script>
@@ -1634,14 +1635,14 @@
         budget: startBudget,
         board: {},
         budgetHistory: [startBudget],
-        incomeHistory: [0],
+        incomeHistory: [],
         ticketSales: [0,0,0],
         ticketSalesProgress: [], //progress through rounds
         ticketPrice: 0, 
         ticketPriceProgress: [], //pricess progress through rounds
         cumulativeSalesFactorProgress: [],
         priceReasonablenessProgress: [],
-        marketingBudgetHistory: [0],
+        marketingBudgetHistory: [],
         marketingPlan: {},
         website: false,
         interest: [0,0,0],
@@ -2056,7 +2057,6 @@
       const suitability = Array.isArray(obj.suitability) ? obj.suitability : [0, 0, 0];
       return [
         { label: "Price", value: formatEuro(obj.price || 0) },
-        { label: "Income / turn", value: formatEuro(obj.income || 0) },
         { label: "Suitability", value: suitability.map(v => Number(v || 0)).join(" / ") },
       ];
     }
@@ -2905,7 +2905,7 @@
       };
       const currentTurn = Number(gameState.turn || 0);
       const openingBudget = Number(gameState.budget || 0);
-      const objectIncome = getObjectIncomeLastTurn(gameState.turn-1);
+      const objectIncome = getObjectIncomeLastTurn(gameState.turn);
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
@@ -3013,7 +3013,11 @@
       if (deskMenu || isDeskMenuOpen()) renderDeskMenu();
       updateAll();
       await saveGameState(worldId, playerId, gameState);
-      showTurnReport(report, (gameState.turn || 0) >= maxT);
+      if ((gameState.turn || 0) >= maxT) {
+        showFinalResults(report);
+      } else {
+        showTurnReport(report);
+      }
     }
 
     async function restartGame() {
@@ -3134,6 +3138,7 @@
 
     // ===== Hover info =====
     function showTileInfo(id,g) {
+      //eventSimulation(gameState, worldSettings, globalSettings);
       const tileShape = g.select("polygon");
       tileShape.attr("fill", SELECTED_CELL_COLOR);
       const board = (gameState && gameState.board) ? gameState.board : {};
@@ -3143,9 +3148,8 @@
         const o = objs[objKey];
         const desc = o.descriptionEn || DEFAULT_DESCRIPTIONS[objKey] || "This object has no description yet.";
         const price = (o.price ?? 0);
-        const income = (o.income ?? 0);
         const baseSuit = Array.isArray(o.suitability)
-          ? o.suitability.map(value => Number(value || 0))
+          ? o.suitability.slice()
           : [0,0,0];
         const suit = [...baseSuit];
         const rentedBooth = gameState?.rentedBooths.find(itm=>itm.tile == id);
@@ -3732,47 +3736,80 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       `;
     }
 
-    function showTurnReport(report, isFinal = false) {
+    function getFinalResultsWorldSettings() {
+      return Object.assign({}, worldSettings || {}, {
+        name: (worldSettings && (worldSettings.name || worldSettings.title)) || worldId || "Event",
+        groups: getGroupLabels(),
+      });
+    }
+
+    function showFinalTurnReview(report) {
       const overlay = document.getElementById("summary-overlay");
       const content = document.getElementById("summary-content");
       const title = document.getElementById("summary-title");
       if (!overlay || !content) return;
-      if (title) title.textContent = isFinal ? "Final turn summary" : `Turn ${report.turn} summary`;
-      if(isFinal){
-        content.innerHTML = renderTurnReportHtml(report, isFinal);
-         overlay.style.display = "flex";
-        overlay.style.position = "fixed";
-        overlay.style.inset = "0";
-        overlay.style.alignItems = "center";
-        overlay.style.justifyContent = "center";
-        overlay.style.background = "rgba(0,0,0,.55)";
-        overlay.style.zIndex = "100";
-        overlay.style.padding = "16px";
-        const nextBtn = document.getElementById("nextturn-btn");
-      }
-      else {
-        const modal = new TurnSummaryModal({
-          turnNumber: report.turn,
-          openingBalance: report.openingBudget,
-          closingBalance: report.closingBudget,
-          objectIncome: report.objectIncome,
-          ticketIncome: report.ticketIncome,
-          expenses: report.expenses,
-          groups: [
-              { name: 'Youth',    thisTurn: report.newSales[0], total: report.totalTicketSales[0], pace: report.salesEfficiency[0], suitability: report.suitability[0], interest: report.interest[0] },
-              { name: 'Families', thisTurn: report.newSales[1], total: report.totalTicketSales[1], pace: report.salesEfficiency[1], suitability: report.suitability[1], interest: report.interest[1] },
-              { name: 'Seniors',  thisTurn: report.newSales[2], total: report.totalTicketSales[2], pace: report.salesEfficiency[2], suitability: report.suitability[2], interest: report.interest[2]},
-          ],
-          ticketPrice: report.ticketPrice,
-          reasonableness: { current: report.priceReasonableness, target: 1.0 },
-          onContinue: () => { modal.close(); startNextTurn(); },
-          onClose:    () => console.log('summary dismissed'),
-     });
+      if (title) title.textContent = "Final turn summary";
+      content.innerHTML = renderTurnReportHtml(report, true);
+      overlay.style.display = "flex";
+      overlay.style.position = "fixed";
+      overlay.style.inset = "0";
+      overlay.style.alignItems = "center";
+      overlay.style.justifyContent = "center";
+      overlay.style.background = "rgba(0,0,0,.55)";
+      overlay.style.zIndex = "100";
+      overlay.style.padding = "16px";
+      const nextBtn = document.getElementById("nextturn-btn");
+      if (nextBtn) nextBtn.disabled = true;
+    }
 
-          modal.show();
+    function showFinalResults(report) {
+      const nextBtn = document.getElementById("nextturn-btn");
+      if (nextBtn) nextBtn.disabled = true;
+
+      if (typeof eventSimulation !== "function" || typeof showFinalResultsModal !== "function") {
+        showFinalTurnReview(report);
+        return;
       }
-      
-      if (nextBtn) nextBtn.disabled = !!isFinal;
+
+      let simulationResult;
+      try {
+        simulationResult = eventSimulation(gameState, worldSettings, globalSettings);
+      } catch (err) {
+        console.error("Final event simulation failed:", err);
+        simulationResult = {
+          visitorsSatisfaction: [0, 0, 0],
+          vendorsSatisfaction: 0,
+          peopleTracker: [],
+        };
+      }
+
+      showFinalResultsModal(gameState, getFinalResultsWorldSettings(), simulationResult, {
+        onRestart: () => restartGame(),
+        onReview: () => showFinalTurnReview(report),
+      });
+    }
+
+    function showTurnReport(report) {
+      const groups = getGroupLabels();
+      const modal = new TurnSummaryModal({
+        turnNumber: report.turn,
+        openingBalance: report.openingBudget,
+        closingBalance: report.closingBudget,
+        objectIncome: report.objectIncome,
+        ticketIncome: report.ticketIncome,
+        expenses: report.expenses,
+        groups: [
+            { name: groups[0] || 'Youth',    thisTurn: report.newSales[0], total: report.totalTicketSales[0], pace: report.salesEfficiency[0], suitability: report.suitability[0], interest: report.interest[0] },
+            { name: groups[1] || 'Families', thisTurn: report.newSales[1], total: report.totalTicketSales[1], pace: report.salesEfficiency[1], suitability: report.suitability[1], interest: report.interest[1] },
+            { name: groups[2] || 'Seniors',  thisTurn: report.newSales[2], total: report.totalTicketSales[2], pace: report.salesEfficiency[2], suitability: report.suitability[2], interest: report.interest[2]},
+        ],
+        ticketPrice: report.ticketPrice,
+        reasonableness: { current: report.priceReasonableness, target: 1.0 },
+        onContinue: () => { modal.close(); },
+        onClose:    () => console.log('summary dismissed'),
+      });
+
+      modal.show();
     }
 
     function showEventSummary() {

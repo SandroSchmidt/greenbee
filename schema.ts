@@ -58,9 +58,10 @@ export type Vec3Labels = [string, string, string];
 
 export interface GameObjectDefinition {
   price: number;
-  income: number;
   color: string;
   suitability: Vec3;
+  effect: number; //I started writing down the explanation for both of these but it's taking me time
+  absorption: number; // so I'd explain it once we meet
   icon: string;
 }
 

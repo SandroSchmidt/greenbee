@@ -587,7 +587,8 @@ body.theme-dark .icon-trigger .empty-icon {
           <tr>
             <th>Key</th>
             <th>Price</th>
-            <th>Income</th>
+            <th>Effect</th>
+            <th>Absorption</th>
             <th>Color</th>
             <th>Suitability 1</th>
             <th>Suitability 2</th>
@@ -736,7 +737,8 @@ body.theme-dark .icon-trigger .empty-icon {
         tr.innerHTML = `
           <td><input data-field="key" value="${key}"></td>
           <td><input data-field="price" type="number" value="${o.price || 0}"></td>
-          <td><input data-field="income" type="number" value="${o.income || 0}"></td>
+          <td><input data-field="effect" type="number" value="${o.effect || 0}"></td>
+          <td><input data-field="absorption" type="number" value="${o.absorption || 0}"></td>
           <td><input data-field="color" type="color" value="${o.color || "#cccccc"}"></td>
           <td><input data-field="int0" type="number" value="${(o.suitability||[])[0] || 0}"></td>
           <td><input data-field="int1" type="number" value="${(o.suitability||[])[1] || 0}"></td>
@@ -751,7 +753,7 @@ body.theme-dark .icon-trigger .empty-icon {
     document.getElementById("add-object").addEventListener("click", () => {
       const key = "obj_" + Math.random().toString(36).slice(2,7);
       if (!localGlobal.objects) localGlobal.objects = {};
-      localGlobal.objects[key] = { price:0, income:0, color:"#cccccc", suitability:[0,0,0], icon:"" };
+      localGlobal.objects[key] = { price:0, effect:0, absorption:0, color:"#cccccc", suitability:[0,0,0], icon:"" };
       renderObjectsTable();
     });
     
@@ -831,7 +833,8 @@ body.theme-dark .icon-trigger .empty-icon {
 
         objects[key] = {
           price: parseFloat(get("price")) || 0,
-          income: parseFloat(get("income")) || 0,
+          effect: parseFloat(get("effect")) || 0,
+          absorption: parseFloat(get("absorption")) || 0,
           color: get("color").trim() || "#cccccc",
           suitability: [
             parseFloat(get("int0")) || 0,
