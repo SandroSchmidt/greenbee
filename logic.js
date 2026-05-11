@@ -246,6 +246,10 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
     console.log("STANDS: ", availableStands);
 }*/
 
+/* ---------------------------------------------------------------------------------------- */
+/* ------------------------------VENDOR PROPOSALS LOGIC------------------------------------ */
+/* ---------------------------------------------------------------------------------------- */
+
 function generateProposals(gameState, worldSettings, globalSettings, options = {}) {
   const opts = {
     maxOffersPerTile: 5,
@@ -793,4 +797,482 @@ function shuffleArray(arr) {
   }
 
   return copy;
+}
+
+
+/* ---------------------------------------------------------------------------------------- */
+/* --------------------------VENDORS SATISFACTION LOGIC------------------------------------ */
+/* ---------------------------------------------------------------------------------------- */
+
+function computeVendorsSatisfaction(gameState, tileId) {
+  console.log("");
+}
+
+/* ---------------------------------------------------------------------------------------- */
+/* --------------------------VISITORS SATISFACTION LOGIC----------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
+
+const saturation = (x, power = 1, k=1) => {
+      return Math.pow(x / (x + k), power);
+};
+
+function getVisitorsSatisfaction(peopleTracker, groupCount = 3) {
+  const satisfactionByGroup = Array.from({ length: groupCount }, () => []);
+
+  for (const person of peopleTracker) {
+    const satisfactionVector = person.satisfactionProgress;
+    const personSatisfactionMEAN = satisfactionVector.reduce((sum, value) => sum + value, 0) / satisfactionVector.length;
+    satisfactionByGroup[person.group].push(personSatisfactionMEAN);
+  }
+
+  const averageSatisfactionByGroup = satisfactionByGroup.map(groupValues =>{
+   return groupValues.reduce((sum, value) => sum + value, 0) / groupValues.length
+  });
+
+  console.log("SATISFACTION BY GROUP: ", satisfactionByGroup);
+  console.log("Average satisfaction by group: ", averageSatisfactionByGroup);
+
+  return averageSatisfactionByGroup
+}
+
+/* ________________________________________________________________________________________ */
+// so basically just getting how similar is visitors vector to vendors suitability vector
+// it shows us how proportional our visitors strucutre is to what vendor would expect 
+const kosinusSimilarity = (a, b) => {
+  if (a.length !== b.length) {
+    throw new Error("Vectors must have the same length");
+  }
+
+  let dotProduct = 0;
+  let magnitudeA = 0;
+  let magnitudeB = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    magnitudeA += a[i] * a[i];
+    magnitudeB += b[i] * b[i];
+  }
+
+  magnitudeA = Math.sqrt(magnitudeA);
+  magnitudeB = Math.sqrt(magnitudeB);
+
+  if (magnitudeA === 0 || magnitudeB === 0) {
+    return 0; // or null, because zero-vector has no direction
+  }
+
+  return dotProduct / (magnitudeA * magnitudeB);
+};
+
+function normalizeVector(x){
+  console.log("VECx", x);
+  let copy = x.slice();
+  for(let i; i<x.length; i++){
+    if(copy[i]<0){
+      copy[i] = 0;
+    }
+  }
+
+  return copy.map(itm=>itm/copy.reduce((acc, itm)=>acc+itm, 0));
+}
+
+function getVendorsSatisfaction(tileVisits, gameState){
+  const similarityArr = gameState.rentedBooths.map(itm=>{
+    const normalizedVector1 = normalizeVector(itm.vendorSuitabilityByGroup)
+    console.log("Vendor suit passed---")
+    console.log("TILE VISITS: ", tileVisits)
+    const normalizedVector2 = normalizeVector(tileVisits[itm.tile]);
+    const similarity = kosinusSimilarity(normalizedVector1, normalizedVector2);
+    console.log("Vector1: ", normalizedVector1);
+    console.log("Vector2: ", normalizedVector2);
+    console.log("Similarity: ", similarity);
+    return similarity;
+  })
+
+  const visitsSatisfaction = gameState.rentedBooths.map(itm=>{
+    const visits= tileVisits[itm.tile].reduce((acc, itm)=>acc+itm, 0);
+    return saturation(visits, 2, 200);
+  })
+
+  console.log("SIMilarity arr: ", similarityArr)
+  console.log("VISITS satisfaction: ", visitsSatisfaction);
+  const combined = [];
+  for(let i=0; i<visitsSatisfaction.length; i++){
+    combined[i] = similarityArr[i]*visitsSatisfaction[i];
+  }
+  console.log("combined: ", combined);
+  console.log("overall satisfaction: ", combined.reduce((acc, itm)=>acc+itm, 0)/combined.length);
+  return combined.reduce((acc, itm)=>acc+itm, 0)/combined.length;
+}
+
+/* ________________________________________________________________________________________ */
+
+const rows_notation = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+function getArrayOfKind(size, kind){
+  const returnArr= [];
+  for(let i=0; i<size; i++){
+    returnArr.push(kind);
+  }
+  return returnArr
+}
+
+function getBatches(populationArray, batchSize, numberOfRandomPeopleAirdrops){
+  const batches = [];
+  console.log("hEreweare");
+  for(let i=0; i<numberOfRandomPeopleAirdrops; i++){
+    const to = i !== (numberOfRandomPeopleAirdrops-1) ? i*batchSize+batchSize : 10000000000;
+    batches.push(populationArray.slice(i*batchSize,to));
+  }
+  console.log("BATCHES: ", batches);
+  return batches;
+}
+
+function pickGates(rows, cols, gameState, numberOfRandomPeopleAirdrops){
+  const entryRing = [];
+  for(let i=0; i<rows; i++){
+    for(let j=0; j<cols; j++){
+      const col = j+1;
+      if(i==0 || i==rows-1 || j==0 || j==cols-1){
+        //basically all the edging squares
+        entryRing.push(rows_notation[i]+col);
+      }
+    }
+  }
+  console.log("ENTRY LAYER: ", entryRing);
+  const pickedGates = []
+
+  
+  const freeSquares = entryRing.filter(itm=>!gameState.board[itm]);
+  console.log("FREE SQR: ", freeSquares);
+  if(freeSquares.length<1){
+    return ["A1"];
+  }
+  if(freeSquares.length<=numberOfRandomPeopleAirdrops){
+    return freeSquares;
+  }
+
+  while(pickedGates.length!==numberOfRandomPeopleAirdrops){
+    const randNum = randomInt(0,freeSquares.length-1);
+    if(!pickedGates.find(itm=>itm==freeSquares[randNum])){
+      pickedGates.push(freeSquares[randNum]);
+    }
+  }
+  console.log("Picked Gates: ", pickedGates)
+  return pickedGates;
+}
+
+function initialArrangement(gates, batches){
+  let batchesFormatted = batches.slice();
+  while(gates.length<batchesFormatted.length){
+    batchesFormatted = [[...batchesFormatted[0],...batchesFormatted[1]],...batchesFormatted.slice(2)];
+    console.log("Batches formatted: ", batchesFormatted);
+  }
+  const peopleTracker = [];
+  gates.forEach((itm, i)=>{
+    batchesFormatted[i].map(group => {
+      const personNote = {
+        group: group,
+        currentSquare: itm,
+        visitedSquaresHistory: [itm],
+        totalAccumulatedSuitability: [0, 0, 0],
+        satisfactionProgress: []
+      }
+      peopleTracker.push(personNote)
+    })
+  })
+  console.log("People tracker: ", peopleTracker);
+  return peopleTracker;
+  //console.log("BAtches formatted: ", batchesFormatted);
+}
+/* ---------------------------------------------------------------------------------------- */
+/* --------------------------EVENT SIMULATION----------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
+function eventSimulation(gameState, worldSettings, globalSettings){
+  const numberOfRandomPeopleAirdrops = 6;
+  const peopleArr= shuffleArray([...getArrayOfKind(worldSettings.population[0], 0), //youth
+  ...getArrayOfKind(worldSettings.population[1], 1), //families
+  ...getArrayOfKind(worldSettings.population[2], 2)]); //senior citizens
+  console.log("People arr: ", peopleArr);
+  const batchSize = Math.round(peopleArr.length/numberOfRandomPeopleAirdrops);
+  const batches = getBatches(peopleArr, batchSize, numberOfRandomPeopleAirdrops);
+  const gates = pickGates(worldSettings.gridSize, worldSettings.gridSize, gameState, numberOfRandomPeopleAirdrops);
+  const peopleTracker = initialArrangement(gates, batches);
+
+  const dataForSuitabilityNet = prepareDataForBoardSuitabilityNet(gameState, worldSettings, globalSettings);
+  const netResult = mapBoardSuitabilityNet(worldSettings.gridSize, worldSettings.gridSize, dataForSuitabilityNet)
+ 
+
+  const numberOfSimulations = 20;
+  runSimulationSteps(peopleTracker, worldSettings.gridSize, worldSettings.gridSize, netResult, dataForSuitabilityNet, numberOfSimulations);
+  console.log("Final people tracker: ", peopleTracker);
+  console.log("SUITABILITY NET: ", netResult);
+  const tileVisits = getVisitCountsByTile(peopleTracker, worldSettings.gridSize, worldSettings.gridSize);
+  console.log("Tile visits: ", tileVisits);
+  const visitorsSatisfaction = getVisitorsSatisfaction(peopleTracker);
+  const vendorsSatisfaction = getVendorsSatisfaction(tileVisits, gameState);
+  return {
+    visitorsSatisfaction: visitorsSatisfaction,
+    vendorsSatisfaction: vendorsSatisfaction,
+    peopleTracker: peopleTracker,
+  }
+}
+
+/* -----------------------------------------------------------------------------------------*/
+function prepareDataForBoardSuitabilityNet(gameState, worldSettings, globalSettings){
+  const data = [];
+  for(let i=0; i<worldSettings.gridSize; i++){
+    for (let j=0; j<worldSettings.gridSize; j++){
+      const col = j+1;
+      const tileId = rows_notation[i]+col;
+      const objKey = gameState.board[tileId];
+      if(!objKey){
+        const emptySquareInfo = {
+            square: tileId,
+            object: "Empty",
+            suitability: [0, 0, 0],
+            effectPower: 1,
+            absorptionPower: 0,
+        };
+        data.push(emptySquareInfo);
+      }
+      else {
+        const object = globalSettings.objects[objKey];
+        const suitability = object.suitability.slice();
+        const booth = (gameState?.rentedBooths ?? []).find(itm => itm.tile === tileId);
+        const vendorSuitability = booth && (booth.vendorSuitabilityByGroup.slice() || booth.suitability.slice());
+        if (Array.isArray(vendorSuitability)){
+          vendorSuitability.forEach((v, i) => { suitability[i] += Number(v || 0); });
+        }
+
+        //adding suitability points that speaker brings to the table
+        const speakerAppointment = (gameState?.appointedSpeakers ?? []).find(itm => itm.tileId == tileId);
+        if(speakerAppointment){
+          const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id == speakerAppointment.speakerId);
+          if (appointedSpeaker && Array.isArray(appointedSpeaker.suitability)) {
+            appointedSpeaker.suitability.forEach((v, i)=> {suitability[i] += Number(v || 0); });
+          }
+        }
+        
+        const occupiedSquareInfo = {
+          square: tileId,
+          object: objKey,
+          suitability: suitability,
+          effectPower: object?.effect ?? 0,
+          absorptionPower: object?.absorption ?? 0,
+        }
+
+        data.push(occupiedSquareInfo);
+      }
+    }
+  }
+  console.log("DATA: ", data);
+  return data;
+}
+
+
+function mapBoardSuitabilityNet(rows, cols, items) {
+  // ---- ID helpers (Excel-style: A1, B2, ... AA1, etc.) ----
+  const parseId = id => {
+    const m = id.match(/^([A-Z]+)(\d+)$/);
+    if (!m) throw new Error(`Invalid square ID: ${id}`);
+    let row = 0;
+    for (const ch of m[1]) row = row * 26 + (ch.charCodeAt(0) - 64);
+    return { row: row - 1, col: parseInt(m[2], 10) - 1 };
+  };
+  const makeId = (row, col) => {
+    let letters = '', r = row + 1;
+    while (r > 0) {
+      letters = String.fromCharCode(65 + (r - 1) % 26) + letters;
+      r = Math.floor((r - 1) / 26);
+    }
+    return letters + (col + 1);
+  };
+
+  // ---- Board lookup ----
+  const board = Array.from({ length: rows }, () => Array(cols).fill(null));
+  for (const item of items) {
+    const { row, col } = parseId(item.square);
+    if (row >= 0 && row < rows && col >= 0 && col < cols) board[row][col] = item;
+  }
+
+  const dim = items[0]?.suitability?.length ?? 3;
+
+  // ---- Result grid ----
+  const result = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => Array(dim).fill(0))
+  );
+
+  // ---- Parent rule: one step toward origin from relative offset (dr, dc).
+  // For a cell at Chebyshev distance L from the source, this yields its
+  // unique "upstream" neighbor at distance L-1. Matches the branching
+  // described in the spec (cardinals → 1 child, diagonals → 3 children).
+  const parentOf = (dr, dc) => {
+    const adr = Math.abs(dr), adc = Math.abs(dc);
+    if (adr > adc) return [dr - Math.sign(dr), dc];
+    if (adc > adr) return [dr, dc - Math.sign(dc)];
+    return [dr - Math.sign(dr), dc - Math.sign(dc)];
+  };
+
+  // ---- Propagate from each source ----
+  for (const item of items) {
+    const { suitability, effectPower = 0 } = item;
+    if (!suitability || suitability.every(v => v === 0)) continue;
+
+    const { row: sr, col: sc } = parseId(item.square);
+    if (sr < 0 || sr >= rows || sc < 0 || sc >= cols) continue;
+
+    // Source's own square: full suitability (layer 0, no falloff, no absorption)
+    for (let i = 0; i < dim; i++) result[sr][sc][i] += suitability[i];
+
+    // factor[r][c] = multiplier on this source's suitability that reaches (r, c)
+    const factor = Array.from({ length: rows }, () => Array(cols).fill(null));
+    factor[sr][sc] = 1;
+
+    const maxLayer = Math.max(sr, rows - 1 - sr, sc, cols - 1 - sc);
+    for (let layer = 1; layer <= maxLayer; layer++) {
+      for (let dr = -layer; dr <= layer; dr++) {
+        for (let dc = -layer; dc <= layer; dc++) {
+          if (Math.max(Math.abs(dr), Math.abs(dc)) !== layer) continue;
+          const tr = sr + dr, tc = sc + dc;
+          if (tr < 0 || tr >= rows || tc < 0 || tc >= cols) continue;
+
+          const [pdr, pdc] = parentOf(dr, dc);
+          const pr = sr + pdr, pc = sc + pdc;
+          const pf = factor[pr][pc];
+          if (pf === null) continue;
+
+          // Parent absorbs power flowing through it to its children,
+          // EXCEPT when parent is the source (source emits, doesn't absorb its own emission).
+          const parentIsSource = (pr === sr && pc === sc);
+          const parentObj = board[pr][pc];
+          const passThrough = parentIsSource || !parentObj
+            ? 1
+            : 1 - (parentObj.absorptionPower || 0);
+
+          const f = pf * effectPower * passThrough;
+          factor[tr][tc] = f;
+          for (let i = 0; i < dim; i++) result[tr][tc][i] += suitability[i] * f;
+        }
+      }
+    }
+  }
+
+  // ---- Format output ----
+  const out = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      out.push({ square: makeId(r, c), suitability: result[r][c] });
+    }
+  }
+  return out;
+}
+
+
+/* ---------------------------------------------------------------------------------------- */
+/* --------------------------SIMULATION STEPPING----------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
+
+function getNeighborSquares(squareId, rows, cols) {
+  const m = squareId.match(/^([A-Z]+)(\d+)$/);
+  let row = 0;
+  for (const ch of m[1]) row = row * 26 + (ch.charCodeAt(0) - 64);
+  row -= 1;
+  const col = parseInt(m[2], 10) - 1;
+
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = row + dr, nc = col + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+        neighbors.push(rows_notation[nr] + (nc + 1));
+      }
+    }
+  }
+  return neighbors;
+}
+
+function weightedPick(candidates, weights) {
+  const total = weights.reduce((a, b) => a + b, 0);
+  // Fallback: if every weight is 0 (all surroundings unsuitable), stay put.
+  if (total <= 0) return candidates[0];
+  let r = Math.random() * total;
+  for (let i = 0; i < candidates.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];
+}
+
+function pickNextSquare(person, rows, cols, netLookup) {
+  // Candidate set: current square (person can stay) + all 8-neighbors.
+  // We put currentSquare first so the "stay put" fallback in weightedPick is sensible.
+  const candidates = [person.currentSquare, ...getNeighborSquares(person.currentSquare, rows, cols)];
+
+  const weights = candidates.map(sq => {
+    const netSuit = netLookup[sq]?.suitability ?? [0, 0, 0];
+    // 1. Take only the value for this person's group.
+    let val = netSuit[person.group] ?? 0;
+    // 2. Clamp negatives to 0 (negative * positive multipliers stays negative,
+    //    so clamping after multiplication would also work — but doing it here
+    //    is clearer and avoids surprises later).
+    if (val < 0) val = 0;
+    // 3. Penalise current square (lower chance of staying).
+    if (sq === person.currentSquare) val *= 0.5;
+    // 4. Penalise per prior visit (compounding 0.66 per visit).
+    const visitCount = person.visitedSquaresHistory.reduce((n, v) => n + (v === sq ? 1 : 0), 0);
+    for (let i = 0; i < visitCount; i++) val *= 0.66;
+    return val;
+  });
+
+  return weightedPick(candidates, weights);
+}
+
+function runSimulationSteps(peopleTracker, rows, cols, netResult, dataForSuitabilityNet, numberOfSimulations) {
+  // Build O(1) lookups by square id once, instead of .find() inside the inner loop.
+  const netLookup = {};
+  for (const itm of netResult) netLookup[itm.square] = itm;
+  const dataLookup = {};
+  for (const itm of dataForSuitabilityNet) dataLookup[itm.square] = itm;
+
+  for (let step = 0; step < numberOfSimulations; step++) {
+    for (const person of peopleTracker) {
+      const nextSquare = pickNextSquare(person, rows, cols, netLookup);
+      person.currentSquare = nextSquare;
+      person.visitedSquaresHistory.push(nextSquare);
+
+      // Accumulate the raw square suitability (NOT the net value).
+      const squareSuit = dataLookup[nextSquare]?.suitability;
+      if (squareSuit) {
+        for (let i = 0; i < person.totalAccumulatedSuitability.length; i++) {
+          person.totalAccumulatedSuitability[i] += squareSuit[i] ?? 0;
+        }
+
+        const satisfaction = saturation(Math.max(0, squareSuit[person.group]), 1)
+        person.satisfactionProgress.push(satisfaction);
+      }
+    }
+  }
+
+  return peopleTracker;
+}
+
+
+function getVisitCountsByTile(peopleTracker, rows, cols) {
+  const counts = {};
+
+  // Pre-fill every tile with [0, 0, 0] so downstream code doesn't have to
+  // null-check missing keys (heatmap rendering, scoring, etc).
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      counts[rows_notation[i] + (j + 1)] = [0, 0, 0];
+    }
+  }
+
+  for (const person of peopleTracker) {
+    for (const tile of person.visitedSquaresHistory) {
+      if (counts[tile]) counts[tile][person.group] += 1;
+    }
+  }
+
+  return counts;
 }
