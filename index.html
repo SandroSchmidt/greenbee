@@ -1608,6 +1608,7 @@
     let deskMenu = null;
     let objectMenu = null;
     let selectedTileId = null;
+    let finalEventInProgress = false;
 
     
 
@@ -1657,6 +1658,7 @@
         objectIncomeHistory: [],
         ticketIncomeHistory: [],
         turnReports: [],
+        finalInfo: null,
         rentedBooths: [],
         infrastructuralSpendings: 0,
         appointedSpeakers: [],
@@ -1776,6 +1778,14 @@
       if (typeof state.assistantProjectionTurn === "undefined") state.assistantProjectionTurn = null;
       if (typeof state.assistantProjection === "undefined") state.assistantProjection = null;
       if (!Array.isArray(state.turnReports)) state.turnReports = [];
+      if (!state.finalInfo || typeof state.finalInfo !== "object") {
+        state.finalInfo = null;
+      } else {
+        if (state.finalInfo.peopleTracker) delete state.finalInfo.peopleTracker;
+        if (state.finalInfo.simulationResult && state.finalInfo.simulationResult.peopleTracker) {
+          delete state.finalInfo.simulationResult.peopleTracker;
+        }
+      }
       if (!Array.isArray(state.rentedBooths)) state.rentedBooths = [];
       if (typeof state.infrastructuralSpendings !== "number") state.infrastructuralSpendings = 0;
       if (!Array.isArray(state.appointedSpeakers)) {
@@ -1797,6 +1807,281 @@
       const turn = Number(gameState.turn || 0);
       if (turn <= 0) return null;
       return Number(gameState.incomeHistory[turn - 1] || 0);
+    }
+
+    function getMaxTurns() {
+      return Number(worldSettings && worldSettings.maxTurns || 10);
+    }
+
+    function isFinalTurnReached() {
+      return !!gameState && Number(gameState.turn || 0) >= getMaxTurns();
+    }
+
+    function hasStoredFinalResults() {
+      return !!(gameState && gameState.finalInfo && gameState.finalInfo.status === "complete" && gameState.finalInfo.simulationResult);
+    }
+
+    function cloneFinalPayload(value) {
+      if (value == null) return null;
+      try {
+        return JSON.parse(JSON.stringify(value));
+      } catch (err) {
+        console.warn("Could not clone final payload:", err);
+        return null;
+      }
+    }
+
+    function getStoredFinalReport() {
+      if (gameState && gameState.finalInfo && gameState.finalInfo.report) return gameState.finalInfo.report;
+      const reports = Array.isArray(gameState && gameState.turnReports) ? gameState.turnReports : [];
+      return reports.length ? reports[reports.length - 1] : null;
+    }
+
+    function finalNumber(value, fallback = 0) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
+    }
+
+    function averageFinalValues(values) {
+      const nums = (Array.isArray(values) ? values : [])
+        .map(v => Number(v))
+        .filter(v => Number.isFinite(v));
+      if (!nums.length) return 0;
+      return nums.reduce((sum, value) => sum + value, 0) / nums.length;
+    }
+
+    function getCardsSoldStats() {
+      const sold = (Array.isArray(gameState && gameState.ticketSales) ? gameState.ticketSales : [])
+        .reduce((sum, value) => sum + Math.max(0, finalNumber(value)), 0);
+      const capacity = (Array.isArray(worldSettings && worldSettings.population) ? worldSettings.population : [])
+        .reduce((sum, value) => sum + Math.max(0, finalNumber(value)), 0);
+      const ratio = capacity > 0 ? Math.max(0, Math.min(1, sold / capacity)) : 0;
+      return { sold, capacity, ratio };
+    }
+
+    function percentText(value) {
+      return `${Math.round(Math.max(0, Math.min(1, finalNumber(value))) * 100)}%`;
+    }
+
+    function buildFinalEventOutcome(simulationResult) {
+      const sim = simulationResult || {};
+      const avgVisitor = averageFinalValues(sim.visitorsSatisfaction);
+      const vendor = Math.max(0, Math.min(1, finalNumber(sim.vendorsSatisfaction)));
+      const cards = getCardsSoldStats();
+      const score = (avgVisitor + vendor + cards.ratio) / 3;
+      let label = "bad";
+      let tone = "danger";
+      if (score >= 0.75) {
+        label = "great";
+        tone = "success";
+      } else if (score >= 0.45) {
+        label = "good";
+        tone = "info";
+      }
+      return {
+        label,
+        tone,
+        score,
+        avgVisitorSatisfaction: avgVisitor,
+        vendorSatisfaction: vendor,
+        cardsSoldRatio: cards.ratio,
+        cardsSold: cards.sold,
+        cardsCapacity: cards.capacity,
+        message: `Event went ${label}. Visitor satisfaction ${percentText(avgVisitor)}, vendor satisfaction ${percentText(vendor)}, cards sold ${percentText(cards.ratio)}.`,
+      };
+    }
+
+    function getFinalOutcome() {
+      const stored = gameState && gameState.finalInfo && gameState.finalInfo.eventOutcome;
+      if (stored && stored.message) return stored;
+      return buildFinalEventOutcome(gameState && gameState.finalInfo && gameState.finalInfo.simulationResult);
+    }
+
+    function getFinalNotificationConfig() {
+      if (!isFinalTurnReached()) return null;
+      if (finalEventInProgress) {
+        return { message: "Event is opening. Visitors are moving through the board.", tone: "info" };
+      }
+      if (hasStoredFinalResults()) {
+        const outcome = getFinalOutcome();
+        return { message: outcome.message, tone: outcome.tone || "info" };
+      }
+      return { message: "All turns are finished. Press Start Event when you are ready to open the event.", tone: "info" };
+    }
+
+    function getPrimaryTurnActionLabel() {
+      if (!isFinalTurnReached()) return "Next turn →";
+      if (finalEventInProgress) return "Event running...";
+      if (hasStoredFinalResults()) return "Show result";
+      return "Start Event";
+    }
+
+    function isPrimaryTurnActionDisabled() {
+      return !!finalEventInProgress;
+    }
+
+    function applyCurrentFinalNotification() {
+      if (!rightStatusMenu || typeof rightStatusMenu.setNotification !== "function") return;
+      const notification = getFinalNotificationConfig();
+      if (notification) {
+        rightStatusMenu.setNotification(notification.message, notification.tone);
+      } else if (typeof rightStatusMenu.clearNotification === "function") {
+        rightStatusMenu.clearNotification();
+      }
+    }
+
+    function handlePrimaryTurnAction() {
+      if (isFinalTurnReached()) {
+        if (finalEventInProgress) {
+          return;
+        }
+        if (hasStoredFinalResults()) {
+          showFinalResults();
+        } else {
+          runFinalEvent();
+        }
+        return;
+      }
+      nextTurn();
+    }
+
+    function markFinalEventReady(report) {
+      if (!gameState || hasStoredFinalResults()) return;
+      const existing = gameState.finalInfo && typeof gameState.finalInfo === "object" ? gameState.finalInfo : {};
+      gameState.finalInfo = {
+        status: "ready",
+        readyAt: existing.readyAt || Date.now(),
+        report: cloneFinalPayload(report || getStoredFinalReport()),
+      };
+    }
+
+    function sanitizeTileVisits(tileVisits) {
+      const clean = {};
+      if (!tileVisits || typeof tileVisits !== "object") return clean;
+      Object.entries(tileVisits).forEach(([tile, counts]) => {
+        clean[tile] = vec3(counts);
+      });
+      return clean;
+    }
+
+    function normalizeFinalVector(value) {
+      const copy = vec3(value).map(v => Math.max(0, finalNumber(v)));
+      const total = copy.reduce((sum, current) => sum + current, 0);
+      return total > 0 ? copy.map(v => v / total) : copy;
+    }
+
+    function cosineSimilarityFallback(a, b) {
+      let dot = 0;
+      let magA = 0;
+      let magB = 0;
+      for (let i = 0; i < Math.min(a.length, b.length); i++) {
+        dot += a[i] * b[i];
+        magA += a[i] * a[i];
+        magB += b[i] * b[i];
+      }
+      if (magA <= 0 || magB <= 0) return 0;
+      return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+    }
+
+    function computeFinalPerVendor(tileVisits) {
+      const visitsByTile = tileVisits || {};
+      return (gameState && Array.isArray(gameState.rentedBooths) ? gameState.rentedBooths : []).map(booth => {
+        const visits = vec3(visitsByTile[booth.tile]);
+        const totalAtBooth = visits.reduce((sum, value) => sum + value, 0);
+        const sim = typeof kosinusSimilarity === "function"
+          ? kosinusSimilarity(normalizeFinalVector(booth.vendorSuitabilityByGroup), normalizeFinalVector(visits))
+          : cosineSimilarityFallback(normalizeFinalVector(booth.vendorSuitabilityByGroup), normalizeFinalVector(visits));
+        const crowdScore = typeof saturation === "function"
+          ? saturation(totalAtBooth, 2, 200)
+          : Math.pow(totalAtBooth / (totalAtBooth + 200 || 1), 2);
+        return {
+          name: booth.vendorName || booth.obj_key || "Vendor",
+          tile: booth.tile,
+          satisfaction: Math.max(0, Math.min(1, finalNumber(sim) * finalNumber(crowdScore))),
+        };
+      }).sort((a, b) => b.satisfaction - a.satisfaction);
+    }
+
+    function compactFinalSimulationResult(simulationResult) {
+      const raw = simulationResult || {};
+      const peopleTracker = Array.isArray(raw.peopleTracker) ? raw.peopleTracker : [];
+      let tileVisits = sanitizeTileVisits(raw.tileVisits);
+      if (!Object.keys(tileVisits).length && peopleTracker.length && typeof getVisitCountsByTile === "function") {
+        const gridSize = Number(worldSettings && worldSettings.gridSize || 0);
+        tileVisits = sanitizeTileVisits(getVisitCountsByTile(peopleTracker, gridSize, gridSize));
+      }
+      const visitorsSatisfaction = vec3(raw.visitorsSatisfaction).map(v => Math.max(0, Math.min(1, finalNumber(v))));
+      const vendorsSatisfaction = Math.max(0, Math.min(1, finalNumber(raw.vendorsSatisfaction)));
+      const cards = getCardsSoldStats();
+      return {
+        visitorsSatisfaction,
+        vendorsSatisfaction,
+        tileVisits,
+        perVendor: computeFinalPerVendor(tileVisits),
+        cardsSoldRatio: cards.ratio,
+        cardsSold: cards.sold,
+        cardsCapacity: cards.capacity,
+      };
+    }
+
+    function waitForFinalDelay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function runFinalEvent() {
+      if (!gameState || !isFinalTurnReached()) return;
+      if (finalEventInProgress) return;
+      if (hasStoredFinalResults()) {
+        showFinalResults();
+        return;
+      }
+
+      finalEventInProgress = true;
+      markFinalEventReady(getStoredFinalReport());
+      updateAll();
+      applyCurrentFinalNotification();
+      await saveGameState(worldId, playerId, gameState);
+
+      const report = getStoredFinalReport();
+      let simulationResult;
+      try {
+        simulationResult = eventSimulation(gameState, worldSettings, globalSettings);
+      } catch (err) {
+        console.error("Final event simulation failed:", err);
+        simulationResult = {
+          visitorsSatisfaction: [0, 0, 0],
+          vendorsSatisfaction: 0,
+          peopleTracker: [],
+          tileVisits: {},
+        };
+      }
+
+      const peopleTracker = Array.isArray(simulationResult.peopleTracker) ? simulationResult.peopleTracker : [];
+      const compactSimulation = compactFinalSimulationResult(simulationResult);
+      console.log("COMPACT SIMULATION: ", compactSimulation);
+      const outcome = buildFinalEventOutcome(compactSimulation);
+      const readyAt = gameState.finalInfo && gameState.finalInfo.readyAt ? gameState.finalInfo.readyAt : Date.now();
+      gameState.finalInfo = {
+        status: "complete",
+        readyAt,
+        completedAt: Date.now(),
+        report: cloneFinalPayload(report),
+        simulationResult: compactSimulation,
+        eventOutcome: outcome,
+      };
+      await saveGameState(worldId, playerId, gameState);
+
+      try {
+        await simulateVisitorsMovementOnTheBoard(peopleTracker);
+      } catch (err) {
+        console.error("Visitor movement animation failed:", err);
+      }
+
+      await waitForFinalDelay(3000);
+      finalEventInProgress = false;
+      updateAll();
+      applyCurrentFinalNotification();
+      showFinalResults(report, compactSimulation);
     }
 
     function buildRightStatusBodyHtml() {
@@ -1824,6 +2109,34 @@
       const assistant = getHiredAssistant();
       if(!assistant) {
         return {type: 'hint', text: 'Hire personal assistant to get valuable insights.'}
+      }
+      if (isFinalTurnReached()) {
+        if (finalEventInProgress) {
+          return {
+            type: 'projection-result',
+            title: 'Event opening',
+            byline: assistant.name,
+            description: 'Visitors are moving through the board now.',
+            hint: 'I will summarize the result as soon as the event simulation wraps up.'
+          };
+        }
+        if (hasStoredFinalResults()) {
+          const outcome = getFinalOutcome();
+          return {
+            type: 'projection-result',
+            title: 'Event result',
+            byline: assistant.name,
+            description: outcome.message,
+            hint: 'Use Show result to reopen the full event report.'
+          };
+        }
+        return {
+          type: 'projection-result',
+          title: 'Event opening ready',
+          byline: assistant.name,
+          description: 'Everything is set up for the event opening.',
+          hint: 'Check booth requests before starting; you may be able to rent a few more booths.'
+        };
       }
       if(!isAssistantActive()){
         return {type: 'hint', text: "Assistant assesment would be available on the next turn"}
@@ -1860,8 +2173,10 @@
         budgetDelta: getLastBudgetDelta(),
         //body: { type: "custom", html: buildRightStatusBodyHtml() },
         body: menuBodyType,
-        nextTurnDisabled: isGameFinished(),
-        onNextTurn: () => nextTurn(),
+        notification: getFinalNotificationConfig(),
+        nextTurnLabel: getPrimaryTurnActionLabel(),
+        nextTurnDisabled: isPrimaryTurnActionDisabled(),
+        onNextTurn: () => handlePrimaryTurnAction(),
         onRestart: () => restartGame(),
         onProjection: async () => {
          const newBodyType = await createAssistantProjection();
@@ -1887,7 +2202,9 @@
         budgetDelta: getLastBudgetDelta(),
         body: menuBodyType,
         //body: { type: "custom", html: buildRightStatusBodyHtml() },
-        nextTurnDisabled: isGameFinished(),
+        notification: getFinalNotificationConfig(),
+        nextTurnLabel: getPrimaryTurnActionLabel(),
+        nextTurnDisabled: isPrimaryTurnActionDisabled(),
       });
     }
 
@@ -1987,7 +2304,7 @@
           .attr("stroke-width", 1)
           .style("cursor", "pointer")
           .on("click", () => onCellClicked(id))
-          .on("mouseover", () => showTileInfo(id, g))
+          .on("mouseover", () => { showTileInfo(id, g);})
           .on("mouseout", () => clearTileInfo(g));
 
         if (id === selectedTileId) applySelectedTileFill(id);
@@ -3010,18 +3327,20 @@
       console.log("GAME STATE: ", gameState);
       console.log("Expenses: ", expensesThisTurn);
       addGeneratedProposalsToGameState(generateProposals(gameState, worldSettings, globalSettings));
+      const finalTurnReached = (gameState.turn || 0) >= maxT;
+      if (finalTurnReached) {
+        markFinalEventReady(report);
+      }
       if (deskMenu || isDeskMenuOpen()) renderDeskMenu();
       updateAll();
+      if (finalTurnReached) applyCurrentFinalNotification();
       await saveGameState(worldId, playerId, gameState);
-      if ((gameState.turn || 0) >= maxT) {
-        showFinalResults(report);
-      } else {
-        showTurnReport(report);
-      }
+      showTurnReport(report);
     }
 
     async function restartGame() {
       if (!confirm("Restart game? This will reset your board.")) return;
+      finalEventInProgress = false;
       gameState = createEmptyGameState();
       renderBoard();
       renderMarketingToolsPanel();
@@ -3033,7 +3352,7 @@
       await saveGameState(worldId, playerId, gameState);
     }
 
-    document.getElementById("nextturn-btn")?.addEventListener("click", () => { nextTurn(); });
+    document.getElementById("nextturn-btn")?.addEventListener("click", () => { handlePrimaryTurnAction(); });
     document.getElementById("restart-btn")?.addEventListener("click", () => { restartGame(); });
 
     // ===== Auswahl-Overlay =====
@@ -3099,6 +3418,10 @@
       if (typeof gameState.objectIncomeHistory[currentTurn] === "undefined") {
         gameState.objectIncomeHistory[currentTurn] = currentObjectIncome;
       }
+      if (isFinalTurnReached() && !hasStoredFinalResults() && !(gameState.finalInfo && gameState.finalInfo.status === "ready")) {
+        markFinalEventReady(getStoredFinalReport());
+        await saveGameState(worldId, playerId, gameState);
+      }
 
       renderBoard();
       initRightStatusMenu();
@@ -3139,6 +3462,7 @@
     // ===== Hover info =====
     function showTileInfo(id,g) {
       //eventSimulation(gameState, worldSettings, globalSettings);
+      console.log("Game state: ", gameState)
       const tileShape = g.select("polygon");
       tileShape.attr("fill", SELECTED_CELL_COLOR);
       const board = (gameState && gameState.board) ? gameState.board : {};
@@ -3196,6 +3520,7 @@
         const tileId = g.attr("data-id");
         if (tileId === selectedTileId) applySelectedTileFill(tileId);
         else applyTileBaseFill(tileId);
+        g.selectAll(".tile-particle").remove();
       }
       resetHoverInfo();
     }
@@ -3406,6 +3731,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 
     async function acceptVendorProposal(proposalId) {
       if (!gameState || !proposalId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
       if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
       if (!Array.isArray(gameState.rentedBooths)) gameState.rentedBooths = [];
 
@@ -3608,8 +3934,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     }
 
     function isGameFinished() {
-      const maxT = (worldSettings && worldSettings.maxTurns) || 10;
-      return (gameState && (gameState.turn || 0) >= maxT);
+      return isFinalTurnReached();
     }
 
     // ===== SUMMARY (unchanged logic, refined render) =====
@@ -3762,31 +4087,139 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       if (nextBtn) nextBtn.disabled = true;
     }
 
-    function showFinalResults(report) {
+    function showFinalResults(report, simulationResult) {
       const nextBtn = document.getElementById("nextturn-btn");
-      if (nextBtn) nextBtn.disabled = true;
+      if (nextBtn) nextBtn.disabled = false;
 
-      if (typeof eventSimulation !== "function" || typeof showFinalResultsModal !== "function") {
-        showFinalTurnReview(report);
+      const finalReport = report || getStoredFinalReport();
+      const storedSimulation = gameState && gameState.finalInfo && gameState.finalInfo.simulationResult;
+      const modalSimulation = simulationResult || storedSimulation;
+
+      if (typeof showFinalResultsModal !== "function" || !modalSimulation) {
+        showFinalTurnReview(finalReport);
         return;
       }
 
-      let simulationResult;
-      try {
-        simulationResult = eventSimulation(gameState, worldSettings, globalSettings);
-      } catch (err) {
-        console.error("Final event simulation failed:", err);
-        simulationResult = {
-          visitorsSatisfaction: [0, 0, 0],
-          vendorsSatisfaction: 0,
-          peopleTracker: [],
-        };
+      showFinalResultsModal(gameState, getFinalResultsWorldSettings(), modalSimulation, {
+        onRestart: () => restartGame(),
+        onReview: () => showFinalTurnReview(finalReport),
+      });
+    }
+
+    async function simulateVisitorsMovementOnTheBoard(peopleTracker) {
+      if (!peopleTracker || peopleTracker.length === 0) return;
+
+      const STEP_DURATION_MS = 1500;
+      const PARTICLE_CAP = 300;
+
+      const numSteps = peopleTracker[0]?.visitedSquaresHistory?.length || 0;
+      if (numSteps === 0) return;
+
+      // 1) Count people per group.
+      const groupCounts = { 0: 0, 1: 0, 2: 0 };
+      for (const p of peopleTracker) {
+        if (groupCounts[p.group] !== undefined) groupCounts[p.group]++;
+      }
+      const totalPeople = peopleTracker.length;
+      const useCapping = totalPeople > PARTICLE_CAP;
+
+      // 2) Per-group particle budgets (proportional to share of the population).
+      const groupBudgets = { 0: 0, 1: 0, 2: 0 };
+      for (const g of [0, 1, 2]) {
+        groupBudgets[g] = useCapping
+          ? Math.round(PARTICLE_CAP * (groupCounts[g] / totalPeople))
+          : groupCounts[g];
       }
 
-      showFinalResultsModal(gameState, getFinalResultsWorldSettings(), simulationResult, {
-        onRestart: () => restartGame(),
-        onReview: () => showFinalTurnReview(report),
-      });
+      const svg = d3.select("#game-board");
+
+      // Read tile geometry from the DOM (the polygon points renderBoard drew).
+      const getTileGeometry = (id) => {
+        const tileG = svg.select(`g[data-id="${id}"]`);
+        if (tileG.empty()) return null;
+        const polygon = tileG.select("polygon");
+        if (polygon.empty()) return null;
+        // points order from renderBoard: [left, bottom, right, top]
+        const pts = polygon.attr("points")
+                           .split(" ")
+                           .map(p => p.split(",").map(Number));
+        const cx = (pts[0][0] + pts[2][0]) / 2;
+        const cy = (pts[1][1] + pts[3][1]) / 2;
+        const hexW = pts[2][0] - pts[0][0];
+        const hexH = pts[1][1] - pts[3][1];
+        return { cx, cy, hexW, hexH, g: tileG };
+      };
+
+      const clearVisitorParticles = () =>
+        svg.selectAll(".visitor-particle").remove();
+
+      // Same sampling logic as spawnTileParticles, just with class + color params.
+      const spawnGroupParticles = (cx, cy, hexW, hexH, g, count, color) => {
+        const hw = hexW * 0.5;
+        const hh = hexH * 0.5;
+        const r = Math.min(hw, hh) * 0.21;
+        for (let i = 0; i < count; i++) {
+          let px, py;
+          do {
+            px = cx + (Math.random() * 2 - 1) * hw;
+            py = cy + (Math.random() * 2 - 1) * hh;
+          } while (Math.abs(px - cx) / hw + Math.abs(py - cy) / hh > 1);
+          g.append("circle")
+            .attr("class", "visitor-particle")
+            .attr("cx", px)
+            .attr("cy", py)
+            .attr("r", r)
+            .attr("fill", color)
+            .attr("opacity", 0.85)
+            .style("pointer-events", "none");
+        }
+      };
+
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+      for (let step = 0; step < numSteps; step++) {
+        clearVisitorParticles();
+
+        // 3) Count people per square per group at this step.
+        const perGroupSquareCounts = { 0: {}, 1: {}, 2: {} };
+        for (const p of peopleTracker) {
+          const sq = p.visitedSquaresHistory[step];
+          if (!sq) continue;
+          const bucket = perGroupSquareCounts[p.group];
+          if (!bucket) continue;
+          bucket[sq] = (bucket[sq] || 0) + 1;
+        }
+
+        // 4) For each group, distribute that group's budget across squares.
+        for (const groupKey of [0, 1, 2]) {
+          const budget = groupBudgets[groupKey];
+          const total  = groupCounts[groupKey];
+          if (budget <= 0 || total <= 0) continue;
+
+          const color = GROUP_COLORS[groupKey];
+          const squareCounts = perGroupSquareCounts[groupKey];
+
+          for (const [squareId, count] of Object.entries(squareCounts)) {
+            const particleCount = useCapping
+              ? Math.round(budget * (count / total))
+              : count;
+            if (particleCount <= 0) continue;
+
+            const geom = getTileGeometry(squareId);
+            if (!geom) continue;
+
+            spawnGroupParticles(
+              geom.cx, geom.cy, geom.hexW, geom.hexH, geom.g,
+              particleCount, color
+            );
+          }
+        }
+
+        await sleep(STEP_DURATION_MS);
+      }
+
+      // Don't leave particles lying around once the sim ends.
+      //clearVisitorParticles();
     }
 
     function showTurnReport(report) {

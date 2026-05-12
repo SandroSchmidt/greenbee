@@ -2,7 +2,8 @@
 /* ------------------------- FINAL RESULTS MODAL ---------------------------- */
 /* ========================================================================== */
 
-const FRM_GROUP_COLORS = ['#3B82F6', '#F97316', '#10B981']; // youth, families, seniors
+//const FRM_GROUP_COLORS = ['#3B82F6', '#F97316', '#10B981']; // youth, families, seniors
+const FRM_GROUP_COLORS = ["#22c55e", "#3b82f6", "#f97316"];
 
 function showFinalResultsModal(gameState, worldSettings, simulationResult, options = {}) {
   injectFinalResultsStyles();
@@ -56,6 +57,9 @@ function computeFinalMetrics(gameState, worldSettings, simulationResult) {
     const total = sum(copy);
     return total > 0 ? copy.map(v => v / total) : copy.map(() => 0);
   };
+  const visitVector = value => Array.isArray(value)
+    ? [0, 1, 2].map(i => num(value[i]))
+    : [0, 1, 2].map(i => num(value && value[i]));
   const simulation = simulationResult || {};
 
   const finalBudget    = num(gameState.budget);
@@ -73,24 +77,32 @@ function computeFinalMetrics(gameState, worldSettings, simulationResult) {
   // Per-vendor breakdown — recompute using the same formula as
   // getVendorsSatisfaction, but keep the per-booth values instead of averaging.
   // Avoids changing your existing function's signature.
-  const tileVisits = getVisitCountsByTile(
-    Array.isArray(simulation.peopleTracker) ? simulation.peopleTracker : [],
-    worldSettings.gridSize,
-    worldSettings.gridSize
-  );
-  const perVendor = (gameState.rentedBooths || []).map(b => {
-    const visits = tileVisits[b.tile] || [0, 0, 0];
-    const totalAtBooth = visits.reduce((a, b) => a + b, 0);
-    const sim = kosinusSimilarity(
-      normalize(b.vendorSuitabilityByGroup),
-      normalize(visits)
+  const tileVisits = simulation.tileVisits && typeof simulation.tileVisits === 'object'
+    ? simulation.tileVisits
+    : getVisitCountsByTile(
+      Array.isArray(simulation.peopleTracker) ? simulation.peopleTracker : [],
+      worldSettings.gridSize,
+      worldSettings.gridSize
     );
-    return {
-      name: b.vendorName || b.obj_key || 'Vendor',
-      tile: b.tile,
-      satisfaction: sim * saturation(totalAtBooth, 2, 200),
-    };
-  }).sort((a, b) => b.satisfaction - a.satisfaction);
+  const perVendor = Array.isArray(simulation.perVendor)
+    ? simulation.perVendor.map(v => ({
+      name: v.name || 'Vendor',
+      tile: v.tile || '',
+      satisfaction: num(v.satisfaction),
+    })).sort((a, b) => b.satisfaction - a.satisfaction)
+    : (gameState.rentedBooths || []).map(b => {
+      const visits = visitVector(tileVisits[b.tile]);
+      const totalAtBooth = visits.reduce((a, b) => a + b, 0);
+      const sim = kosinusSimilarity(
+        normalize(b.vendorSuitabilityByGroup),
+        normalize(visits)
+      );
+      return {
+        name: b.vendorName || b.obj_key || 'Vendor',
+        tile: b.tile,
+        satisfaction: sim * saturation(totalAtBooth, 2, 200),
+      };
+    }).sort((a, b) => b.satisfaction - a.satisfaction);
 
   // Heatmap totals
   const N = worldSettings.gridSize;
@@ -99,7 +111,7 @@ function computeFinalMetrics(gameState, worldSettings, simulationResult) {
   for (let i = 0; i < N; i++) {
     for (let j = 0; j < N; j++) {
       const tileId = rows_notation[i] + (j + 1);
-      const t = (tileVisits[tileId] || [0, 0, 0]).reduce((a, b) => a + b, 0);
+      const t = visitVector(tileVisits[tileId]).reduce((a, b) => a + b, 0);
       totals.push(t);
       if (t > maxTotal) maxTotal = t;
     }
@@ -146,7 +158,7 @@ function computeFinalMetrics(gameState, worldSettings, simulationResult) {
 
 function buildModalHTML(m, leaderboard) {
   const fmt = n => '€' + Math.round(n).toLocaleString();
-  const pct = v => Math.round(v * 100) + '%';
+  const pct = v => Math.round((Number.isFinite(Number(v)) ? Number(v) : 0) * 100) + '%';
   const deltaColor = m.budgetDelta >= 0 ? '#10B981' : '#EF4444';
   const deltaSign = m.budgetDelta >= 0 ? '+' : '';
 
@@ -191,7 +203,7 @@ function buildModalHTML(m, leaderboard) {
               <span class="frm-bar-name">${escapeHTML(name)}</span>
               <span class="frm-bar-track"><span class="frm-bar-fill" style="width:${pct(m.visitorsSatisfaction[i])}; background:${FRM_GROUP_COLORS[i]}"></span></span>
               <span class="frm-bar-pct">${pct(m.visitorsSatisfaction[i])}</span>
-              <span class="frm-bar-meta">${m.visitorsByGroup[i]} visitors</span>
+              <span class="frm-bar-meta">${m.visitorsByGroup[i] || 0} visitors</span>
             </div>
           `).join('')}
         </div>
