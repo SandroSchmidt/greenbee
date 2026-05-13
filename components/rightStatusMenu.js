@@ -1,4 +1,84 @@
-
+/**
+ * StatusMenu — a state-driven right panel for GreenBee.
+ *
+ * No dependencies. Vanilla JS + injected stylesheet. Themeable via CSS variables.
+ *
+ * STRUCTURE
+ * ---------
+ *   ┌─────────────────────────┐
+ *   │ TURN N        N of TOTAL│  ← header (always on)
+ *   │ ━━━━━━━━━░░░░░░         │
+ *   │ Budget         €X,XXX   │
+ *   │              +€XXX delta│
+ *   ├─────────────────────────┤
+ *   │ [optional warning bar]  │  ← warning slot (optional)
+ *   │ [body content variant]  │  ← body slot (variant-driven)
+ *   ├─────────────────────────┤
+ *   │ Restart       Next turn │  ← footer (always on)
+ *   └─────────────────────────┘
+ *
+ * USAGE
+ * -----
+ *   const panel = new StatusMenu({
+ *     turnNumber: 9,
+ *     totalTurns: 12,
+ *     budget: 2105,
+ *     budgetDelta: 340,
+ *     body: { type: 'projection-card' },
+ *     onNextTurn: () => advanceTurn(),
+ *     onProjection: () => fetchProjection(),
+ *     onRestart: () => confirmRestart(),
+ *   });
+ *   panel.mount('#right-panel');
+ *
+ *   // later — update piece-by-piece
+ *   panel.update({ budget: 2445, budgetDelta: 340 });
+ *   panel.setBody({ type: 'tile-details', sections: [...] });
+ *   panel.setWarning('Budget below €100');
+ *   panel.clearWarning();
+ *
+ *   // on game end
+ *   panel.destroy();
+ *
+ * BODY VARIANTS
+ * -------------
+ *   { type: 'idle' }
+ *     → "Click a tile to build · hover for details"
+ *
+ *   { type: 'hint', text: '...' }
+ *     → custom muted hint text
+ *
+ *   { type: 'projection-card', byline?, description?, ctaLabel? }
+ *     → assistant CTA card. Click fires onProjection.
+ *
+ *   { type: 'projection-result', amount?, byline?, description?, hint? }
+ *     → result of an assistant projection (hides CTA until next turn)
+ *
+ *   { type: 'tile-details', sections: [{ label, lines: [{name, value}] }] }
+ *     → key-value readout. Use for hover or click context.
+ *
+ *   { type: 'custom', html: '...' }
+ *     → escape hatch. Insert any HTML you want.
+ *
+ * WARNING SEVERITIES
+ * ------------------
+ *   panel.setWarning('msg')                    → amber (warning)
+ *   panel.setWarning('msg', 'danger')          → red
+ *   panel.update({ warning: { message, severity } })
+ *   panel.setNotification('msg')               → blue/info notice
+ *   panel.setNotification('msg', 'success')    → green notice
+ *
+ * THEMING
+ * -------
+ *   Override on :root or .gp-panel:
+ *     --gp-bg, --gp-surface, --gp-border,
+ *     --gp-text, --gp-text-secondary, --gp-text-tertiary,
+ *     --gp-success, --gp-danger,
+ *     --gp-action-primary, --gp-action-text,
+ *     --gp-warning-bg, --gp-warning-border, --gp-warning-text,
+ *     --gp-notification-bg, --gp-notification-border, --gp-notification-text,
+ *     --gp-radius-md, --gp-radius-lg, --gp-font-family
+ */
 
 const GAME_PANEL_STYLES = `
 .gp-panel {
@@ -19,6 +99,13 @@ const GAME_PANEL_STYLES = `
   --gp-danger-bg: #fee2e2;
   --gp-danger-border: #dc2626;
   --gp-danger-text: #7f1d1d;
+  --gp-notification-bg: #eff6ff;
+  --gp-notification-border: #3b82f6;
+  --gp-notification-text: #1e3a8a;
+  --gp-notification-icon: #2563eb;
+  --gp-notification-success-bg: #ecfdf5;
+  --gp-notification-success-border: #10b981;
+  --gp-notification-success-text: #065f46;
   --gp-radius-md: 8px;
   --gp-radius-lg: 12px;
   --gp-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -54,6 +141,12 @@ body.theme-dark .gp-panel,
   --gp-danger-bg: rgba(220, 38, 38, 0.14);
   --gp-danger-border: rgba(248, 113, 113, 0.4);
   --gp-danger-text: #fca5a5;
+  --gp-notification-bg: rgba(59, 130, 246, 0.14);
+  --gp-notification-border: rgba(96, 165, 250, 0.4);
+  --gp-notification-text: #bfdbfe;
+  --gp-notification-success-bg: rgba(16, 185, 129, 0.14);
+  --gp-notification-success-border: rgba(52, 211, 153, 0.4);
+  --gp-notification-success-text: #a7f3d0;
 }
 
 /* ---------- Header ---------- */
@@ -175,6 +268,47 @@ body.theme-dark .gp-panel,
   margin: 0;
 }
 .gp-panel__warning--danger .gp-panel__warning-text {
+  color: var(--gp-danger-text);
+}
+
+/* Notification banner */
+.gp-panel__notification {
+  background: var(--gp-notification-bg);
+  border: 0.5px solid var(--gp-notification-border);
+  border-radius: var(--gp-radius-md);
+  padding: 10px 12px;
+  display: flex;
+  gap: 8px;
+}
+.gp-panel__notification--success {
+  background: var(--gp-notification-success-bg);
+  border-color: var(--gp-notification-success-border);
+}
+.gp-panel__notification--danger {
+  background: var(--gp-danger-bg);
+  border-color: var(--gp-danger-border);
+}
+.gp-panel__notification-icon {
+  flex-shrink: 0;
+  color: var(--gp-notification-icon);
+  margin-top: 1px;
+}
+.gp-panel__notification--success .gp-panel__notification-icon {
+  color: var(--gp-notification-success-text);
+}
+.gp-panel__notification--danger .gp-panel__notification-icon {
+  color: var(--gp-danger-text);
+}
+.gp-panel__notification-text {
+  font-size: 12px;
+  color: var(--gp-notification-text);
+  line-height: 1.45;
+  margin: 0;
+}
+.gp-panel__notification--success .gp-panel__notification-text {
+  color: var(--gp-notification-success-text);
+}
+.gp-panel__notification--danger .gp-panel__notification-text {
   color: var(--gp-danger-text);
 }
 
@@ -345,6 +479,7 @@ class StatusMenu {
       currency: '€',
       // Slots
       warning: null,           // { message, severity } | null
+      notification: null,      // { message, tone } | null
       body: { type: 'idle' },  // see BODY VARIANTS in header comment
       // Footer
       showRestart: true,
@@ -416,6 +551,15 @@ class StatusMenu {
     this.update({ warning: null });
   }
 
+  /** Convenience - set notification banner. */
+  setNotification(message, tone = 'info') {
+    this.update({ notification: { message, tone } });
+  }
+
+  clearNotification() {
+    this.update({ notification: null });
+  }
+
   /** Tear down + remove from DOM. */
   destroy() {
     if (this.rootEl && this.rootEl.parentNode) {
@@ -454,6 +598,7 @@ class StatusMenu {
       <div class="gp-panel__divider"></div>
       <div class="gp-panel__body">
         ${this._warningHtml()}
+        ${this._notificationHtml()}
         ${this._bodyHtml()}
       </div>
       ${this._footerHtml()}
@@ -513,6 +658,27 @@ class StatusMenu {
     `;
   }
 
+  _notificationHtml() {
+    const n = this.options.notification;
+    if (!n || !n.message) return '';
+    const tone = n.tone || 'info';
+    const toneClass = tone === 'success'
+      ? ' gp-panel__notification--success'
+      : tone === 'danger'
+        ? ' gp-panel__notification--danger'
+        : '';
+    return `
+      <div class="gp-panel__notification${toneClass}" role="status">
+        <svg class="gp-panel__notification-icon" width="14" height="14" viewBox="0 0 14 14" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="7" cy="7" r="5.5"/>
+          <path d="M7 4.5v3M7 9.5v.1"/>
+        </svg>
+        <p class="gp-panel__notification-text">${this._escape(n.message)}</p>
+      </div>
+    `;
+  }
+
   _bodyHtml() {
     const b = this.options.body || { type: 'idle' };
     switch (b.type) {
@@ -549,6 +715,11 @@ class StatusMenu {
       case 'projection-result': {
         const byline = b.byline ? `<span class="gp-panel__card-byline">${this._escape(b.byline)}</span>` : '';
         const title = this._escape(b.title || 'Projection');
+        const description = this._escape(b.description || 'Estimated next-turn revenue');
+        const hasAmount = b.amount != null && Number.isFinite(Number(b.amount));
+        const amountHtml = hasAmount
+          ? `<div class="gp-panel__projection-num">${this._formatMoney(b.amount)}</div>`
+          : '';
         const hint = b.hint
           ? `<p class="gp-panel__projection-hint">${this._escape(b.hint)}</p>`
           : '';
@@ -565,8 +736,8 @@ class StatusMenu {
               <span class="gp-panel__card-title">${title}</span>
               ${byline}
             </div>
-            <p class="gp-panel__card-body" style="margin: 0 0 4px;">Estimated next-turn revenue</p>
-            <div class="gp-panel__projection-num">${this._formatMoney(b.amount)}</div>
+            <p class="gp-panel__card-body" style="margin: 0 0 4px;">${description}</p>
+            ${amountHtml}
             ${hint}
           </div>
         `;

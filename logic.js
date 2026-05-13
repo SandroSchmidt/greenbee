@@ -837,7 +837,7 @@ function getVisitorsSatisfaction(peopleTracker, groupCount = 3) {
 
 /* ________________________________________________________________________________________ */
 // so basically just getting how similar is visitors vector to vendors suitability vector
-// it shows us how proportional our visitors strucutre is to what vendor would expect 
+// it shows us how proportional our visitors strucutre is to what vendor would expect based on his suitability vector
 const kosinusSimilarity = (a, b) => {
   if (a.length !== b.length) {
     throw new Error("Vectors must have the same length");
@@ -988,9 +988,9 @@ function initialArrangement(gates, batches){
 /* ---------------------------------------------------------------------------------------- */
 function eventSimulation(gameState, worldSettings, globalSettings){
   const numberOfRandomPeopleAirdrops = 6;
-  const peopleArr= shuffleArray([...getArrayOfKind(worldSettings.population[0], 0), //youth
-  ...getArrayOfKind(worldSettings.population[1], 1), //families
-  ...getArrayOfKind(worldSettings.population[2], 2)]); //senior citizens
+  const peopleArr= shuffleArray([...getArrayOfKind(gameState.ticketSales[0], 0), //youth
+  ...getArrayOfKind(gameState.ticketSales[1], 1), //families
+  ...getArrayOfKind(gameState.ticketSales[2], 2)]); //senior citizens
   console.log("People arr: ", peopleArr);
   const batchSize = Math.round(peopleArr.length/numberOfRandomPeopleAirdrops);
   const batches = getBatches(peopleArr, batchSize, numberOfRandomPeopleAirdrops);
@@ -1012,6 +1012,7 @@ function eventSimulation(gameState, worldSettings, globalSettings){
   return {
     visitorsSatisfaction: visitorsSatisfaction,
     vendorsSatisfaction: vendorsSatisfaction,
+    tileVisits: tileVisits,
     peopleTracker: peopleTracker,
   }
 }
@@ -1194,7 +1195,11 @@ function getNeighborSquares(squareId, rows, cols) {
 function weightedPick(candidates, weights) {
   const total = weights.reduce((a, b) => a + b, 0);
   // Fallback: if every weight is 0 (all surroundings unsuitable), stay put.
-  if (total <= 0) return candidates[0];
+  if (total <= 0) {
+    //if all the candidate squares are unsuitable we just randomly pick one (uniform probabilities)
+    const sqIdx = randomInt(0, candidates.length-1);
+    return candidates[sqIdx];
+  } 
   let r = Math.random() * total;
   for (let i = 0; i < candidates.length; i++) {
     r -= weights[i];
@@ -1203,10 +1208,11 @@ function weightedPick(candidates, weights) {
   return candidates[candidates.length - 1];
 }
 
+
 function pickNextSquare(person, rows, cols, netLookup) {
   // Candidate set: current square (person can stay) + all 8-neighbors.
   // We put currentSquare first so the "stay put" fallback in weightedPick is sensible.
-  const candidates = [person.currentSquare, ...getNeighborSquares(person.currentSquare, rows, cols)];
+  let candidates = [person.currentSquare, ...getNeighborSquares(person.currentSquare, rows, cols)];
 
   const weights = candidates.map(sq => {
     const netSuit = netLookup[sq]?.suitability ?? [0, 0, 0];
