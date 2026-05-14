@@ -164,6 +164,8 @@ export interface GameState {
   rentedBooths: RentedBooth[];
 
   appointedSpeakers: SpeakerAppointments[];
+
+  finalInfo: FinalInfo;   
 }
 
 /**
@@ -172,6 +174,41 @@ export interface GameState {
  */
 export interface PersistedGameState extends GameState {
   lastUpdate: TimestampMs;
+}
+
+export interface FinalInfo {
+        status: "complete" | "ready",
+        readyAt: TimestampMs,
+        completedAt: TimestampMs,
+        report: TurnReport, //last turn report
+        simulationResult: CompactSimulationInfo,
+        eventOutcome: Outcome,
+}
+
+export interface CompactSimulationInfo {
+        visitorsSatisfaction: Vec3,
+        vendorsSatisfaction: number,
+        tileVisits: Record<BoardTileId, Vec3>,
+        perVendor: {
+          name: string,
+          tile: string,
+          satisfaction: number,
+        }[],
+        cardsSoldRatio: number,
+        cardsSold: number,
+        cardsCapacity: number,
+}
+
+export interface Outcome {
+        label: string,
+        tone: string,
+        score: number,
+        avgVisitorSatisfaction: number,
+        vendorSatisfaction: number,
+        cardsSoldRatio: number,
+        cardsSold: number,
+        cardsCapacity: number,
+        message: string,
 }
 
 export interface SpeakerAppointments{
