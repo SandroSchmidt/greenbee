@@ -165,7 +165,20 @@ export interface GameState {
 
   appointedSpeakers: SpeakerAppointments[];
 
-  finalInfo: FinalInfo;   
+  finalInfo: FinalInfo;
+  brandingPackage: boolean;
+
+  sponsors: {
+    id: string,
+    deal: number, //idx number of picked offer on the list of possible_offers
+    move_signed: number,
+    status: "accepted",
+  }[];
+
+  sponsoring_offers: {
+    id: string,
+    deal: number,
+  }[]
 }
 
 /**

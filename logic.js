@@ -136,7 +136,25 @@ function calculateTicketPriceReasonableness({
   const salesMomentum = smoothstep(cumulativeSalesFactor);
   const salesMultiplier = 1 + (salesMomentum - 0.5) * 2 * salesSensitivity;
 
-  return clamp(historyAdjustedFactor * salesMultiplier, 0, maxFactor);
+  let sponsorsMultiplier = 1.0;
+  if(gameState?.sponsors){
+    const sponsorsCatalog = typeof SPONSORS_LIST !== "undefined"
+      ? SPONSORS_LIST
+      : (typeof window !== "undefined" && Array.isArray(window.SPONSORS_LIST) ? window.SPONSORS_LIST : []);
+    gameState?.sponsors.forEach(itm=>{
+      const sponsor = sponsorsCatalog.find(spo => spo.id == itm.id);
+      if(!sponsor){
+        sponsorsMultiplier *= 1.0;
+      }
+      else{
+        const possibleOffers = Array.isArray(sponsor.possible_offers) ? sponsor.possible_offers : [];
+        const sponsorMultiplier = (100 + (possibleOffers[itm.deal]?.ticket_reasonableness_boost || 0)) / 100;
+        sponsorsMultiplier *= sponsorMultiplier;
+      }
+    })
+  }
+
+  return clamp(historyAdjustedFactor * salesMultiplier * sponsorsMultiplier, 0, maxFactor);
 }
 
 function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, globalSettings, options = {}) {
@@ -340,6 +358,15 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
   console.log("PROPOSALS: ", proposals);
   return shuffleArray(proposals).slice(0, opts.maxTotalOffers);
     //.sort((a, b) => b.price - a.price)
+}
+
+function getBrandingProposal(gameState){
+return {
+  price: 200,
+  code: 'branding',
+  title: 'Branding Package',
+  vendorId: 'Sales Team XY'
+}
 }
 
 
@@ -1281,4 +1308,153 @@ function getVisitCountsByTile(peopleTracker, rows, cols) {
   }
 
   return counts;
+}
+
+
+//SPONSOR LOGIC
+
+function getInterestedSponsors(gameState, SPONSORS){
+  const currentSponsorIds = (Array.isArray(gameState?.sponsors) ? gameState.sponsors : [])
+    .map(itm => itm && itm.id)
+    .filter(Boolean);
+  const potentialSponsors = SPONSORS.filter(itm => !currentSponsorIds.includes(itm.id));
+  if(potentialSponsors.length<1) return [];
+
+  return potentialSponsors
+    .filter(sponsor => {
+      const requirementSets = Array.isArray(sponsor.requirement_sets)
+        ? sponsor.requirement_sets
+        : [];
+
+      if (requirementSets.length < 1) return true;
+      return requirementSets.some(requirements => sponsorRequirementsMet(gameState, requirements));
+    })
+    .map(sponsor => {
+      const offers = Array.isArray(sponsor.possible_offers) ? sponsor.possible_offers : [];
+      const selected_offer = offers.length > 0 ? randomInt(0, offers.length - 1) : -1;
+      return {
+        ...sponsor,
+        selected_offer,
+      };
+    });
+}
+
+function sponsorRequirementsMet(gameState, requirements = {}) {
+  if (requirements.sales_team_required && !gameState?.salesTeam) return false;
+
+  if (!meetsMinimum(
+    getTicketSalesPercentage(gameState),
+    requirements.min_ticket_sales_percentage
+  )) return false;
+
+  if (!meetsRecentTicketSalesEfficiency(
+    getTicketSalesEfficiencyHistory(gameState),
+    requirements.min_ticket_sales_efficiency_last_turns
+  )) return false;
+
+  if (!meetsVectorMinimum(
+    getLatestSuitability(gameState),
+    requirements.min_suitability_per_group
+  )) return false;
+
+  if (!meetsMinimum(
+    gameState?.infrastructuralSpendings,
+    requirements.min_infrastructural_investment
+  )) return false;
+
+  if (!meetsMinimum(
+    Array.isArray(gameState?.rentedBooths) ? gameState.rentedBooths.length : 0,
+    requirements.min_vendors
+  )) return false;
+
+  if (!meetsMinimum(
+    Array.isArray(gameState?.appointedSpeakers) ? gameState.appointedSpeakers.length : 0,
+    requirements.min_appointed_speakers
+  )) return false;
+
+  return true;
+}
+
+function meetsMinimum(value, minimum) {
+  if (minimum == null) return true;
+  return Number(value || 0) >= Number(minimum || 0);
+}
+
+function meetsVectorMinimum(values, minimums) {
+  if (!Array.isArray(minimums) || minimums.length < 1) return true;
+  if (!Array.isArray(values)) return false;
+
+  return minimums.every((minimum, index) => (
+    Number(values[index] || 0) >= Number(minimum || 0)
+  ));
+}
+
+function meetsRecentTicketSalesEfficiency(history, requiredLastTurns) {
+  if (!Array.isArray(requiredLastTurns) || requiredLastTurns.length < 1) return true;
+  if (!Array.isArray(history) || history.length < requiredLastTurns.length) return false;
+
+  const recent = history.slice(history.length - requiredLastTurns.length);
+  return requiredLastTurns.every((minimum, index) => (
+    averageNumbers(recent[index]) >= Number(minimum || 0)
+  ));
+}
+
+function averageNumbers(value) {
+  if (Array.isArray(value)) {
+    if (value.length < 1) return 0;
+    return value.reduce((sum, current) => sum + Number(current || 0), 0) / value.length;
+  }
+
+  return Number(value || 0);
+}
+
+function getTicketSalesEfficiencyHistory(gameState) {
+  if (Array.isArray(gameState?.cumulativeSalesFactorProgress)) {
+    return gameState.cumulativeSalesFactorProgress;
+  }
+
+  if (Array.isArray(gameState?.turnReports)) {
+    return gameState.turnReports
+      .map(report => report && report.salesEfficiency)
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function getLatestSuitability(gameState) {
+  if (Array.isArray(gameState?.suitability)) return gameState.suitability;
+
+  const reports = Array.isArray(gameState?.turnReports) ? gameState.turnReports : [];
+  for (let i = reports.length - 1; i >= 0; i--) {
+    if (Array.isArray(reports[i]?.suitability)) return reports[i].suitability;
+  }
+
+  return null;
+}
+
+function getTicketSalesPercentage(gameState) {
+  if (Number.isFinite(Number(gameState?.ticketSalesPercentage))) {
+    return Number(gameState.ticketSalesPercentage);
+  }
+
+  const totalTicketSales = Array.isArray(gameState?.ticketSales)
+    ? gameState.ticketSales.reduce((sum, current) => sum + Number(current || 0), 0)
+    : 0;
+
+  const capacity = Number(
+    gameState?.ticketSalesCapacity
+    ?? gameState?.cardsCapacity
+    ?? gameState?.finalInfo?.simulationResult?.cardsCapacity
+    ?? (Array.isArray(gameState?.population)
+      ? gameState.population.reduce((sum, current) => sum + Number(current || 0), 0)
+      : undefined)
+    ?? (Array.isArray(gameState?.worldSettings?.population)
+      ? gameState.worldSettings.population.reduce((sum, current) => sum + Number(current || 0), 0)
+      : undefined)
+    ?? 0
+  );
+
+  if (capacity <= 0) return 0;
+  return (totalTicketSales / capacity) * 100;
 }
