@@ -1828,6 +1828,10 @@
         rentedBooths: [],
         infrastructuralSpendings: 0,
         appointedSpeakers: [],
+        brandingPackage: false,
+        branding_proposal: null,
+        premiumWifi: false,
+        premiumWifi_proposal: null,
         sponsors: [],
         sponsoring_offers: [],
       };
@@ -1956,6 +1960,14 @@
       }
       if (!Array.isArray(state.rentedBooths)) state.rentedBooths = [];
       if (typeof state.infrastructuralSpendings !== "number") state.infrastructuralSpendings = 0;
+      if (typeof state.brandingPackage !== "boolean") state.brandingPackage = false;
+      if (typeof state.branding_proposal === "undefined" || (state.branding_proposal !== null && typeof state.branding_proposal !== "object")) {
+        state.branding_proposal = null;
+      }
+      if (typeof state.premiumWifi !== "boolean") state.premiumWifi = false;
+      if (typeof state.premiumWifi_proposal === "undefined" || (state.premiumWifi_proposal !== null && typeof state.premiumWifi_proposal !== "object")) {
+        state.premiumWifi_proposal = null;
+      }
       if (!Array.isArray(state.sponsors)) state.sponsors = [];
       state.sponsors = state.sponsors
         .filter(sponsor => sponsor && sponsor.id)
@@ -2329,8 +2341,6 @@
       if(!isAssistantActive()){
         return {type: 'hint', text: "Assistant assesment would be available on the next turn"}
       }
-      console.log("GAME STATE ASSISTANT PROJ: ", gameState.assistantProjection);
-      console.log("GAME STATE: ", gameState);
       if(!!gameState?.assistantProjection && (gameState.assistantProjection.turn == gameState.turn)){
         const hintText = gameState.assistantProjection.priceReasonableness < 0.5 ? 
         "My research says the ticket price is too high, we should go for something more reasonable" : 
@@ -2368,7 +2378,6 @@
         onRestart: () => restartGame(),
         onProjection: async () => {
          const newBodyType = await createAssistantProjection();
-         console.log("NEW BODY TYPE: ", JSON.stringify(newBodyType));
          rightStatusMenu.setBody(newBodyType);
         },
       });
@@ -2866,7 +2875,6 @@
         const grid = content.append("div").attr("class", "shop-object-grid");
 
         Object.keys(objs).forEach(key => {
-          console.log("KEY: ", globalSettings.objects[key]);
           if (!enabled[key]) return;
           const o = objs[key];
           const btn = grid.append("button")
@@ -3176,7 +3184,6 @@
       const assistantIconPlace = document.getElementById('assistant-icon-place');
       if(gameState.assistant){
         const assistantObj = ASSISTANTS.find(itm=>itm.id == gameState.assistant);
-        console.log("assistantObj ico: ", assistantObj.icon)
         assistantIconPlace.classList.remove('gb-row__value');
         assistantIconPlace.classList.add('assistant-hired-icon');
         assistantIconPlace.innerHTML = `<img src="${assistantObj.icon}" alt="${assistantObj.name}" />`
@@ -3330,7 +3337,6 @@
     }
 
     function toggleDeskMenu() {
-      console.log("TOGGLING DESK MENU")
       if(isDeskMenuOpen()) closeDeskMenu();
       else openDeskMenu();
     }
@@ -3436,6 +3442,22 @@
       return total;
     }
 
+    function calculateSponsorsIncome(turn, sponsors){
+      const total = sponsors.reduce((acc, itm)=>{
+        const sponsor = SPONSORS_LIST.find(spo => spo.id == itm.id);
+        if(sponsor.possible_offers[itm.deal].amount<=0){
+          return 0;
+        }
+        else if (turn>=sponsor.possible_offers[itm.deal].installments + itm.move_signed){
+          return 0;
+        }
+        else return sponsor.possible_offers[itm.deal].amount;
+      }, 0)
+
+      console.log("TOTAL: ", total);
+      return total;
+    }
+
     // ===== Turn-Logik =====
     async function nextTurn() {
       const maxT = (worldSettings && worldSettings.maxTurns) || 10;
@@ -3460,8 +3482,10 @@
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
       const ticketResult = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, { mutate: true });
+      const sponsorsIncome = calculateSponsorsIncome(currentTurn+1, gameState.sponsors);
+      console.log("PSOJNSORS INOCME: ", sponsorsIncome)
       const ticketIncome = Number(ticketResult.ticketIncome || 0);
-      const totalIncome = objectIncome + ticketIncome;
+      const totalIncome = objectIncome + ticketIncome + sponsorsIncome;
       const turnAfter = currentTurn + 1;
 
       if (!Array.isArray(gameState.budgetHistory)) gameState.budgetHistory = [];
@@ -3485,15 +3509,13 @@
       gameState.turn = turnAfter;
 
       const loanPayment = getRequestedCredits().reduce((acc, itm) => getLoanPaymentAmount(itm) + acc, 0);
-      console.log("CREDIT ITNEREST: ", loanPayment)
-      console.log("ROUNDED: ", Math.round(loanPayment));
       expensesThisTurn["Loan Payment"] = loanPayment;
 
       let spendings = Object.keys(gameState.marketingPlan).reduce((accumulator, itm)=>accumulator+gameState.marketingPlan[itm], 0);
-      console.log("MARKETING SPENDINGS: ", spendings);
+
       expensesThisTurn["Marketing Fee"] = spendings;
       spendings += loanPayment;
-      console.log("SPEDINGS AFTER LOAN INTEREST: ", spendings);
+
       if(gameState?.salesTeam){
         const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
         if(salesTeam){
@@ -3511,13 +3533,13 @@
         spendings+= assistant.fee;
         expensesThisTurn["Assistant Fee"] = assistant.fee;
       }
-      gameState.budget = openingBudget + totalIncome - spendings;
+      gameState.budget = openingBudget + totalIncome - objectIncome - spendings; //- objectIncome since we already added object income upon leasing
       if(gameState.budget<0){
         console.log("Bankrupcy");
       }
 
       rightStatusMenu.clearWarning();
-      
+
       if(spendings>totalIncome){
         rightStatusMenu.setWarning('Previous turn got more spendings than you earned. Time to reconsider strategy!')
       }
@@ -3547,6 +3569,7 @@
         openingBudget,
         objectIncome,
         ticketIncome,
+        sponsorsIncome,
         totalIncome,
         creditRepayment: gameState?.turnReports[gameState.turnReports.length-1]?.creditRepayment ? gameState.turnReports[gameState.turnReports.length-1].creditRepayment+loanPayment : loanPayment,
         closingBudget: Number(gameState.budget || 0),
@@ -3562,8 +3585,24 @@
       //#?#
       gameState.proposals= gameState.proposals.filter(itm=>itm.status=='accepted');
       const vendorProposals = generateProposals(gameState, worldSettings, globalSettings);
-      const brandingProposal = getBrandingProposal();
+      const brandingProposal = buildBrandingDeskItem();
+      const premiumWifiProposal = buildPremiumWifiDeskItem();
+      const coinFlip = randomBetween(0.0, 1.0);
+      if(!gameState.brandingPackage && coinFlip>0.5){
+        console.log("HERE we are: ");
+        gameState.branding_proposal = brandingProposal;
+        console.log("game state branding proposal: ", gameState.branding_proposal);
+      } else if (gameState?.branding_proposal && gameState?.branding_proposal?.status != "accepted") {
+        gameState.branding_proposal = null;
+      }
+      const wifiCoinFlip = randomBetween(0.0, 1.0);
+      if(!gameState.premiumWifi && wifiCoinFlip>0.5){
+        gameState.premiumWifi_proposal = premiumWifiProposal;
+      } else if (gameState?.premiumWifi_proposal && gameState?.premiumWifi_proposal?.status != "accepted") {
+        gameState.premiumWifi_proposal = null;
+      }
       const sponsoringOffers = getInterestedSponsors(gameState, SPONSORS_LIST);
+      console.log("interested sponsors: ", sponsoringOffers);
       addGeneratedProposalsToGameState(vendorProposals);
       addGeneratedSponsoringOffersToGameState(sponsoringOffers);
 
@@ -3655,7 +3694,7 @@
       renderMarketingToolsPanel();
 
       const currentTurn = gameState.turn || 0;
-      
+
       const currentObjectIncome = getObjectIncomeLastTurn(gameState?.turn ?? 0);
       if (typeof gameState.objectIncomeHistory[currentTurn] === "undefined") {
         gameState.objectIncomeHistory[currentTurn] = currentObjectIncome;
@@ -3719,7 +3758,7 @@
           : [0,0,0];
         const suit = [...baseSuit];
         const rentedBooth = gameState?.rentedBooths.find(itm=>itm.tile == id);
-        console.log("RENTED BOOTH: ", rentedBooth)
+
         if(rentedBooth){
           for(let i=0; i<3; i++){
             suit[i] = baseSuit[i] + Number(rentedBooth.vendorSuitabilityByGroup?.[i] || 0);
@@ -3815,7 +3854,6 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 
       return Object.keys(channels).map(key => {
         const ch = channels[key] || {};
-        console.log("CHANNEL KEY: ", key);
         const label = ch.label || key;
         const maxSpend = Math.max(0, Number(ch.maxSpend || 0));
 
@@ -3931,9 +3969,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function addGeneratedProposalsToGameState(rawProposals) {
       if (!gameState) return;
       if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
-      console.log("Proposals before: ", gameState.proposals);
       gameState.proposals = gameState.proposals.filter(itm => itm.status == 'accepted');
-      console.log("Proposals after: ", gameState.proposals);
       const existingIds = new Set(gameState.proposals.map(p => p && p.id).filter(Boolean));
 
       (Array.isArray(rawProposals) ? rawProposals : []).forEach((rawProposal, index) => {
@@ -4027,6 +4063,62 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         { label: "Marketing effect", value: formatSponsorEffectList(deal.marketing_effect) },
         { label: "Ticket reasonableness", value: formatSignedValue(deal.ticket_reasonableness_boost, "%") },
       ];
+    }
+
+    function buildBrandingDeskItem() {
+
+      const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
+      const senderName = salesTeam?.name ?? "Sales Team";
+      const fee = 300;
+
+      const item = {
+        id: 'branding_deal1',
+        type: "branding",
+        sender: senderName,
+        turn: Number(gameState.turn),
+        title: `Branding Package Offer`,
+        preview: `A branded promotion push for ${formatEuro(fee)} (flat) to make the event more attractive to sponsors, vendors and visitors.`,
+        body: `${senderName} proposes a branding package that strengthens the event's presentation and commercial appeal. The package is positioned as a broad visibility boost to help attract stronger sponsor interest, better vendor attention and more visitor confidence.`,
+        terms: [
+          {label: "Fee", value: formatEuro(fee)},
+          {label: "Primary effect", value: "Higher sponsor, vendor and visitor appeal"}
+        ],
+        fee: fee,
+      }
+
+      if(gameState.brandingPackage){
+        item.status = 'accepted';
+      }
+
+      return item;
+    }
+
+    function buildPremiumWifiDeskItem() {
+
+      const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
+      const senderName = salesTeam?.name ?? "Sales Team";
+      const fee = 300;
+
+      const item = {
+        id: 'wifi_deal1',
+        type: "wifi",
+        sender: senderName,
+        turn: Number(gameState.turn),
+        title: `Premium Wi-Fi Offer`,
+        preview: `A premium connectivity upgrade for ${formatEuro(fee)} (flat) to improve the visitor and vendor experience.`,
+        body: `${senderName} proposes a premium Wi-Fi package for the event. The upgrade gives guests, vendors and sponsors a more reliable on-site connection and improves the event's overall service quality.`,
+        terms: [
+          {label: "Fee", value: formatEuro(fee)},
+          {label: "Primary effect", value: "Premium on-site connectivity"}
+        ],
+        fee: fee,
+      }
+
+      if(gameState.premiumWifi){
+        item.status = 'accepted';
+      }
+
+      return item;
     }
 
     function buildSponsorDeskItem(offer, status) {
@@ -4197,6 +4289,13 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       }
 
       gameState.sponsoring_offers = gameState.sponsoring_offers.filter(item => item && item.id !== sponsorId);
+
+      const sponsorObj = SPONSORS_LIST.find(itm=>itm.id == offer.id);
+      const dealObj = sponsorObj.possible_offers[offer.deal];
+      if(dealObj.amount>0){
+        gameState.budget += dealObj.amount;
+      }
+
       updateAll();
       renderDeskMenu();
       await saveGameState(worldId, playerId, gameState);
@@ -4212,21 +4311,99 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       await saveGameState(worldId, playerId, gameState);
     }
 
+    async function acceptBrandingPackageOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.brandingPackage) return;
+      if (!gameState.branding_proposal) return;
+
+      const brandingPackageOffer = gameState.branding_proposal;
+      gameState.budget -= brandingPackageOffer.fee;
+      gameState.brandingPackage = true;
+      gameState.branding_proposal.status = "accepted";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function declineBrandingPackageOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.brandingPackage) return;
+      if (!gameState.branding_proposal) return;
+
+      gameState.branding_proposal.status = "declined";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function acceptPremiumWifiOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.premiumWifi) return;
+      if (!gameState.premiumWifi_proposal) return;
+
+      const premiumWifiOffer = gameState.premiumWifi_proposal;
+      gameState.budget -= premiumWifiOffer.fee;
+      gameState.premiumWifi = true;
+      gameState.premiumWifi_proposal.status = "accepted";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function declinePremiumWifiOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.premiumWifi) return;
+      if (!gameState.premiumWifi_proposal) return;
+
+      gameState.premiumWifi_proposal.status = "declined";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
     function acceptDeskItem(id) {
       if (getSponsorIdFromDeskItemId(id)) return acceptSponsoringOffer(id);
+      if (id.includes('branding')) return acceptBrandingPackageOffer(id);
+      if (id.includes('wifi')) return acceptPremiumWifiOffer(id);
       return acceptVendorProposal(id);
     }
 
     function declineDeskItem(id) {
       if (getSponsorIdFromDeskItemId(id)) return declineSponsoringOffer(id);
+      if (id.includes('branding')) return declineBrandingPackageOffer(id);
+      if (id.includes('wifi')) return declinePremiumWifiOffer(id);
       return declineVendorProposal(id);
+    }
+
+    function getBrandingDeskItem(){
+      if(!gameState.branding_proposal){
+        return [];
+      }
+      else return [gameState.branding_proposal];
+    }
+
+    function getPremiumWifiDeskItem(){
+      if(!gameState.premiumWifi_proposal){
+        return [];
+      }
+      else return [gameState.premiumWifi_proposal];
     }
 
     function getDeskMenuOptions() {
       return {
         mountTo: document.getElementById("desk-menu"),
         items: [...getSponsoringOffers(), 
-        //...getDeskReportItems(), 
+        //...getDeskReportItems(),#?#
+        ...getBrandingDeskItem(),
+        ...getPremiumWifiDeskItem(),
         ...getDeskProposalItems()],
         onAccept:   (id) => acceptDeskItem(id),
         onDecline:  (id) => declineDeskItem(id),
@@ -4299,7 +4476,6 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function getLoanPaymentAmount(credit) {
       const amount = Math.max(0, Number(credit && credit.amount) || 0);
       const interest = Math.max(0, Number(credit && credit.interest) || 0);
-      console.log("TURNS: ", worldSettings);
       const totalMonthsToPay = worldSettings.maxTurns - credit.takenTurn;
       return Math.round((amount*(interest/100)) + amount/totalMonthsToPay)
     }
@@ -4968,7 +5144,6 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 
     async function createAssistantProjection(){
       if (!isAssistantActive()) return getRightMenuBodyType();
-      console.log("PROJECTING...");
       const turn = Number(gameState.turn || 0);
       if (gameState.assistantProjectionTurn === turn && gameState.assistantProjection) return getRightMenuBodyType();
 

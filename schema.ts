@@ -167,6 +167,9 @@ export interface GameState {
 
   finalInfo: FinalInfo;
   brandingPackage: boolean;
+  branding_proposal: Record<string,any> | null;
+  premiumWifi: boolean;
+  premiumWifi_proposal: Record<string,any> | null;
 
   sponsors: {
     id: string,
@@ -312,7 +315,7 @@ export type AssistantDefinition = HireablePartnerDefinition;
  * Desk menu models currently built in index.html as placeholder data.
  * These are not persisted yet, but they are part of the app data shape.
  */
-export type DeskItem = DeskReportItem | DeskProposalItem | DeskNewsItem;
+export type DeskItem = DeskReportItem | DeskProposalItem | DeskNewsItem | DeskBrandingItem | DeskWifiItem | DeskSponsorItem;
 
 export interface DeskItemBase {
   id: string;
@@ -334,11 +337,28 @@ export interface DeskNewsItem extends DeskItemBase {
   type: "news";
 }
 
-export interface DeskProposalItem extends DeskItemBase {
-  type: "proposal";
+export interface DeskActionableItem extends DeskItemBase {
   status?: ProposalStatus;
   expiresInTurns?: number;
   terms?: DeskProposalTerm[];
+}
+
+export interface DeskProposalItem extends DeskActionableItem {
+  type: "proposal";
+}
+
+export interface DeskBrandingItem extends DeskActionableItem {
+  type: "branding";
+  fee?: number;
+}
+
+export interface DeskWifiItem extends DeskActionableItem {
+  type: "wifi";
+  fee?: number;
+}
+
+export interface DeskSponsorItem extends DeskActionableItem {
+  type: "sponsor";
 }
 
 export type ProposalStatus = "pending" | "accepted" | "declined" | "expired";

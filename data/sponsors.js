@@ -37,7 +37,7 @@ const SPONSORS_LIST = [
       },
       {
         installments: 3,
-        amount: 180,
+        amount: 160,
         suitability_effect: [-5, -10, -20],
         marketing_effect: [5, 5, 5, 5],
         ticket_reasonableness_boost: 3, //3 percent

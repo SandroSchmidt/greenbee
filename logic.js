@@ -307,7 +307,7 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
   const proposals = [];
 
   availableStands.forEach(stand => {
-    console.log("AVAILABLE STAND: ", stand);
+    //console.log("AVAILABLE STAND: ", stand);
     const proximity = calculateVendorTileProximityScore(
       stand.tile,
       gameState,
@@ -355,7 +355,7 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
   });
 
 
-  console.log("PROPOSALS: ", proposals);
+  //console.log("PROPOSALS: ", proposals);
   return shuffleArray(proposals).slice(0, opts.maxTotalOffers);
     //.sort((a, b) => b.price - a.price)
 }
@@ -391,36 +391,36 @@ function calculateVendorOfferPrice({
   
   const addRandomToBasePrice = randomInt(low_high[0], low_high[1]);
   const basePrice = Math.max(1, Number(obj.price + addRandomToBasePrice || 0));
-  console.log("Base price> ", basePrice)
+  //console.log("Base price> ", basePrice)
   // Ticket sales make vendors more confident.
   // Range roughly: 0.85x -> 1.35x
   const ticketSalesMultiplier =
     0.85 + smoothstep(totalSoldTicketsPercentage) * 0.5;
 
-    console.log("Ticket sales multiplier> ", ticketSalesMultiplier);
+   // console.log("Ticket sales multiplier> ", ticketSalesMultiplier);
   // Recent sales efficiency also affects offer quality.
   // Range roughly: 0.50x -> 1.80x
   const salesFactorMultiplier =
     0.6 + clamp01(avgSalesFactor || 0) * 0.8;
 
-    console.log("Sales factor multiplier> ", salesFactorMultiplier);
+   // console.log("Sales factor multiplier> ", salesFactorMultiplier);
   // Marketing attracts vendors.
   // Range roughly: 0.5x -> 1.5x
   const marketingMultiplier =
     0.6 + clamp01(marketingFactor) * 0.8;
 
-    console.log("Marketing multiplier> ", marketingMultiplier)
+    //console.log("Marketing multiplier> ", marketingMultiplier)
   // Sales team negotiates better lease prices.
   // Between +20% to +50%.
   const salesTeamMultiplier = gameState?.salesTeam
     ? randomBetween(1.2, 1.5)
     : 1;
 
-    console.log("Sales multiplier> ", salesTeamMultiplier)
+    //console.log("Sales multiplier> ", salesTeamMultiplier)
   // Small natural randomness so offers do not feel robotic.
   const marketNoise = randomBetween(0.9, 1.2);
 
-    console.log("Market noise> ", marketNoise);
+    //console.log("Market noise> ", marketNoise);
   let price =
     basePrice *
     ticketSalesMultiplier *
@@ -431,7 +431,7 @@ function calculateVendorOfferPrice({
     marketNoise;
     
 
-    console.log("Final price> ", roundToNearest(Math.max(1, price), roundPriceTo));
+    //console.log("Final price> ", roundToNearest(Math.max(1, price), roundPriceTo));
   return roundToNearest(Math.max(1, price), roundPriceTo);
 }
 
@@ -464,7 +464,7 @@ function calculateOfferCountForTile({
   // Base count can be 0 if the event is unattractive.
   let count = Math.floor(randomBetween(0, 1.25) + demandScore * 3);
   
-  console.log("Offer count for tile:", count);
+  //console.log("Offer count for tile:", count);
   // Sales team brings extra vendor leads.
   // 1 to 3 offers.
   // ## This should be applied overal - as up to three more proposals total, not per tile
@@ -658,12 +658,12 @@ function calculateMarketingProposalFactor(gameState, globalSettings) {
   let interestFactor =
     interest.reduce((acc, v) => acc + saturate(v, marketingK), 0) / 3;
 
-  console.log("interest factor before website accounted: ", interestFactor);
+  //console.log("interest factor before website accounted: ", interestFactor);
   if(gameState?.website){
     interestFactor = (interestFactor * (100+randomInt(12, 25))) / 100; 
   }
 
-  console.log("Interest factor: ", interestFactor);
+  //console.log("Interest factor: ", interestFactor);
   return interestFactor
 }
 
