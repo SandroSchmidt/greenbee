@@ -3,10 +3,13 @@
  *
  * No dependencies. Vanilla JS + injected stylesheet. Themeable via CSS variables.
  *
- * Renders a modal-style inbox with three item types:
+ * Renders a modal-style inbox with five item types:
  *   - 'report'   — informational, expandable to full body, no actions
  *   - 'proposal' — actionable, expandable, has Accept / Decline buttons + status
  *   - 'news'     — informational, like report but visually neutral (gray tile)
+ *   - 'branding' — actionable like proposal; only appears in All / Accepted filters
+ *   - 'wifi'     — actionable like proposal; only appears in All / Accepted filters
+ *   - 'sponsor'  — actionable like proposal; only appears in All / Accepted filters
  *
  * USAGE
  * -----
@@ -59,7 +62,7 @@
  * -----------
  *   {
  *     id:       string,                 // required, unique
- *     type:     'report'|'proposal'|'news',
+ *     type:     'report'|'proposal'|'news'|'branding'|'wifi'|'sponsor',
  *     sender:   string,                 // shown in meta row
  *     title:    string,                 // bold line
  *     preview:  string,                 // optional, shown when collapsed
@@ -69,7 +72,7 @@
  *     read:     boolean,                // default false
  *     icon:     string,                 // optional, raw <svg>...</svg> override
  *
- *     // proposal-only
+ *     // proposal / branding / wifi / sponsor only
  *     status:           'pending'|'accepted'|'declined'|'expired', // default 'pending'
  *     expiresInTurns:   number,         // optional, shows warning if <= 1
  *     terms:            [{ label, value }, ...],  // optional metadata grid
@@ -382,6 +385,14 @@ const INBOX_PANEL_STYLES = `
   gap: 6px;
   margin-bottom: 12px;
 }
+.inbox__terms__sponsors {
+  display: grid;
+  grid-template-columns:repeat(3, 1fr);
+  grid-auto-rows:auto;
+  gap: 6px;
+  margin-bottom: 12px;
+  text-align:center;
+}
 .inbox__term {
   padding: 8px 10px;
   background: var(--inbox-bg, #ffffff);
@@ -448,6 +459,57 @@ const INBOX_PANEL_STYLES = `
   outline-offset: -2px;
 }
 
+.inbox__item--tile-colored {
+  background: var(--inbox-tile-bg);
+  border-bottom-color: var(--inbox-tile-stroke);
+  color: var(--inbox-tile-stroke);
+}
+.inbox__item--tile-colored.inbox__item--expanded {
+  background: var(--inbox-tile-bg);
+}
+.inbox__item--tile-colored:not(.inbox__item--expanded) .inbox__item-header:hover {
+  background: transparent;
+}
+.inbox__item--tile-colored .inbox__item-icon {
+  background: transparent !important;
+  color: var(--inbox-tile-stroke) !important;
+  border: 0.5px solid var(--inbox-tile-stroke);
+}
+.inbox__item--tile-colored .inbox__item-sender,
+.inbox__item--tile-colored.inbox__item--read .inbox__item-sender,
+.inbox__item--tile-colored.inbox__item--resolved .inbox__item-sender,
+.inbox__item--tile-colored .inbox__item-turn,
+.inbox__item--tile-colored .inbox__item-title,
+.inbox__item--tile-colored.inbox__item--read .inbox__item-title,
+.inbox__item--tile-colored.inbox__item--resolved .inbox__item-title,
+.inbox__item--tile-colored .inbox__item-preview,
+.inbox__item--tile-colored .inbox__item-body-text,
+.inbox__item--tile-colored .inbox__term-label,
+.inbox__item--tile-colored .inbox__term-value {
+  color: var(--inbox-tile-stroke);
+}
+.inbox__item--tile-colored .inbox__item-dot,
+.inbox__item--tile-colored .inbox__item-pill,
+.inbox__item--tile-colored .inbox__term,
+.inbox__item--tile-colored .inbox__item-warning,
+.inbox__item--tile-colored .inbox__btn {
+  border: 0.5px solid var(--inbox-tile-stroke);
+}
+.inbox__item--tile-colored .inbox__item-dot {
+  background: var(--inbox-tile-stroke);
+}
+.inbox__item--tile-colored .inbox__item-pill,
+.inbox__item--tile-colored .inbox__term,
+.inbox__item--tile-colored .inbox__item-warning,
+.inbox__item--tile-colored .inbox__btn {
+  background: rgba(255, 255, 255, 0.28);
+  color: var(--inbox-tile-stroke);
+}
+.inbox__item--tile-colored .inbox__btn:hover {
+  background: rgba(255, 255, 255, 0.42);
+  border-color: var(--inbox-tile-stroke);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .inbox-backdrop,
   .inbox,
@@ -464,6 +526,18 @@ const INBOX_TILE_COLORS = {
   report:   { bg: '#EAF3DE', stroke: '#3B6D11' },
   proposal: { bg: '#FAEEDA', stroke: '#854F0B' },
   news:     { bg: '#F1EFE8', stroke: '#5F5E5A' },
+  branding: { bg: '#aacddc5a', stroke: '#061E29'},
+  wifi: { bg: '#dfafd569', stroke: '#2c0028'},
+  sponsor:  { bg: '#ffe4ef67', stroke: '#810B38'}
+};
+
+const INBOX_FULL_TILE_TYPES = ['report', 'news', 'branding', 'wifi', 'sponsor'];
+const INBOX_ACTIONABLE_TYPES = ['proposal', 'branding', 'wifi', 'sponsor'];
+const INBOX_ACTIONABLE_LABELS = {
+  proposal: 'Proposal',
+  branding: 'Branding',
+  wifi: 'Wi-Fi',
+  sponsor: 'Sponsor',
 };
 
 // Default SVG icons.
@@ -473,6 +547,9 @@ const INBOX_DEFAULT_ICONS = {
   'sales team': '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
   '_report':    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
   '_proposal':  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>',
+  '_branding':  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h6"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>',
+  '_wifi':      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/></svg>',
+  '_sponsor':   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-9.33-9.3C.8 7.74 3.38 4 7.28 4c2.06 0 3.38 1.1 4.72 2.67C13.34 5.1 14.66 4 16.72 4c3.9 0 6.48 3.74 4.61 7.7C19 16.65 12 21 12 21z"/></svg>',
   '_news':      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>',
 };
 
@@ -582,7 +659,7 @@ class InboxPanel {
     this._renderItems();
   }
 
-  /** Update a proposal's status: 'pending' | 'accepted' | 'declined' | 'expired'. */
+  /** Update an actionable item's status: 'pending' | 'accepted' | 'declined' | 'expired'. */
   setItemStatus(id, status) {
     const item = this._findItem(id);
     if (!item) return;
@@ -725,18 +802,25 @@ class InboxPanel {
     `;
   }
 
+  _isActionableItem(item) {
+    return !!item && INBOX_ACTIONABLE_TYPES.includes(item.type);
+  }
+
+  _isAcceptedActionable(item) {
+    return this._isActionableItem(item) && item.status === 'accepted';
+  }
+
   _buildFiltersHtml() {
     const items = this.options.items || [];
     const filters = this.options.filters || ['all'];
     const labels = this.options.filterLabels || {};
 
-    const isAccepted = i => i.type === 'proposal' && i.status === 'accepted';
     const counts = {
-      all:       items.filter(i => !isAccepted(i)).length,
+      all:       items.filter(i => !this._isAcceptedActionable(i)).length,
       reports:   items.filter(i => i.type === 'report').length,
-      proposals: items.filter(i => i.type === 'proposal' && !isAccepted(i)).length,
+      proposals: items.filter(i => i.type === 'proposal' && !this._isAcceptedActionable(i)).length,
       news:      items.filter(i => i.type === 'news').length,
-      accepted:  items.filter(isAccepted).length,
+      accepted:  items.filter(i => this._isAcceptedActionable(i)).length,
     };
 
     const pillsHtml = filters.map(f => {
@@ -754,13 +838,12 @@ class InboxPanel {
   }
 
   _filteredItems() {
-    const isAccepted = i => i.type === 'proposal' && i.status === 'accepted';
-    if (this._activeFilter === 'all') return this.options.items.filter(i => !isAccepted(i));
-    if (this._activeFilter === 'accepted') return this.options.items.filter(isAccepted);
+    if (this._activeFilter === 'all') return this.options.items.filter(i => !this._isAcceptedActionable(i));
+    if (this._activeFilter === 'accepted') return this.options.items.filter(i => this._isAcceptedActionable(i));
     const typeMap = { reports: 'report', proposals: 'proposal', news: 'news' };
     const targetType = typeMap[this._activeFilter];
     if (!targetType) return this.options.items.slice();
-    if (this._activeFilter === 'proposals') return this.options.items.filter(i => i.type === 'proposal' && !isAccepted(i));
+    if (this._activeFilter === 'proposals') return this.options.items.filter(i => i.type === 'proposal' && !this._isAcceptedActionable(i));
     return this.options.items.filter(i => i.type === targetType);
   }
 
@@ -776,7 +859,8 @@ class InboxPanel {
     const isExpanded = this._expandedId === item.id;
     const isRead     = !!item.read;
     const status     = item.status || 'pending';
-    const isResolved = item.type === 'proposal' && status !== 'pending';
+    const isActionable = this._isActionableItem(item);
+    const isResolved = isActionable && status !== 'pending';
 
     const classes = ['inbox__item'];
     if (isExpanded) classes.push('inbox__item--expanded');
@@ -784,6 +868,11 @@ class InboxPanel {
     if (isResolved) classes.push('inbox__item--resolved');
 
     const tile = INBOX_TILE_COLORS[item.type] || INBOX_TILE_COLORS.report;
+    const isTileColored = INBOX_FULL_TILE_TYPES.includes(item.type);
+    if (isTileColored) classes.push('inbox__item--tile-colored');
+    const itemStyle = isTileColored
+      ? ` style="--inbox-tile-bg: ${tile.bg}; --inbox-tile-stroke: ${tile.stroke};"`
+      : '';
     const iconHtml = item.icon
       || INBOX_DEFAULT_ICONS[String(item.sender || '').toLowerCase()]
       || INBOX_DEFAULT_ICONS[`_${item.type}`]
@@ -793,11 +882,12 @@ class InboxPanel {
       ? item.timestamp
       : (item.turn != null ? `Turn ${item.turn}` : '');
 
-    // Status pill (proposals only)
+    // Status pill (actionable items only)
     let pillHtml = '';
-    if (item.type === 'proposal') {
+    if (isActionable) {
       if (status === 'pending') {
-        pillHtml = `<span class="inbox__item-pill inbox__item-pill--proposal">Proposal</span>`;
+        const label = INBOX_ACTIONABLE_LABELS[item.type] || 'Proposal';
+        pillHtml = `<span class="inbox__item-pill inbox__item-pill--proposal">${this._escape(label)}</span>`;
       } else if (status === 'accepted') {
         pillHtml = `<span class="inbox__item-pill inbox__item-pill--accepted">Accepted</span>`;
       } else if (status === 'declined') {
@@ -823,9 +913,9 @@ class InboxPanel {
     if (isExpanded) {
       const bodyText = item.body || item.preview || '';
 
-      // Expiry warning (pending proposals only)
+      // Expiry warning (pending actionable items only)
       let warningHtml = '';
-      if (item.type === 'proposal' && status === 'pending' && item.expiresInTurns != null) {
+      if (isActionable && status === 'pending' && item.expiresInTurns != null) {
         const t = Math.round(Number(item.expiresInTurns));
         let text = '';
         let urgent = false;
@@ -845,12 +935,12 @@ class InboxPanel {
             <div class="inbox__term-value">${this._escape(t.value)}</div>
           </div>
         `).join('');
-        termsHtml = `<div class="inbox__terms">${cells}</div>`;
+        termsHtml = `<div class="${item.type == 'sponsor' ? "inbox__terms__sponsors" : "inbox__terms"}">${cells}</div>`;
       }
 
-      // Action buttons (pending proposals only)
+      // Action buttons (pending actionable items only)
       let actionsHtml = '';
-      if (item.type === 'proposal' && status === 'pending') {
+      if (isActionable && status === 'pending') {
         actionsHtml = `
           <div class="inbox__actions">
             <button class="inbox__btn inbox__btn--primary"   type="button" data-inbox-accept="${this._escape(item.id)}">Accept</button>
@@ -870,7 +960,7 @@ class InboxPanel {
     }
 
     return `
-      <div class="${classes.join(' ')}" data-inbox-item="${this._escape(item.id)}">
+      <div class="${classes.join(' ')}" data-inbox-item="${this._escape(item.id)}"${itemStyle}>
         <div class="inbox__item-header" data-inbox-toggle="${this._escape(item.id)}" tabindex="0" role="button" aria-expanded="${isExpanded}">
           <div class="inbox__item-icon" style="background: ${tile.bg}; color: ${tile.stroke};">
             ${iconHtml}

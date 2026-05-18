@@ -281,7 +281,6 @@ function buildModalHTML(m, leaderboard) {
       <div class="frm-footer">
         <div class="frm-verdict">Verdict <b>${escapeHTML(m.verdict)}</b></div>
         <div style="display:flex;gap:8px">
-          <button class="frm-review">Review report</button>
           <button class="frm-restart">Restart game →</button>
         </div>
       </div>
@@ -355,12 +354,34 @@ function injectFinalResultsStyles() {
   style.id = 'frm-styles';
   style.textContent = `
     .frm-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; z-index: 9999; overflow-y: auto; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; }
-    .frm-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 600px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); color: #111; }
-    .frm-header { padding: 22px 24px 18px; display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 0.5px solid rgba(0,0,0,0.08); }
+    .frm-modal { 
+      background: #fff; 
+      border-radius: 12px; 
+      height:86vh; 
+      max-height:86vh; 
+      width: 100%; 
+      max-width: 600px; 
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2); 
+      display: flex;
+      flex-direction: column;
+      color: #111; 
+     }
+    .frm-header { 
+      padding: 22px 24px 18px; 
+      display: flex; 
+      align-items: flex-start; 
+      justify-content: space-between; 
+      border-bottom: 0.5px solid rgba(0,0,0,0.08); 
+      flex: 0 0 auto;
+    }
     .frm-title { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
     .frm-subtitle { font-size: 13px; color: #666; }
     .frm-close { background: transparent; border: none; cursor: pointer; padding: 4px 8px; color: #888; font-size: 22px; line-height: 1; }
-    .frm-body { padding: 22px 24px; }
+    .frm-body { 
+      padding: 22px 24px; 
+      flex: 1 1 auto;
+      overflow:auto;
+    }
     .frm-hero-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 26px; }
     .frm-hero { background: #f7f7f5; border-radius: 8px; padding: 14px 16px; }
     .frm-hero-label { font-size: 12px; color: #666; margin-bottom: 6px; }
@@ -390,7 +411,16 @@ function injectFinalResultsStyles() {
     .frm-legend-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
     .frm-legend-stops { display: inline-flex; gap: 2px; }
     .frm-legend-stops span { width: 10px; height: 10px; border-radius: 2px; }
-    .frm-footer { padding: 16px 24px; border-top: 0.5px solid rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; background: #fafaf8; border-radius: 0 0 12px 12px; }
+    .frm-footer { 
+      padding: 16px 24px; 
+      border-top: 0.5px solid rgba(0,0,0,0.08); 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      background: #fafaf8; 
+      border-radius: 0 0 12px 12px; 
+      flex: 0 0 auto;
+      }
     .frm-verdict { font-size: 12px; color: #666; }
     .frm-verdict b { color: #111; font-weight: 500; margin-left: 6px; }
     .frm-review, .frm-restart { font-family: inherit; font-size: 13px; padding: 9px 18px; border-radius: 8px; cursor: pointer; }

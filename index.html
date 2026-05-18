@@ -20,6 +20,7 @@
   <script src="components/deskMenu.js"></script>
   <script src="components/objectActionPanel.js"></script>
   <script src="data/speakers.js"></script>
+  <script src="data/sponsors.js"></script>
 </head>
 <style>
   /* =========================================================
@@ -56,6 +57,8 @@
 
     --gb-tx:           160ms cubic-bezier(.4, 0, .2, 1);
     --gb-news-reports: #2a2a2a;
+
+    --gb-sun-thumb: #0d2030;
   }
 
   body.theme-dark{
@@ -78,6 +81,7 @@
     --gb-border-strong:rgba(255, 255, 255, .14);
 
     --gb-news-reports: #101824;
+    --gb-sun-thumb: #e5e7eb
   }
 
   body{
@@ -111,23 +115,120 @@
   /* =========================================================
      HEADER
      ========================================================= */
-  #main-header{
-    background: var(--gb-surface) !important;
-    border-bottom: 1px solid var(--gb-border) !important;
-    box-shadow: var(--gb-shadow-xs);
-    height: 56px !important;
-  }
-  .header-pill{
-    background: var(--gb-surface-soft) !important;
-    border: 1px solid var(--gb-border) !important;
-    color: var(--gb-text) !important;
-    font-size: 12px !important;
-    font-weight: 500 !important;
-    padding: 6px 12px !important;
-    border-radius: var(--gb-radius-pill) !important;
-  }
-  .header-center{ display:flex; gap: 8px; }
-  .header-right{ display: flex; gap: 8px; align-items: center; }
+  .header-right {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+/* World indicator */
+.world-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gb-text-secondary, #6b7280);
+}
+.world-display .world-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.world-display #world-name {
+  color: var(--gb-text, #111827);
+  font-weight: 500;
+}
+
+/* Player indicator */
+.player-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gb-text, #111827);
+}
+.player-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gb-accent-soft, #dcfce7);
+  color: var(--gb-accent, #166534);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Theme switch */
+.theme-switch {
+  background: none;
+  border: none;
+  padding: 2px;
+  margin: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-switch:focus-visible .theme-switch-track {
+  box-shadow: 0 0 0 2px var(--gb-accent, #16a34a);
+}
+.theme-switch-track {
+  position: relative;
+  width: 54px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--gb-surface-2, #f3f4f6);
+  border: 1px solid var(--gb-border, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 7px;
+  box-sizing: border-box;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.theme-switch-thumb {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gb-sun-thumb, #111827);
+  transform: translateY(-50%);
+  transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.2s ease;
+  z-index: 0;
+}
+.theme-icon {
+  width: 13px;
+  height: 13px;
+  position: relative;
+  z-index: 1;
+  transition: color 0.2s ease;
+}
+/* Light mode: thumb on left, over the sun */
+.theme-icon-sun  { color: var(--gb-surface, #ffffff); }
+.theme-icon-moon { color: var(--gb-text-tertiary, #9ca3af); }
+
+/* Dark mode: thumb slides right, over the moon */
+[data-theme="dark"] .theme-switch-thumb,
+.theme-switch[aria-checked="true"] .theme-switch-thumb {
+  left: calc(100% - 24px);
+  background: var(--gb-text, #f3f4f6);
+}
+[data-theme="dark"] .theme-icon-sun,
+.theme-switch[aria-checked="true"] .theme-icon-sun {
+  color: var(--gb-text-tertiary, #9ca3af);
+}
+[data-theme="dark"] .theme-icon-moon,
+.theme-switch[aria-checked="true"] .theme-icon-moon {
+  color: var(--gb-surface, #122341);
+}
 
   /* =========================================================
      BUTTONS – refined with proper states
@@ -1168,6 +1269,36 @@
 
   /* keep buy summary panel on top of others */
   #summary-overlay{ z-index: 95; display: none;}
+
+  .assistant-hired-icon,
+  .sales-team-hired-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 2%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--oap-surface, #f5f5f5);
+    border: 0.5px solid var(--oap-border, rgba(0, 0, 0, 0.1));
+  }
+
+  .assistant-hired-icon img { 
+    width: 100%;
+    height: 100%;
+    scale: 140%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .sales-team-hired-icon {
+    color: #fff;
+    font-size: 8px;
+    letter-spacing: 0;
+  }
 </style>
 <body class="theme-light">
 
@@ -1175,13 +1306,40 @@
   <header id="main-header">
     <div class="header-left">
       <img src="logo_transparent.png" class="logo-image" alt="GreenBee Logo" style="cursor:pointer"
-           onclick="window.open('about.html', '_blank')">
+        onclick="window.open('about.html', '_blank')">
     </div>
-
+  
     <div class="header-right">
-      <span id="world-display" class="header-pill">World: -</span>
-      <span id="player-display" class="header-pill">Player: -</span>
-      <button id="theme-toggle" class="btn small ghost" type="button">☀︎ / 🌙</button>
+      <div class="world-display" title="Current world">
+        <svg class="world-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+        <span id="world-name">-</span>
+      </div>
+  
+      <div class="player-display" title="Current player">
+        <span id="player-name">-</span>
+        <div id="player-avatar" class="player-avatar" aria-hidden="true">-</div>
+      </div>
+  
+      <button id="theme-toggle" class="theme-switch" type="button" role="switch" aria-checked="false"
+        aria-label="Toggle theme">
+        <span class="theme-switch-track">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4" />
+            <path
+              d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+          <span class="theme-switch-thumb"></span>
+        </span>
+      </button>
     </div>
   </header>
 
@@ -1312,7 +1470,7 @@
               </svg>
             </span>
             <span class="gb-row__label">Sales team</span>
-            <span class="gb-row__value">-</span>
+            <span id="sales-team-icon-place" class="gb-row__value">-</span>
             <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3.5 2L7 5l-3.5 3" />
@@ -1329,7 +1487,9 @@
               </svg>
             </span>
             <span class="gb-row__label">Assistant</span>
-            <span class="gb-row__value">-</span>
+            <div id="assistant-icon-place" class="gb-row__value">
+              
+            </div>
             <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3.5 2L7 5l-3.5 3" />
@@ -1372,7 +1532,7 @@
             </svg>
           </button>
         
-          <!-- Credit: bank card (utility variant) -->
+          <!-- Credit: bank card (utility variant) #?#-->
           <button id="request-credit"  class="gb-row gb-row--utility" type="button" data-action="credit">
             <span class="gb-row__icon">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"
@@ -1382,7 +1542,7 @@
               </svg>
             </span>
             <span class="gb-row__label">Credit</span>
-            <span class="gb-row__value">-</span>
+            <span id="credit-return-amount" class="gb-row__value">-</span>
             <svg class="gb-row__chevron" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor"
               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M3.5 2L7 5l-3.5 3" />
@@ -1488,13 +1648,19 @@
 
   <script>
     // ===== Theme =====
+
     function applyThemeFromStorage() {
       const pref = localStorage.getItem("gb-theme") || "light";
       document.body.classList.toggle("theme-dark", pref === "dark");
+
+      const themeToggle = document.getElementById('theme-toggle');
+      themeToggle.setAttribute('aria-checked', String(pref === 'dark'));
     }
     document.getElementById("theme-toggle").addEventListener("click", () => {
       const isDark = document.body.classList.toggle("theme-dark");
       localStorage.setItem("gb-theme", isDark ? "dark" : "light");
+      const themeToggle = document.getElementById('theme-toggle');
+      themeToggle.setAttribute('aria-checked', String(isDark));
     });
     applyThemeFromStorage();
 
@@ -1662,6 +1828,12 @@
         rentedBooths: [],
         infrastructuralSpendings: 0,
         appointedSpeakers: [],
+        brandingPackage: false,
+        branding_proposal: null,
+        premiumWifi: false,
+        premiumWifi_proposal: null,
+        sponsors: [],
+        sponsoring_offers: [],
       };
     }
 
@@ -1788,6 +1960,31 @@
       }
       if (!Array.isArray(state.rentedBooths)) state.rentedBooths = [];
       if (typeof state.infrastructuralSpendings !== "number") state.infrastructuralSpendings = 0;
+      if (typeof state.brandingPackage !== "boolean") state.brandingPackage = false;
+      if (typeof state.branding_proposal === "undefined" || (state.branding_proposal !== null && typeof state.branding_proposal !== "object")) {
+        state.branding_proposal = null;
+      }
+      if (typeof state.premiumWifi !== "boolean") state.premiumWifi = false;
+      if (typeof state.premiumWifi_proposal === "undefined" || (state.premiumWifi_proposal !== null && typeof state.premiumWifi_proposal !== "object")) {
+        state.premiumWifi_proposal = null;
+      }
+      if (!Array.isArray(state.sponsors)) state.sponsors = [];
+      state.sponsors = state.sponsors
+        .filter(sponsor => sponsor && sponsor.id)
+        .map(sponsor => ({
+          ...sponsor,
+          id: sponsor.id,
+          deal: Number(sponsor.deal || 0),
+          move_signed: Number(sponsor.move_signed ?? sponsor.acceptedTurn ?? state.turn ?? 0),
+          status: "accepted",
+        }));
+      if (!Array.isArray(state.sponsoring_offers)) state.sponsoring_offers = [];
+      state.sponsoring_offers = state.sponsoring_offers
+        .filter(offer => offer && offer.id)
+        .map(offer => ({
+          id: offer.id,
+          deal: Number(offer.deal || 0),
+        }));
       if (!Array.isArray(state.appointedSpeakers)) {
         state.appointedSpeakers = Array.isArray(state.speakers) ? state.speakers : [];
       }
@@ -1921,6 +2118,7 @@
     }
 
     function applyCurrentFinalNotification() {
+      rightStatusMenu.clearWarning();
       if (!rightStatusMenu || typeof rightStatusMenu.setNotification !== "function") return;
       const notification = getFinalNotificationConfig();
       if (notification) {
@@ -2072,12 +2270,14 @@
       await saveGameState(worldId, playerId, gameState);
 
       try {
+        renderBoard(true);
         await simulateVisitorsMovementOnTheBoard(peopleTracker);
+        await waitForFinalDelay(3000);
+        renderBoard();
       } catch (err) {
         console.error("Visitor movement animation failed:", err);
       }
 
-      await waitForFinalDelay(3000);
       finalEventInProgress = false;
       updateAll();
       applyCurrentFinalNotification();
@@ -2141,8 +2341,6 @@
       if(!isAssistantActive()){
         return {type: 'hint', text: "Assistant assesment would be available on the next turn"}
       }
-      console.log("GAME STATE ASSISTANT PROJ: ", gameState.assistantProjection);
-      console.log("GAME STATE: ", gameState);
       if(!!gameState?.assistantProjection && (gameState.assistantProjection.turn == gameState.turn)){
         const hintText = gameState.assistantProjection.priceReasonableness < 0.5 ? 
         "My research says the ticket price is too high, we should go for something more reasonable" : 
@@ -2180,7 +2378,6 @@
         onRestart: () => restartGame(),
         onProjection: async () => {
          const newBodyType = await createAssistantProjection();
-         console.log("NEW BODY TYPE: ", JSON.stringify(newBodyType));
          rightStatusMenu.setBody(newBodyType);
         },
       });
@@ -2228,7 +2425,7 @@
       syncMarketingToolsPanelState();
     }
 
-    function renderBoard() {
+    function renderBoard(simulationProgress = false) {
       closeObjectActionPanel();
       const svg = d3.select("#game-board");
       svg.selectAll("*").remove();
@@ -2318,6 +2515,7 @@
             .attr("height", hexH * 2.2)
             .on("mouseover", () => showTileInfo(id, g))
             .on("mouseout", () => clearTileInfo(g))
+            .style("opacity", simulationProgress ? 0.3 : 1)
             .style("pointer-events", "none");
         }
       });
@@ -2677,7 +2875,6 @@
         const grid = content.append("div").attr("class", "shop-object-grid");
 
         Object.keys(objs).forEach(key => {
-          console.log("KEY: ", globalSettings.objects[key]);
           if (!enabled[key]) return;
           const o = objs[key];
           const btn = grid.append("button")
@@ -2872,6 +3069,7 @@
       renderSalesTeamStatus();
       renderAssistantStatus();
       updateInsightsButtonVisibility();
+      renderControlBoard();
     }
 
     function isMarketingToolsMenuOpen() {
@@ -2961,6 +3159,48 @@
 
       menu.style.left = `${left}px`;
       menu.style.top = `${top}px`;
+    }
+
+    
+    function renderControlBoard() {
+      // Rendering sales team button icon #?#
+      const salesTeamIconPlace = document.getElementById('sales-team-icon-place');
+      const salesTeamObj = gameState.salesTeam ? SALES_TEAMS.find(itm => itm.id == gameState.salesTeam) : null;
+      if(salesTeamIconPlace){
+        if(salesTeamObj){
+          salesTeamIconPlace.classList.remove('gb-row__value');
+          salesTeamIconPlace.classList.add('sales-team-hired-icon');
+          salesTeamIconPlace.style.background = salesTeamObj.color;
+          salesTeamIconPlace.innerHTML = salesTeamObj.initials || '';
+        } else {
+          salesTeamIconPlace.classList.remove('sales-team-hired-icon');
+          salesTeamIconPlace.classList.add('gb-row__value');
+          salesTeamIconPlace.style.background = '';
+          salesTeamIconPlace.innerHTML = '-';
+        }
+      }
+
+      //Rendering assistant button icon #?#
+      const assistantIconPlace = document.getElementById('assistant-icon-place');
+      if(gameState.assistant){
+        const assistantObj = ASSISTANTS.find(itm=>itm.id == gameState.assistant);
+        assistantIconPlace.classList.remove('gb-row__value');
+        assistantIconPlace.classList.add('assistant-hired-icon');
+        assistantIconPlace.innerHTML = `<img src="${assistantObj.icon}" alt="${assistantObj.name}" />`
+      } else {
+        assistantIconPlace.classList.remove('assistant-hired-icon');
+        assistantIconPlace.classList.add('gb-row__value');
+        assistantIconPlace.innerHTML = '-'
+      }
+
+      const requestedCreditsElement = document.getElementById('credit-return-amount');
+      const requestedCredits = gameState.requestedCredits;
+      if(requestedCredits.length>0){
+        const amount  = requestedCredits.reduce((acc, itm)=> acc+getLoanAmountToReturn(itm), 0);
+        requestedCreditsElement.innerHTML = '€'+String(amount);
+      } else {
+        requestedCreditsElement.innerHTML = '-';
+      }
     }
 
     function renderTicketPricesMenu() {
@@ -3097,7 +3337,6 @@
     }
 
     function toggleDeskMenu() {
-      console.log("TOGGLING DESK MENU")
       if(isDeskMenuOpen()) closeDeskMenu();
       else openDeskMenu();
     }
@@ -3203,6 +3442,22 @@
       return total;
     }
 
+    function calculateSponsorsIncome(turn, sponsors){
+      const total = sponsors.reduce((acc, itm)=>{
+        const sponsor = SPONSORS_LIST.find(spo => spo.id == itm.id);
+        if(sponsor.possible_offers[itm.deal].amount<=0){
+          return 0;
+        }
+        else if (turn>=sponsor.possible_offers[itm.deal].installments + itm.move_signed){
+          return 0;
+        }
+        else return sponsor.possible_offers[itm.deal].amount;
+      }, 0)
+
+      console.log("TOTAL: ", total);
+      return total;
+    }
+
     // ===== Turn-Logik =====
     async function nextTurn() {
       const maxT = (worldSettings && worldSettings.maxTurns) || 10;
@@ -3227,8 +3482,10 @@
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
       const ticketResult = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, { mutate: true });
+      const sponsorsIncome = calculateSponsorsIncome(currentTurn+1, gameState.sponsors);
+      console.log("PSOJNSORS INOCME: ", sponsorsIncome)
       const ticketIncome = Number(ticketResult.ticketIncome || 0);
-      const totalIncome = objectIncome + ticketIncome;
+      const totalIncome = objectIncome + ticketIncome + sponsorsIncome;
       const turnAfter = currentTurn + 1;
 
       if (!Array.isArray(gameState.budgetHistory)) gameState.budgetHistory = [];
@@ -3252,15 +3509,13 @@
       gameState.turn = turnAfter;
 
       const loanPayment = getRequestedCredits().reduce((acc, itm) => getLoanPaymentAmount(itm) + acc, 0);
-      console.log("CREDIT ITNEREST: ", loanPayment)
-      console.log("ROUNDED: ", Math.round(loanPayment));
       expensesThisTurn["Loan Payment"] = loanPayment;
 
       let spendings = Object.keys(gameState.marketingPlan).reduce((accumulator, itm)=>accumulator+gameState.marketingPlan[itm], 0);
-      console.log("MARKETING SPENDINGS: ", spendings);
+
       expensesThisTurn["Marketing Fee"] = spendings;
       spendings += loanPayment;
-      console.log("SPEDINGS AFTER LOAN INTEREST: ", spendings);
+
       if(gameState?.salesTeam){
         const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
         if(salesTeam){
@@ -3278,10 +3533,12 @@
         spendings+= assistant.fee;
         expensesThisTurn["Assistant Fee"] = assistant.fee;
       }
-      gameState.budget = openingBudget + totalIncome - spendings;
+      gameState.budget = openingBudget + totalIncome - objectIncome - spendings; //- objectIncome since we already added object income upon leasing
       if(gameState.budget<0){
         console.log("Bankrupcy");
       }
+
+      rightStatusMenu.clearWarning();
 
       if(spendings>totalIncome){
         rightStatusMenu.setWarning('Previous turn got more spendings than you earned. Time to reconsider strategy!')
@@ -3312,6 +3569,7 @@
         openingBudget,
         objectIncome,
         ticketIncome,
+        sponsorsIncome,
         totalIncome,
         creditRepayment: gameState?.turnReports[gameState.turnReports.length-1]?.creditRepayment ? gameState.turnReports[gameState.turnReports.length-1].creditRepayment+loanPayment : loanPayment,
         closingBudget: Number(gameState.budget || 0),
@@ -3324,9 +3582,30 @@
         interest: vec3(gameState.interest),
       };
       gameState.turnReports.push(report);
-      console.log("GAME STATE: ", gameState);
-      console.log("Expenses: ", expensesThisTurn);
-      addGeneratedProposalsToGameState(generateProposals(gameState, worldSettings, globalSettings));
+      //#?#
+      gameState.proposals= gameState.proposals.filter(itm=>itm.status=='accepted');
+      const vendorProposals = generateProposals(gameState, worldSettings, globalSettings);
+      const brandingProposal = buildBrandingDeskItem();
+      const premiumWifiProposal = buildPremiumWifiDeskItem();
+      const coinFlip = randomBetween(0.0, 1.0);
+      if(!gameState.brandingPackage && coinFlip>0.5){
+        console.log("HERE we are: ");
+        gameState.branding_proposal = brandingProposal;
+        console.log("game state branding proposal: ", gameState.branding_proposal);
+      } else if (gameState?.branding_proposal && gameState?.branding_proposal?.status != "accepted") {
+        gameState.branding_proposal = null;
+      }
+      const wifiCoinFlip = randomBetween(0.0, 1.0);
+      if(!gameState.premiumWifi && wifiCoinFlip>0.5){
+        gameState.premiumWifi_proposal = premiumWifiProposal;
+      } else if (gameState?.premiumWifi_proposal && gameState?.premiumWifi_proposal?.status != "accepted") {
+        gameState.premiumWifi_proposal = null;
+      }
+      const sponsoringOffers = getInterestedSponsors(gameState, SPONSORS_LIST);
+      console.log("interested sponsors: ", sponsoringOffers);
+      addGeneratedProposalsToGameState(vendorProposals);
+      addGeneratedSponsoringOffersToGameState(sponsoringOffers);
+
       const finalTurnReached = (gameState.turn || 0) >= maxT;
       if (finalTurnReached) {
         markFinalEventReady(report);
@@ -3400,8 +3679,10 @@
 
     // ===== Start =====
     async function startGame() {
-      document.getElementById("world-display").textContent  = "World: " + worldId;
-      document.getElementById("player-display").textContent = "Player: " + (studentRecord && studentRecord.name || playerId);
+      document.getElementById("world-name").textContent  = worldId;
+      document.getElementById("player-name").textContent = (studentRecord && studentRecord.name || playerId);
+      const avatar = document.getElementById('player-avatar');
+      avatar.textContent = ((studentRecord && studentRecord.name || playerId)[0] || '-').toUpperCase();
 
       globalSettings = await loadGlobalSettings();
       worldSettings = await loadWorldSettings(worldId);
@@ -3413,7 +3694,7 @@
       renderMarketingToolsPanel();
 
       const currentTurn = gameState.turn || 0;
-      
+
       const currentObjectIncome = getObjectIncomeLastTurn(gameState?.turn ?? 0);
       if (typeof gameState.objectIncomeHistory[currentTurn] === "undefined") {
         gameState.objectIncomeHistory[currentTurn] = currentObjectIncome;
@@ -3477,7 +3758,7 @@
           : [0,0,0];
         const suit = [...baseSuit];
         const rentedBooth = gameState?.rentedBooths.find(itm=>itm.tile == id);
-        console.log("RENTED BOOTH: ", rentedBooth)
+
         if(rentedBooth){
           for(let i=0; i<3; i++){
             suit[i] = baseSuit[i] + Number(rentedBooth.vendorSuitabilityByGroup?.[i] || 0);
@@ -3573,7 +3854,6 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 
       return Object.keys(channels).map(key => {
         const ch = channels[key] || {};
-        console.log("CHANNEL KEY: ", key);
         const label = ch.label || key;
         const maxSpend = Math.max(0, Number(ch.maxSpend || 0));
 
@@ -3689,9 +3969,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function addGeneratedProposalsToGameState(rawProposals) {
       if (!gameState) return;
       if (!Array.isArray(gameState.proposals)) gameState.proposals = [];
-      console.log("Proposals before: ", gameState.proposals);
       gameState.proposals = gameState.proposals.filter(itm => itm.status == 'accepted');
-      console.log("Proposals after: ", gameState.proposals);
       const existingIds = new Set(gameState.proposals.map(p => p && p.id).filter(Boolean));
 
       (Array.isArray(rawProposals) ? rawProposals : []).forEach((rawProposal, index) => {
@@ -3701,6 +3979,209 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         existingIds.add(proposal.id);
       });
     }
+
+    function addGeneratedSponsoringOffersToGameState(sponsoringOffers) {
+      if(!sponsoringOffers) return;
+      gameState.sponsoring_offers = [];
+      sponsoringOffers.forEach((offer)=> {
+        gameState.sponsoring_offers.push({
+          id: offer.id,
+          deal: offer.selected_offer
+        })
+      });
+    }
+
+    //#?#
+    function getDeskReportItems() {
+      const reports = Array.isArray(gameState && gameState.reports) ? gameState.reports : [];
+      return [1,2].map((report, index) => {
+        const id = `report${index}`;
+        const status = {
+          id: `report${index}`,
+          type: 'report',
+          sender: 'Assistant',
+          turn: 2,
+          title: 'Marketing channel insight',
+          preview: 'Your billboards are underperforming…',
+          body: 'Full report text shown when expanded.',
+        }
+
+        return status;
+      })
+    }
+
+    function getSponsorDefinition(sponsorId) {
+      const sponsors = typeof window !== "undefined" && Array.isArray(window.SPONSORS_LIST) ? window.SPONSORS_LIST : [];
+      return sponsors.find(sponsor => sponsor && sponsor.id === sponsorId) || null;
+    }
+
+    function getSponsorOfferDefinition(sponsorId, dealIndex) {
+      const sponsor = getSponsorDefinition(sponsorId);
+      const offers = sponsor && Array.isArray(sponsor.possible_offers) ? sponsor.possible_offers : [];
+      return offers[Number(dealIndex || 0)] || null;
+    }
+
+    function getSponsorDeskItemId(sponsorId) {
+      return `sponsor:${sponsorId}`;
+    }
+
+    function getSponsorIdFromDeskItemId(itemId) {
+      const prefix = "sponsor:";
+      return typeof itemId === "string" && itemId.startsWith(prefix) ? itemId.slice(prefix.length) : null;
+    }
+
+    function getSponsorSenderName(sponsor) {
+      const salesTeam = getHiredSalesTeam();
+      return salesTeam ? salesTeam.name : (sponsor && sponsor.name) || "Sponsor";
+    }
+
+    function formatSignedValue(value, suffix = "") {
+      const number = Number(value || 0);
+      return `${number >= 0 ? "+" : ""}${number}${suffix}`;
+    }
+
+    function formatSponsorEffectList(values, labels, suffix = "") {
+      if (!Array.isArray(values) || values.length < 1) return "None";
+      return values.map((value, index) => {
+        const label = labels && labels[index] ? `${labels[index]} ` : "";
+        return `${label}${formatSignedValue(value, suffix)}`;
+      }).join(" / ");
+    }
+
+    function buildSponsorTerms(deal) {
+      if (!deal) return [];
+      const installments = Math.max(1, Number(deal.installments || 1));
+      const amount = Math.max(0, Number(deal.amount || 0));
+      const total = installments * amount;
+      const groupLabels = getGroupLabels();
+
+      return [
+        { label: "Total amount", value: formatEuro(total) },
+        { label: "Installments", value: `${installments}` },
+        { label: "Amount per installment", value: formatEuro(amount) },
+        { label: "Suitability effect", value: formatSponsorEffectList(deal.suitability_effect, groupLabels) },
+        { label: "Marketing effect", value: formatSponsorEffectList(deal.marketing_effect) },
+        { label: "Ticket reasonableness", value: formatSignedValue(deal.ticket_reasonableness_boost, "%") },
+      ];
+    }
+
+    function buildBrandingDeskItem() {
+
+      const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
+      const senderName = salesTeam?.name ?? "Sales Team";
+      const fee = 300;
+
+      const item = {
+        id: 'branding_deal1',
+        type: "branding",
+        sender: senderName,
+        turn: Number(gameState.turn),
+        title: `Branding Package Offer`,
+        preview: `A branded promotion push for ${formatEuro(fee)} (flat) to make the event more attractive to sponsors, vendors and visitors.`,
+        body: `${senderName} proposes a branding package that strengthens the event's presentation and commercial appeal. The package is positioned as a broad visibility boost to help attract stronger sponsor interest, better vendor attention and more visitor confidence.`,
+        terms: [
+          {label: "Fee", value: formatEuro(fee)},
+          {label: "Primary effect", value: "Higher sponsor, vendor and visitor appeal"}
+        ],
+        fee: fee,
+      }
+
+      if(gameState.brandingPackage){
+        item.status = 'accepted';
+      }
+
+      return item;
+    }
+
+    function buildPremiumWifiDeskItem() {
+
+      const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
+      const senderName = salesTeam?.name ?? "Sales Team";
+      const fee = 300;
+
+      const item = {
+        id: 'wifi_deal1',
+        type: "wifi",
+        sender: senderName,
+        turn: Number(gameState.turn),
+        title: `Premium Wi-Fi Offer`,
+        preview: `A premium connectivity upgrade for ${formatEuro(fee)} (flat) to improve the visitor and vendor experience.`,
+        body: `${senderName} proposes a premium Wi-Fi package for the event. The upgrade gives guests, vendors and sponsors a more reliable on-site connection and improves the event's overall service quality.`,
+        terms: [
+          {label: "Fee", value: formatEuro(fee)},
+          {label: "Primary effect", value: "Premium on-site connectivity"}
+        ],
+        fee: fee,
+      }
+
+      if(gameState.premiumWifi){
+        item.status = 'accepted';
+      }
+
+      return item;
+    }
+
+    function buildSponsorDeskItem(offer, status) {
+      const sponsor = getSponsorDefinition(offer && offer.id);
+      const deal = getSponsorOfferDefinition(offer && offer.id, offer && offer.deal);
+      const sponsorName = (sponsor && sponsor.name) || (offer && offer.id) || "Sponsor";
+      const installments = Math.max(1, Number(deal && deal.installments || 1));
+      const amount = Math.max(0, Number(deal && deal.amount || 0));
+      const total = installments * amount;
+      const paymentSummary = amount > 0
+        ? `${formatEuro(amount)} per installment, ${formatEuro(total)} total`
+        : "non-cash promotional package";
+
+      const item = {
+        id: getSponsorDeskItemId(offer.id),
+        type: "sponsor",
+        sender: getSponsorSenderName(sponsor),
+        turn: Number(offer.move_signed ?? gameState.turn ?? 0),
+        title: `${sponsorName} sponsorship offer`,
+        preview: `${paymentSummary}${deal ? ` with ${formatSignedValue(deal.ticket_reasonableness_boost, "%")} ticket reasonableness` : ""}.`,
+        body: `${sponsorName} wants to sponsor your event. This deal offers ${paymentSummary} and applies the listed audience, marketing and ticket-price effects after acceptance.`,
+        terms: buildSponsorTerms(deal),
+      };
+
+      if (status) item.status = status;
+      return item;
+    }
+
+    function getSponsoringOffers(){
+      const activeOffers = Array.isArray(gameState && gameState.sponsoring_offers)
+        ? gameState.sponsoring_offers
+        : [];
+      const acceptedSponsors = Array.isArray(gameState && gameState.sponsors)
+        ? gameState.sponsors
+        : [];
+
+      const activeItems = activeOffers.map(offer => buildSponsorDeskItem(offer));
+      const acceptedItems = acceptedSponsors.map(sponsor => buildSponsorDeskItem(sponsor, "accepted"));
+
+      return [...activeItems, ...acceptedItems];
+    }
+
+    // FOR LATER
+    /*function getBrandingPackage(){
+      return [1,2].map((itm, index)=>{
+
+        return {
+          id: `sp${index}`,
+          type: 'branding',
+          sender: 'Sales Team',
+          turn: gameState.turn,
+          title: `CocaCola Sponsoring offer`,
+          preview: `Exclusive partner deal - 200$ per turn next 3 turns`,
+          body: `CocaCola Company wants a partnership deal - we find this event very valuable for entire community and we want to be part of it.`,
+          terms: [
+            {label: "Total amount", value: "€600"},
+            {label: "Installments", value: "3"},
+            {label: "Amount per installment", value: "€200"}
+          ]
+        }
+      })[0]
+
+    }*/
 
     function getDeskProposalItems() {
       const proposals = Array.isArray(gameState && gameState.proposals) ? gameState.proposals : [];
@@ -3780,12 +4261,152 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       await saveGameState(worldId, playerId, gameState);
     }
 
+    async function acceptSponsoringOffer(itemId) {
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (!Array.isArray(gameState.sponsors)) gameState.sponsors = [];
+      if (!Array.isArray(gameState.sponsoring_offers)) gameState.sponsoring_offers = [];
+
+      const sponsorId = getSponsorIdFromDeskItemId(itemId) || itemId;
+      const offer = gameState.sponsoring_offers.find(item => item && item.id === sponsorId);
+      if (!offer) return;
+
+      const acceptedSponsor = {
+        id: offer.id,
+        deal: Number(offer.deal || 0),
+        move_signed: Number(gameState.turn || 0),
+        status: "accepted",
+      };
+
+      const existingIndex = gameState.sponsors.findIndex(item => item && item.id === sponsorId);
+      if (existingIndex >= 0) {
+        gameState.sponsors[existingIndex] = {
+          ...gameState.sponsors[existingIndex],
+          ...acceptedSponsor,
+        };
+      } else {
+        gameState.sponsors.push(acceptedSponsor);
+      }
+
+      gameState.sponsoring_offers = gameState.sponsoring_offers.filter(item => item && item.id !== sponsorId);
+
+      const sponsorObj = SPONSORS_LIST.find(itm=>itm.id == offer.id);
+      const dealObj = sponsorObj.possible_offers[offer.deal];
+      if(dealObj.amount>0){
+        gameState.budget += dealObj.amount;
+      }
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function declineSponsoringOffer(itemId) {
+      if (!gameState || !Array.isArray(gameState.sponsoring_offers)) return;
+      const sponsorId = getSponsorIdFromDeskItemId(itemId) || itemId;
+      const beforeCount = gameState.sponsoring_offers.length;
+      gameState.sponsoring_offers = gameState.sponsoring_offers.filter(item => item && item.id !== sponsorId);
+      if (gameState.sponsoring_offers.length === beforeCount) return;
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function acceptBrandingPackageOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.brandingPackage) return;
+      if (!gameState.branding_proposal) return;
+
+      const brandingPackageOffer = gameState.branding_proposal;
+      gameState.budget -= brandingPackageOffer.fee;
+      gameState.brandingPackage = true;
+      gameState.branding_proposal.status = "accepted";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function declineBrandingPackageOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.brandingPackage) return;
+      if (!gameState.branding_proposal) return;
+
+      gameState.branding_proposal.status = "declined";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function acceptPremiumWifiOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.premiumWifi) return;
+      if (!gameState.premiumWifi_proposal) return;
+
+      const premiumWifiOffer = gameState.premiumWifi_proposal;
+      gameState.budget -= premiumWifiOffer.fee;
+      gameState.premiumWifi = true;
+      gameState.premiumWifi_proposal.status = "accepted";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    async function declinePremiumWifiOffer(itemId){
+      if (!gameState || !itemId) return;
+      if (finalEventInProgress || hasStoredFinalResults()) return;
+      if (gameState.premiumWifi) return;
+      if (!gameState.premiumWifi_proposal) return;
+
+      gameState.premiumWifi_proposal.status = "declined";
+
+      updateAll();
+      renderDeskMenu();
+      await saveGameState(worldId, playerId, gameState);
+    }
+
+    function acceptDeskItem(id) {
+      if (getSponsorIdFromDeskItemId(id)) return acceptSponsoringOffer(id);
+      if (id.includes('branding')) return acceptBrandingPackageOffer(id);
+      if (id.includes('wifi')) return acceptPremiumWifiOffer(id);
+      return acceptVendorProposal(id);
+    }
+
+    function declineDeskItem(id) {
+      if (getSponsorIdFromDeskItemId(id)) return declineSponsoringOffer(id);
+      if (id.includes('branding')) return declineBrandingPackageOffer(id);
+      if (id.includes('wifi')) return declinePremiumWifiOffer(id);
+      return declineVendorProposal(id);
+    }
+
+    function getBrandingDeskItem(){
+      if(!gameState.branding_proposal){
+        return [];
+      }
+      else return [gameState.branding_proposal];
+    }
+
+    function getPremiumWifiDeskItem(){
+      if(!gameState.premiumWifi_proposal){
+        return [];
+      }
+      else return [gameState.premiumWifi_proposal];
+    }
+
     function getDeskMenuOptions() {
       return {
         mountTo: document.getElementById("desk-menu"),
-        items: getDeskProposalItems(),
-        onAccept:   (id) => acceptVendorProposal(id),
-        onDecline:  (id) => declineVendorProposal(id),
+        items: [...getSponsoringOffers(), 
+        //...getDeskReportItems(),#?#
+        ...getBrandingDeskItem(),
+        ...getPremiumWifiDeskItem(),
+        ...getDeskProposalItems()],
+        onAccept:   (id) => acceptDeskItem(id),
+        onDecline:  (id) => declineDeskItem(id),
         onItemRead: (id) => {console.log("MARK READ Logic tb added");},
         onClose:    () => closeDeskMenu(),
       };
@@ -3855,10 +4476,18 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function getLoanPaymentAmount(credit) {
       const amount = Math.max(0, Number(credit && credit.amount) || 0);
       const interest = Math.max(0, Number(credit && credit.interest) || 0);
-      console.log("TURNS: ", worldSettings);
       const totalMonthsToPay = worldSettings.maxTurns - credit.takenTurn;
       return Math.round((amount*(interest/100)) + amount/totalMonthsToPay)
     }
+    function getLoanAmountToReturn(credit){
+      const amount = Math.max(0, Number(credit && credit.amount) || 0);
+      const interest = Math.max(0, Number(credit && credit.interest) || 0);
+      const months = getCreditMonthsRemaining(credit && credit.takenTurn);
+      const total =  Math.round(amount * (1 + ((interest / 100) * months)));
+      const payed = (gameState.turn-credit.takenTurn)*getLoanPaymentAmount(credit);
+      return total -payed;
+    }
+
     function hasRequestedCreditOption(optionIndex) {
       return getRequestedCredits().some(credit => Number(credit.optionIndex) === Number(optionIndex));
     }
@@ -4346,13 +4975,19 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.style.width = "100%";
         btn.type = "button";
         const alreadyHasTeam = !!(gameState && gameState.salesTeam);
-        btn.textContent = isHired ? "Currently hired" : (alreadyHasTeam ? "Team already hired" : "Hire team");
-        btn.disabled = isHired || alreadyHasTeam || isGameFinished();
+        //btn.textContent = isHired ? "Currently hired" : (alreadyHasTeam ? "Team already hired" : "Hire team");
+        btn.textContent = isHired ? "End collaboration" : (alreadyHasTeam ? "Team already hired" : "Hire assistant");
+        //#?#
+        btn.disabled = (!isHired && alreadyHasTeam) || isGameFinished();
         btn.addEventListener("click", async () => {
-          if (!gameState || gameState.salesTeam) return;
-          if (Number(gameState.budget || 0) < Number(team.fee || 0)) { alert("Not enough budget."); return; }
+          if (!gameState || (gameState.salesTeam && !isHired)) return;
           //gameState.budget = Number(gameState.budget || 0) - Number(team.price || 0);
-          gameState.salesTeam = team.id;
+          if(isHired){
+            gameState.salesTeam = null;
+          } else {
+             if (Number(gameState.budget || 0) < Number(team.fee || 0)) { alert("Not enough budget."); return; }
+            gameState.salesTeam = team.id;
+          }
           renderHireOverlay();
           renderSalesTeamStatus();
           updateInsightsButtonVisibility();
@@ -4447,18 +5082,28 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         btn.className = isHired ? "btn small" : "btn small primary";
         btn.style.width = "100%";
         btn.type = "button";
-        btn.textContent = isHired ? "Currently hired" : (alreadyHasAssistant ? "Assistant already hired" : "Hire assistant");
-        btn.disabled = isHired || alreadyHasAssistant || isGameFinished();
+        btn.textContent = isHired ? "End collaboration" : (alreadyHasAssistant ? "Assistant already hired" : "Hire assistant");
+        btn.disabled = (!isHired && alreadyHasAssistant )|| isGameFinished();
         btn.addEventListener("click", async () => {
-          if (!gameState || gameState.assistant) return;
-          if (Number(gameState.budget || 0) < Number(assistant.fee || 0)) { alert("Not enough budget."); return; }
+          if (!gameState || (gameState?.assistant && !isHired)) return;
           //gameState.budget = Number(gameState.budget || 0) - Number(assistant.price || 0);
-          gameState.assistant = assistant.id;
-          gameState.assistantHiredTurn = Number(gameState.turn || 0);
-          gameState.assistantProjectionTurn = null;
-          gameState.assistantProjection = null;
-          renderAssistantOverlay();
+          if(isHired){
+            //this is for firing assistant #?#
+            gameState.assistant = null;
+            gameState.assistantHiredTurn = null;
+            gameState.assistantProjectionTurn = null;
+            gameState.assistantProjection = null;
+          }
+          else{
+            //this is for hiring assistant
+            if (Number(gameState.budget || 0) < Number(assistant.fee || 0)) { alert("Not enough budget."); return; }
+            gameState.assistant = assistant.id;
+            gameState.assistantHiredTurn = Number(gameState.turn || 0);
+            gameState.assistantProjectionTurn = null;
+            gameState.assistantProjection = null;
+          }
           updateAll();
+          renderAssistantOverlay();
           if (isTicketsPricesMenuOpen()) renderTicketPricesMenu();
           await saveGameState(worldId, playerId, gameState);
         });
@@ -4499,7 +5144,6 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 
     async function createAssistantProjection(){
       if (!isAssistantActive()) return getRightMenuBodyType();
-      console.log("PROJECTING...");
       const turn = Number(gameState.turn || 0);
       if (gameState.assistantProjectionTurn === turn && gameState.assistantProjection) return getRightMenuBodyType();
 

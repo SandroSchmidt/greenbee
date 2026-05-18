@@ -164,6 +164,24 @@ export interface GameState {
   rentedBooths: RentedBooth[];
 
   appointedSpeakers: SpeakerAppointments[];
+
+  finalInfo: FinalInfo;
+  brandingPackage: boolean;
+  branding_proposal: Record<string,any> | null;
+  premiumWifi: boolean;
+  premiumWifi_proposal: Record<string,any> | null;
+
+  sponsors: {
+    id: string,
+    deal: number, //idx number of picked offer on the list of possible_offers
+    move_signed: number,
+    status: "accepted",
+  }[];
+
+  sponsoring_offers: {
+    id: string,
+    deal: number,
+  }[]
 }
 
 /**
@@ -172,6 +190,41 @@ export interface GameState {
  */
 export interface PersistedGameState extends GameState {
   lastUpdate: TimestampMs;
+}
+
+export interface FinalInfo {
+        status: "complete" | "ready",
+        readyAt: TimestampMs,
+        completedAt: TimestampMs,
+        report: TurnReport, //last turn report
+        simulationResult: CompactSimulationInfo,
+        eventOutcome: Outcome,
+}
+
+export interface CompactSimulationInfo {
+        visitorsSatisfaction: Vec3,
+        vendorsSatisfaction: number,
+        tileVisits: Record<BoardTileId, Vec3>,
+        perVendor: {
+          name: string,
+          tile: string,
+          satisfaction: number,
+        }[],
+        cardsSoldRatio: number,
+        cardsSold: number,
+        cardsCapacity: number,
+}
+
+export interface Outcome {
+        label: string,
+        tone: string,
+        score: number,
+        avgVisitorSatisfaction: number,
+        vendorSatisfaction: number,
+        cardsSoldRatio: number,
+        cardsSold: number,
+        cardsCapacity: number,
+        message: string,
 }
 
 export interface SpeakerAppointments{
@@ -262,7 +315,7 @@ export type AssistantDefinition = HireablePartnerDefinition;
  * Desk menu models currently built in index.html as placeholder data.
  * These are not persisted yet, but they are part of the app data shape.
  */
-export type DeskItem = DeskReportItem | DeskProposalItem | DeskNewsItem;
+export type DeskItem = DeskReportItem | DeskProposalItem | DeskNewsItem | DeskBrandingItem | DeskWifiItem | DeskSponsorItem;
 
 export interface DeskItemBase {
   id: string;
@@ -284,11 +337,28 @@ export interface DeskNewsItem extends DeskItemBase {
   type: "news";
 }
 
-export interface DeskProposalItem extends DeskItemBase {
-  type: "proposal";
+export interface DeskActionableItem extends DeskItemBase {
   status?: ProposalStatus;
   expiresInTurns?: number;
   terms?: DeskProposalTerm[];
+}
+
+export interface DeskProposalItem extends DeskActionableItem {
+  type: "proposal";
+}
+
+export interface DeskBrandingItem extends DeskActionableItem {
+  type: "branding";
+  fee?: number;
+}
+
+export interface DeskWifiItem extends DeskActionableItem {
+  type: "wifi";
+  fee?: number;
+}
+
+export interface DeskSponsorItem extends DeskActionableItem {
+  type: "sponsor";
 }
 
 export type ProposalStatus = "pending" | "accepted" | "declined" | "expired";

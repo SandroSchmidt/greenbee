@@ -300,6 +300,158 @@ body {
   padding: 0 12px;
 }
 
+.th-with-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Transparent bridge fills the 10px gap so hover isn't lost while moving toward the popup */
+.info-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: min(320px, 80vw);
+  height: 10px;
+}
+
+/* Trigger — refined, no harsh circle */
+.info-tooltip__trigger {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #94a39a;
+  cursor: help;
+  transition: color 180ms ease, background 180ms ease;
+}
+
+.info-tooltip__trigger:hover,
+.info-tooltip:focus-within .info-tooltip__trigger {
+  color: #1f9d59;
+  background: rgba(34, 168, 96, 0.10);
+}
+
+.info-tooltip__trigger svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Popover — layered shadow, softer border, smoother motion */
+.info-tooltip__content {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  width: min(280px, 70vw);
+  padding: 14px 16px;
+  border: 1px solid rgba(20, 35, 26, 0.06);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(20, 35, 26, 0.04),
+    0 6px 16px rgba(20, 35, 26, 0.08),
+    0 24px 48px -8px rgba(20, 35, 26, 0.14);
+  color: #44564a;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(-4px) scale(0.98);
+  transform-origin: top center;
+  transition:
+    opacity 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 300ms cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 300ms;
+  pointer-events: none; /* overridden to auto when visible */
+  z-index: 4;
+  max-height: 320px;
+  overflow-y:auto;
+}
+
+.info-tooltip:hover .info-tooltip__content,
+.info-tooltip:focus-within .info-tooltip__content {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Smaller arrow */
+.info-tooltip__content::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  
+  bottom: calc(100% - 1px);
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  border-top: 1px solid rgba(20, 35, 26, 0.06);
+  border-left: 1px solid rgba(20, 35, 26, 0.06);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* Glossary variant (Objects panel) */
+.info-tooltip--glossary .info-tooltip__content {
+  width: min(320px, 80vw);
+  left: 0;
+  transform: translateX(0) translateY(-4px) scale(0.98);
+  transform-origin: top left;
+}
+
+.info-tooltip--glossary:hover .info-tooltip__content,
+.info-tooltip--glossary:focus-within .info-tooltip__content {
+  transform: translateX(0) translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.info-tooltip--glossary .info-tooltip__content::before {
+  left: 16px;
+}
+
+/* Definition list — stacked, with subtle dividers */
+.info-tooltip__content dl {
+  margin: 0;
+  display: block;
+}
+
+.info-tooltip__content dt {
+  font-weight: 700;
+  color: #16351f;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 4px;
+  white-space: nowrap;
+}
+
+.info-tooltip__content dt:not(:first-of-type) {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(20, 35, 26, 0.06);
+}
+
+.info-tooltip__content dd {
+  margin: 0;
+  color: #56685c;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 /* ===============================
    ICON PICKER
    =============================== */
@@ -465,7 +617,45 @@ body.theme-dark .header-pill {
   border-color: rgba(56, 189, 248, 0.34);
   color: #93dafe;
 }
+body.theme-dark .info-tooltip__trigger {
+  background: transparent;
+  border: none;
+  color: #7a8a9d;
+}
 
+body.theme-dark .info-tooltip__trigger:hover,
+body.theme-dark .info-tooltip:focus-within .info-tooltip__trigger {
+  color: var(--dark-accent);
+  background: rgba(56, 189, 248, 0.10);
+}
+
+body.theme-dark .info-tooltip__content {
+  background: #0f1b2e;
+  border-color: rgba(148, 163, 184, 0.14);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.20),
+    0 8px 24px rgba(0, 0, 0, 0.30),
+    0 24px 48px -8px rgba(0, 0, 0, 0.50);
+  color: #c9d6e8;
+}
+
+body.theme-dark .info-tooltip__content::before {
+  background: #0f1b2e;
+  border-top-color: rgba(148, 163, 184, 0.14);
+  border-left-color: rgba(148, 163, 184, 0.14);
+}
+
+body.theme-dark .info-tooltip__content dt {
+  color: #a8d4c0;
+}
+
+body.theme-dark .info-tooltip__content dt:not(:first-of-type) {
+  border-top-color: rgba(148, 163, 184, 0.10);
+}
+
+body.theme-dark .info-tooltip__content dd {
+  color: #93a4bd;
+}
 body.theme-dark .table input,
 body.theme-dark .field input {
   background: rgba(5, 12, 24, 0.82);
@@ -580,8 +770,30 @@ body.theme-dark .icon-trigger .empty-icon {
   </table>
 </section>-->
     <section class="panel">
-      <h2>Objects</h2>
-      <p class="text-muted">Alle Bauelemente des Spiels mit Preis, Einkommen, Farbe und Interessens-Werten.</p>
+      <h2 style="display: flex; align-items: center;">Objects <span class="info-tooltip info-tooltip--glossary">
+          <button type="button" style=" display:flex; justify-content: end; align-items: end;" class="info-tooltip__trigger" aria-label="Explain object parameters">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4M12 8h.01" />
+            </svg>
+          </button>
+          <span class="info-tooltip__content">
+            <dl>
+              <dt>Effect</dt>
+              <dd>
+              Determines how strongly this object affects every other square on the board when creating board interactivity net. The effect weakens with distance:
+              first neighbours receive Suitability × Effect, second neighbours receive Suitability × Effect², and so on. Interactivity net is then used to simulate visitors movement during event.
+              </dd>
+              <dt>Absorption</dt>
+              <dd>Describes how much of effect of other squares transmitted through this one would be absorbed here. I.e. observed square is [x,y], it's effect is 0.5 and suitability [20, 12, -20]. If square [x+1, y] has an object with absorption factor 0.8, that square in interactivity net would still be affected by 0.5 effect factor from square [x,y], however it'd keep 80% (0.8 abs factor) of effect that is heading towards [x+2,y] - meaning the multiplier would be 0.5*0.5*0.8</dd>
+              <dt>Suitability</dt>
+              <dd>How well this object appeals to each visitor demographic. Higher values raise that group's satisfaction
+                score.</dd>
+            </dl>
+          </span>
+        </span></h2>
+      <p class="text-muted">All game components/building units with their price, income, color, and interest values.</p>
       <table class="table" id="objects-table">
         <thead>
           <tr>
@@ -590,9 +802,9 @@ body.theme-dark .icon-trigger .empty-icon {
             <th>Effect</th>
             <th>Absorption</th>
             <th>Color</th>
-            <th>Suitability 1</th>
-            <th>Suitability 2</th>
-            <th>Suitability 3</th>
+            <th>Sui. youth</th>
+            <th>Sui. famillies</th>
+            <th>Sui. seniors</th>
             <th>Icon</th>
             <th></th>
           </tr>
@@ -604,17 +816,30 @@ body.theme-dark .icon-trigger .empty-icon {
 
     <section class="panel">
   <h2>Advertising / Marketing Channels</h2>
-  <p class="text-muted">Werbearten mit Max-Kosten pro Runde und Wirksamkeit je Gruppe.</p>
-
+  <div style="display:flex"><p class="text-muted">Advertising channels with maximum cost per round and effectiveness per group.</p>
+<span style="display:none;" class="info-tooltip">
+              <button type="button" class="info-tooltip__trigger" aria-label="Explain object parameters">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 16v-4M12 8h.01"/>
+  </svg>
+</button>
+              <span class="info-tooltip__content">Lorem ipsum dolor sit amet, consectetur adipiscing elit. You can replace this text with the real explanation later.</span>
+            </span>
+          </div>
   <table class="table" id="marketing-table">
     <thead>
       <tr>
         <th>Key</th>
         
         <th>Max Cost</th>
-        <th>Eff G1</th>
-        <th>Eff G2</th>
-        <th>Eff G3</th>
+        <th>Eff. youth
+        </th>
+        <th>Eff. famillies
+        </th>
+        <th>Eff. seniors
+        </th>
         <th></th>
       </tr>
     </thead>
@@ -627,9 +852,9 @@ body.theme-dark .icon-trigger .empty-icon {
 
     <section class="panel">
       <h2>Base Rules</h2>
-      <p class="text-muted">universale Steuerparameter (können später erweitert werden).</p>
+      <p class="text-muted">Universal control parameters (can be expanded later).</p>
       <label class="field">
-        <span>suitability Saturation K (optional)</span>
+        <span>Suitability saturation K (optional)</span>
         <input type="number" id="base-suitability-k" min="0">
       </label>
     </section>

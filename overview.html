@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,160 +9,1068 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
-  <!-- Dein firebase.initializeApp(...) hier einfügen -->
+  <!-- Your firebase.initializeApp(...) here -->
   <script src="functions.js"></script>
+
+  <style>
+    /* ===== Header bits (kept compatible with existing layout) ===== */
+    .header-right { display: flex; gap: 16px; align-items: center; }
+
+    .world-picker {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 10px 6px 12px;
+      border: 1px solid var(--gb-border, #e5e7eb);
+      border-radius: var(--gb-radius-sm, 8px);
+      background: var(--gb-surface, #fff);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .world-picker:hover { border-color: var(--gb-text-tertiary, #9ca3af); }
+    .world-picker:focus-within {
+      border-color: var(--gb-accent, #16a34a);
+      box-shadow: 0 0 0 3px var(--gb-accent-soft, #dcfce7);
+    }
+    .world-picker svg {
+      width: 14px; height: 14px;
+      color: var(--gb-text-secondary, #6b7280);
+      flex-shrink: 0;
+    }
+    .world-picker select {
+      border: none; background: transparent;
+      color: var(--gb-text, #111827);
+      font: 500 13px/1 inherit;
+      padding: 0 16px 0 0; margin: 0;
+      cursor: pointer;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 0 center;
+      background-size: 12px;
+    }
+    .world-picker select:focus { outline: none; }
+
+    /* ===== Theme switch (kept from your original) ===== */
+    .theme-switch { background: none; border: none; padding: 2px; margin: 0;
+      cursor: pointer; display: inline-flex; align-items: center;
+      -webkit-tap-highlight-color: transparent; }
+    .theme-switch:focus-visible .theme-switch-track {
+      box-shadow: 0 0 0 2px var(--gb-accent, #16a34a); }
+    .theme-switch-track {
+      position: relative; width: 54px; height: 26px; border-radius: 999px;
+      background: var(--gb-surface-2, #f3f4f6);
+      border: 1px solid var(--gb-border, #e5e7eb);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 7px; box-sizing: border-box;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .theme-switch-thumb {
+      position: absolute; top: 50%; left: 2px; width: 22px; height: 22px;
+      border-radius: 50%; background: var(--gb-sun-thumb, #111827);
+      transform: translateY(-50%);
+      transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s ease;
+      z-index: 0;
+    }
+    .theme-icon { width: 13px; height: 13px; position: relative; z-index: 1;
+      transition: color 0.2s ease; }
+    .theme-icon-sun  { color: var(--gb-surface, #ffffff); }
+    .theme-icon-moon { color: var(--gb-text-tertiary, #9ca3af); }
+    body.theme-dark .theme-switch-thumb,
+    .theme-switch[aria-checked="true"] .theme-switch-thumb {
+      left: calc(100% - 24px);
+      background: var(--gb-text, #f3f4f6);
+    }
+    body.theme-dark .theme-icon-sun,
+    .theme-switch[aria-checked="true"] .theme-icon-sun {
+      color: var(--gb-text-tertiary, #9ca3af);
+    }
+    body.theme-dark .theme-icon-moon,
+    .theme-switch[aria-checked="true"] .theme-icon-moon {
+      color: var(--gb-surface, #122341);
+    }
+
+    html {
+      overflow: hidden;
+    }
+    body.overview-page {
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Page layout ===== */
+    .ovw-wrap {
+      width: 100%; max-width: none; margin: 0;
+      padding: 24px clamp(14px, 2vw, 32px) 24px;
+      display: flex; flex-direction: column; gap: 18px;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .ovw-page-head {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+    }
+    .ovw-title {
+      font-size: 22px; font-weight: 600; margin: 0;
+      color: var(--gb-text, #111827);
+    }
+    .ovw-subtitle {
+      font-size: 13px;
+      margin-top: 4px;
+      color: var(--gb-text-secondary, #6b7280);
+    }
+
+    .ovw-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .ovw-search { position: relative; }
+    .ovw-search input {
+      width: 240px; padding: 8px 12px 8px 34px;
+      border: 1px solid var(--gb-border, #e5e7eb);
+      border-radius: var(--gb-radius-sm, 8px);
+      background: var(--gb-surface, #fff);
+      color: var(--gb-text, #111827);
+      font: 400 13px/1 inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .ovw-search input::placeholder { color: var(--gb-text-tertiary, #9ca3af); }
+    .ovw-search input:focus {
+      outline: none;
+      border-color: var(--gb-accent, #16a34a);
+      box-shadow: 0 0 0 3px var(--gb-accent-soft, #dcfce7);
+    }
+    .ovw-search svg {
+      position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+      width: 14px; height: 14px;
+      color: var(--gb-text-tertiary, #9ca3af);
+      pointer-events: none;
+    }
+
+    .ovw-refresh {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 12px;
+      border: 1px solid var(--gb-border, #e5e7eb);
+      border-radius: var(--gb-radius-sm, 8px);
+      background: var(--gb-surface, #fff);
+      color: var(--gb-text, #111827);
+      font: 500 13px/1 inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .ovw-refresh:hover {
+      border-color: var(--gb-text-tertiary, #9ca3af);
+      background: var(--gb-surface-2, #f9fafb);
+    }
+    .ovw-refresh svg { width: 13px; height: 13px; }
+    .ovw-refresh.is-loading svg { animation: ovw-spin 0.8s linear infinite; }
+    @keyframes ovw-spin { to { transform: rotate(360deg); } }
+    body.theme-dark .ovw-refresh:hover { background: rgba(255,255,255,0.04); }
+
+    /* ===== KPI cards ===== */
+    .ovw-stats {
+      display: grid; gap: 12px;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    @media (max-width: 800px) { .ovw-stats { grid-template-columns: repeat(2, 1fr); } }
+
+    .stat-card {
+      padding: 16px 18px;
+      background: var(--gb-surface, #fff);
+      border: 1px solid var(--gb-border, #e5e7eb);
+      border-radius: var(--gb-radius, 12px);
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .stat-card-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--gb-text-secondary, #6b7280);
+    }
+    .stat-card-value {
+      font-size: 26px; font-weight: 600;
+      color: var(--gb-text, #111827);
+      font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .stat-card-sub {
+      font-size: 12px; color: var(--gb-text-secondary, #6b7280);
+      margin-top: 2px;
+    }
+    .stat-card.is-accent .stat-card-value { color: var(--gb-accent, #16a34a); }
+    .stat-card.is-warn   .stat-card-value { color: #d97706; }
+    .stat-card.is-info   .stat-card-value { color: #2563eb; }
+    body.theme-dark .stat-card.is-warn .stat-card-value { color: #fbbf24; }
+    body.theme-dark .stat-card.is-info .stat-card-value { color: #60a5fa; }
+
+    /* ===== Table ===== */
+    .ovw-table-wrap {
+      background: var(--gb-surface, #fff);
+      border: 1px solid var(--gb-border, #e5e7eb);
+      border-radius: var(--gb-radius, 12px);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      flex: 1 1 auto;
+    }
+    .ovw-table-scroll { overflow-x: auto; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+    .ovw-table {
+      width: 100%; min-width: 920px;
+      border-collapse: collapse; font-size: 13px;
+    }
+    .ovw-table thead th {
+      text-align: left; padding: 12px 16px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--gb-text-secondary, #6b7280);
+      background: var(--gb-surface-2, #f9fafb);
+      border-bottom: 1px solid var(--gb-border, #e5e7eb);
+      white-space: nowrap;
+    }
+    body.theme-dark .ovw-table thead th { background: rgba(255,255,255,0.03); }
+    .ovw-table thead th.sortable { cursor: pointer; user-select: none;
+      transition: color 0.15s; }
+    .ovw-table thead th.sortable:hover { color: var(--gb-text, #111827); }
+    .ovw-table thead th .sort-ind {
+      display: inline-block; margin-left: 4px; opacity: 0.35;
+    }
+    .ovw-table thead th.is-sorted { color: var(--gb-text, #111827); }
+    .ovw-table thead th.is-sorted .sort-ind {
+      opacity: 1; color: var(--gb-accent, #16a34a);
+    }
+    .ovw-table tbody tr { transition: background 0.1s; }
+    .ovw-table tbody tr:hover { background: var(--gb-surface-2, #f9fafb); }
+    body.theme-dark .ovw-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+    .ovw-table tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--gb-border, #e5e7eb);
+      color: var(--gb-text, #111827);
+      vertical-align: middle;
+    }
+    .ovw-table tbody tr:last-child td { border-bottom: none; }
+
+    /* Student cell */
+    .cell-student { display: flex; align-items: center; gap: 10px; }
+    .student-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gb-accent-soft, #dcfce7);
+      color: var(--gb-accent-ink, #166534);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      flex-shrink: 0; line-height: 1;
+    }
+    .student-name { font-weight: 500; color: var(--gb-text, #111827); }
+    .student-meta {
+      font-size: 11px; color: var(--gb-text-tertiary, #9ca3af);
+      margin-top: 1px; font-variant-numeric: tabular-nums;
+    }
+
+    /* Status badge */
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500; white-space: nowrap;
+    }
+    .badge::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; flex-shrink: 0;
+    }
+    .badge-gray  { background: #f3f4f6; color: #6b7280; }
+    .badge-blue  { background: #dbeafe; color: #1e40af; }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+    .badge-green { background: #dcfce7; color: #166534; }
+    body.theme-dark .badge-gray  { background: rgba(107,114,128,0.18); color: #9ca3af; }
+    body.theme-dark .badge-blue  { background: rgba(59,130,246,0.18); color: #93c5fd; }
+    body.theme-dark .badge-amber { background: rgba(245,158,11,0.18); color: #fcd34d; }
+    body.theme-dark .badge-green { background: rgba(34,197,94,0.18); color: #86efac; }
+
+    /* Progress */
+    .progress-cell { min-width: 140px; }
+    .progress-text {
+      font-size: 12px; color: var(--gb-text, #111827);
+      font-variant-numeric: tabular-nums; margin-bottom: 5px;
+    }
+    .progress-text .muted { color: var(--gb-text-tertiary, #9ca3af); }
+    .progress-bar {
+      height: 4px; background: var(--gb-surface-2, #f3f4f6);
+      border-radius: 999px; overflow: hidden;
+    }
+    body.theme-dark .progress-bar { background: rgba(255,255,255,0.08); }
+    .progress-fill {
+      height: 100%; background: var(--gb-accent, #16a34a);
+      border-radius: inherit;
+      transition: width 0.3s ease;
+    }
+    .progress-fill.is-amber { background: #d97706; }
+    .progress-fill.is-gray  { background: #9ca3af; }
+
+    /* Numeric cells */
+    .num-cell { font-variant-numeric: tabular-nums; font-weight: 500; }
+    .num-cell.is-neg { color: #dc2626; }
+    body.theme-dark .num-cell.is-neg { color: #f87171; }
+    .num-sub {
+      font-size: 11px; color: var(--gb-text-tertiary, #9ca3af);
+      font-weight: 400; margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .num-delta.up   { color: var(--gb-accent, #16a34a); }
+    .num-delta.down { color: #dc2626; }
+    body.theme-dark .num-delta.down { color: #f87171; }
+    .num-delta.flat { color: var(--gb-text-tertiary, #9ca3af); }
+
+    /* Resource chips */
+    .resource-icons { display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .resource-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 7px; border-radius: 6px;
+      background: var(--gb-surface-2, #f3f4f6);
+      color: var(--gb-text-secondary, #6b7280);
+      font-size: 11px; font-weight: 500;
+    }
+    .resource-chip svg { width: 11px; height: 11px; flex-shrink: 0; }
+    body.theme-dark .resource-chip { background: rgba(255,255,255,0.06); color: #d1d5db; }
+    .resource-empty {
+      color: var(--gb-text-tertiary, #9ca3af); font-size: 12px;
+    }
+
+    /* Board thumbnail */
+    .board-thumb {
+      width: 60px; height: 46px; padding: 2px;
+      border-radius: 8px;
+      border: 1px solid var(--gb-border, #e5e7eb);
+      background: var(--gb-surface-2, #fafbfc);
+      display: inline-block; cursor: zoom-in;
+      transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+      vertical-align: middle;
+      box-sizing: border-box;
+    }
+    body.theme-dark .board-thumb { background: rgba(255,255,255,0.025); }
+    .board-thumb:hover, .board-thumb:focus-visible {
+      border-color: var(--gb-accent, #16a34a);
+      outline: none;
+      box-shadow: 0 0 0 3px var(--gb-accent-soft, #dcfce7);
+      transform: translateY(-1px);
+    }
+    body.theme-dark .board-thumb:hover,
+    body.theme-dark .board-thumb:focus-visible {
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.18);
+    }
+    .board-thumb svg { display: block; width: 100%; height: 100%; }
+    .board-thumb.is-empty {
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--gb-text-tertiary, #9ca3af);
+      font-size: 11px; cursor: default;
+    }
+    .board-thumb.is-empty:hover, .board-thumb.is-empty:focus-visible {
+      border-color: var(--gb-border, #e5e7eb);
+      box-shadow: none; transform: none;
+    }
+
+    /* Floating board popup */
+    .board-popup {
+      position: fixed; width: 380px;
+      background: var(--gb-surface, #fff);
+      border: 1px solid var(--gb-border, #e5e7eb);
+      border-radius: var(--gb-radius, 12px);
+      box-shadow: 0 14px 44px rgba(15, 23, 42, 0.14),
+                  0 4px 12px rgba(15, 23, 42, 0.06);
+      padding: 14px;
+      z-index: 1000;
+      opacity: 0; transform: scale(0.96);
+      pointer-events: none;
+      transition: opacity 0.16s ease, transform 0.16s ease;
+    }
+    body.theme-dark .board-popup {
+      box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55),
+                  0 4px 12px rgba(0, 0, 0, 0.35);
+    }
+    .board-popup.is-visible {
+      opacity: 1; transform: scale(1);
+      pointer-events: auto;
+    }
+    .board-popup-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px; padding-bottom: 10px;
+      border-bottom: 1px solid var(--gb-border, #e5e7eb);
+    }
+    .board-popup-title {
+      font-size: 13px; font-weight: 600;
+      color: var(--gb-text, #111827);
+    }
+    .board-popup-meta {
+      font-size: 11px; color: var(--gb-text-secondary, #6b7280);
+      font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .board-popup-svg { width: 100%; height: 280px; display: block; }
+    .board-popup-foot {
+      display: flex; flex-wrap: wrap; gap: 4px 14px;
+      font-size: 11px; color: var(--gb-text-secondary, #6b7280);
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid var(--gb-border, #e5e7eb);
+    }
+    .board-popup-foot strong {
+      color: var(--gb-text, #111827); font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Empty state */
+    .ovw-empty {
+      padding: 60px 24px; text-align: center;
+      color: var(--gb-text-secondary, #6b7280);
+      font-size: 14px;
+    }
+
+    /* ===== Dark mode variables ===== */
+    body.theme-dark {
+      --gb-shadow-xs:     0 1px 2px rgba(0, 0, 0, .35);
+      --gb-shadow-sm:     0 1px 2px rgba(0, 0, 0, .4);
+      --gb-shadow-md:     0 4px 6px -1px rgba(0, 0, 0, .45);
+      --gb-shadow-lg:     0 18px 28px -8px rgba(0, 0, 0, .55);
+
+      --gb-accent-soft:   rgba(16, 185, 129, .14);
+      --gb-accent-ink:    #6ee7b7;
+
+      --gb-text:          #e5e7eb;
+      --gb-text-muted:    #94a3b8;
+      --gb-text-subtle:   #64748b;
+      --gb-text-secondary:#94a3b8;
+      --gb-text-tertiary: #64748b;
+
+      --gb-surface:       #1e293b;
+      --gb-surface-2:     #182236;
+      --gb-surface-soft:  #182236;
+      --gb-surface-sunk:  #0f172a;
+      --gb-border:        rgba(255, 255, 255, .08);
+      --gb-border-strong: rgba(255, 255, 255, .14);
+
+      --gb-news-reports:  #101824;
+      --gb-sun-thumb:     #e5e7eb;
+
+      background: var(--gb-surface-sunk);
+      color: var(--gb-text);
+    }
+  </style>
 </head>
-<body class="theme-light">
+<body style="display:flex; flex-direction: column;" class="theme-light overview-page">
+
   <header id="main-header">
     <div class="header-left">
-      <img src="logo Kopie.png" class="logo-image" alt="Green Bee Logo">
-      <span class="app-title">Green Bee – Overview</span>
+      <img src="logo_transparent.png" class="logo-image" alt="GreenBee Logo"
+           style="cursor:pointer" onclick="window.open('about.html', '_blank')">
     </div>
-    <div class="header-center">
-      <select id="world-select" class="header-pill"></select>
-    </div>
+
     <div class="header-right">
-      <button id="theme-toggle" class="btn small">☀︎ / 🌙</button>
+      <div class="world-picker" title="Select world">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        <select id="world-select" aria-label="World">
+          <option value="">—</option>
+        </select>
+      </div>
+
+      <button id="theme-toggle" class="theme-switch" type="button" role="switch"
+              aria-checked="false" aria-label="Toggle theme">
+        <span class="theme-switch-track">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round"
+               stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <span class="theme-switch-thumb"></span>
+        </span>
+      </button>
     </div>
   </header>
 
-  <main class="page-wrap two-columns">
-    <section class="panel">
-      <h2>Players</h2>
-      <table class="table" id="players-table">
-        <thead>
-          <tr>
-            <th>Player</th>
-            <th>Turn</th>
-            <th>Budget</th>
-            <th>Total Tickets</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <span id="status-overview" class="status"></span>
-    </section>
+  <main class="ovw-wrap">
+    <div class="ovw-page-head">
+      <div>
+        <h1 class="ovw-title">Class overview</h1>
+        <div class="ovw-subtitle" id="ovw-subtitle">Monitor your students' progress in real time.</div>
+      </div>
+      <div class="ovw-toolbar">
+        <div class="ovw-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input id="ovw-search-input" type="text" placeholder="Search students…">
+        </div>
+        <button id="ovw-refresh" class="ovw-refresh" type="button" title="Reload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-3-6.7L21 8"/>
+            <path d="M21 3v5h-5"/>
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
 
-    <section class="panel">
-      <h2>Board Preview</h2>
-      <div id="preview-meta" class="text-muted"></div>
-      <svg id="preview-svg" width="320" height="260"></svg>
-    </section>
+    <div class="ovw-stats" id="ovw-stats">
+      <div class="stat-card">
+        <div class="stat-card-label">Total students</div>
+        <div class="stat-card-value" id="stat-total">0</div>
+        <div class="stat-card-sub" id="stat-total-sub">—</div>
+      </div>
+      <div class="stat-card is-info">
+        <div class="stat-card-label">Playing</div>
+        <div class="stat-card-value" id="stat-playing">0</div>
+        <div class="stat-card-sub">In progress</div>
+      </div>
+      <div class="stat-card is-warn">
+        <div class="stat-card-label">Ready for event</div>
+        <div class="stat-card-value" id="stat-ready">0</div>
+        <div class="stat-card-sub">Awaiting kickoff</div>
+      </div>
+      <div class="stat-card is-accent">
+        <div class="stat-card-label">Completed</div>
+        <div class="stat-card-value" id="stat-complete">0</div>
+        <div class="stat-card-sub">Event finished</div>
+      </div>
+    </div>
+
+    <div class="ovw-table-wrap">
+      <div class="ovw-table-scroll">
+        <table class="ovw-table">
+          <thead>
+            <tr>
+              <th class="sortable is-sorted" data-sort="name">Student<span class="sort-ind">↕</span></th>
+              <th>Status</th>
+              <th class="sortable" data-sort="turn">Progress<span class="sort-ind">↕</span></th>
+              <th class="sortable" data-sort="budget">Budget<span class="sort-ind">↕</span></th>
+              <th class="sortable" data-sort="tickets">Tickets sold<span class="sort-ind">↕</span></th>
+              <th>Hires &amp; actions</th>
+              <th class="sortable" data-sort="lastupdate">Last active<span class="sort-ind">↕</span></th>
+              <th style="text-align:center;">Board</th>
+            </tr>
+          </thead>
+          <tbody id="ovw-tbody"></tbody>
+        </table>
+      </div>
+      <div id="ovw-empty" class="ovw-empty" style="display:none;">No students to show.</div>
+    </div>
   </main>
 
-  <script>
-    let currentWorldId = null;
-    let globalSettings = null;
+  <div id="board-popup" class="board-popup" role="dialog" aria-hidden="true">
+    <div class="board-popup-head">
+      <div class="board-popup-title" id="bp-title">—</div>
+      <div class="board-popup-meta" id="bp-meta">—</div>
+    </div>
+    <svg id="bp-svg" class="board-popup-svg"></svg>
+    <div class="board-popup-foot" id="bp-foot"></div>
+  </div>
 
+  <script>
+    /* ===== Theme ===== */
     function applyThemeFromStorage() {
       const pref = localStorage.getItem("gb-theme") || "light";
-      document.body.classList.toggle("theme-dark", pref === "dark");
+      const isDark = pref === "dark";
+      document.body.classList.toggle("theme-dark", isDark);
+      const btn = document.getElementById("theme-toggle");
+      if (btn) btn.setAttribute("aria-checked", String(isDark));
     }
     document.getElementById("theme-toggle").addEventListener("click", () => {
       const isDark = document.body.classList.toggle("theme-dark");
       localStorage.setItem("gb-theme", isDark ? "dark" : "light");
+      document.getElementById("theme-toggle").setAttribute("aria-checked", String(isDark));
     });
     applyThemeFromStorage();
 
-    async function initOverview() {
-      globalSettings = await loadGlobalSettings();
+    /* ===== State ===== */
+    const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    let globalSettings = null;
+    let currentWorldId = null;
+    let currentWorldSettings = null;
+    let currentPlayers = {};
+    let viewRows = [];
+    let sortKey = "name";
+    let sortDir = 1;
+    let searchTerm = "";
+
+    /* ===== Init ===== */
+    async function init() {
+      try { globalSettings = await loadGlobalSettings(); }
+      catch (e) { globalSettings = { objects: {} }; }
+
       const worlds = await listWorlds();
       const sel = document.getElementById("world-select");
       sel.innerHTML = "";
-      worlds.forEach(w => {
+      if (!worlds || worlds.length === 0) {
         const opt = document.createElement("option");
-        opt.value = w;
-        opt.textContent = w;
+        opt.value = ""; opt.textContent = "No worlds";
         sel.appendChild(opt);
-      });
-      sel.addEventListener("change", () => {
-        loadPlayers(sel.value);
-      });
-      if (worlds.length > 0) {
-        sel.value = worlds[0];
-        await loadPlayers(worlds[0]);
-      }
-    }
-
-    async function loadPlayers(worldId) {
-      currentWorldId = worldId;
-      const players = await loadPlayerList(worldId);
-      const tbody = document.querySelector("#players-table tbody");
-      tbody.innerHTML = "";
-
-      Object.keys(players || {}).forEach(pid => {
-        const player = players[pid];
-        const gs = player.gameState || {};
-        const turn = gs.turn || 0;
-        const budget = gs.budget || 0;
-        const ts = gs.ticketSales || {};
-        const totalTickets = (ts[0] || ts.youth || 0) +
-                             (ts[1] || ts.families || 0) +
-                             (ts[2] || ts.seniors || 0);
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><button class="btn small" data-player="${pid}">${player.name || pid}</button></td>
-          <td>${turn}</td>
-          <td>${budget}</td>
-          <td>${totalTickets}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      tbody.querySelectorAll("button[data-player]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          showPreview(currentWorldId, btn.dataset.player);
-        });
-      });
-    }
-
-    async function showPreview(worldId, playerId) {
-      const gs = await loadGameState(worldId, playerId);
-      const ws = await loadWorldSettings(worldId);
-      const svg = d3.select("#preview-svg");
-      svg.selectAll("*").remove();
-
-      if (!gs || !gs.board) {
-        d3.select("#preview-meta").text("No board yet.");
+        renderTable();
         return;
       }
+      worlds.forEach(w => {
+        const opt = document.createElement("option");
+        opt.value = w; opt.textContent = w;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener("change", () => loadWorld(sel.value));
 
-      d3.select("#preview-meta").text(`World: ${worldId} – Player: ${playerId}`);
+      const stored = localStorage.getItem("gb-overview-world");
+      const initial = stored && worlds.includes(stored) ? stored : worlds[0];
+      sel.value = initial;
+      await loadWorld(initial);
 
-      const gridSize = ws.gridSize || 5;
-      const hexW = 40, hexH = 20;
-      const origin = [80, 130];
+      document.getElementById("ovw-search-input").addEventListener("input", (e) => {
+        searchTerm = e.target.value.trim().toLowerCase();
+        renderTable();
+      });
 
-      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-      const board = gs.board;
+      document.querySelectorAll(".ovw-table thead th.sortable").forEach(th => {
+        th.addEventListener("click", () => {
+          const k = th.dataset.sort;
+          if (sortKey === k) { sortDir = -sortDir; }
+          else { sortKey = k; sortDir = k === "name" ? 1 : -1; }
+          document.querySelectorAll(".ovw-table thead th").forEach(x => x.classList.remove("is-sorted"));
+          th.classList.add("is-sorted");
+          renderTable();
+        });
+      });
 
+      document.getElementById("ovw-refresh").addEventListener("click", async () => {
+        const btn = document.getElementById("ovw-refresh");
+        btn.classList.add("is-loading");
+        try { await loadWorld(currentWorldId); } catch (e) {}
+        setTimeout(() => btn.classList.remove("is-loading"), 400);
+      });
+
+      // Hide popup on scroll/resize
+      window.addEventListener("scroll", hideBoardPopup, true);
+      window.addEventListener("resize", hideBoardPopup);
+
+      // Popup hover continuity
+      const pop = document.getElementById("board-popup");
+      pop.addEventListener("mouseenter", () => clearTimeout(popupHideTimer));
+      pop.addEventListener("mouseleave", hideBoardPopup);
+    }
+
+    async function loadWorld(worldId) {
+      if (!worldId) return;
+      currentWorldId = worldId;
+      localStorage.setItem("gb-overview-world", worldId);
+      document.getElementById("world-select").value = worldId;
+
+      try { currentWorldSettings = await loadWorldSettings(worldId); }
+      catch (e) { currentWorldSettings = {}; }
+
+      try { currentPlayers = (await loadPlayerList(worldId)) || {}; }
+      catch (e) { currentPlayers = {}; }
+
+      // Defensive: in case loadPlayerList doesn't include gameState, fetch separately
+      const pids = Object.keys(currentPlayers);
+      await Promise.all(pids.map(async (pid) => {
+        if (!currentPlayers[pid].gameState) {
+          try {
+            const gs = await loadGameState(worldId, pid);
+            if (gs) currentPlayers[pid].gameState = gs;
+          } catch (e) { /* ignore */ }
+        }
+      }));
+
+      buildViewRows();
+      renderStats();
+      renderTable();
+    }
+
+    /* ===== Derive view rows ===== */
+    function buildViewRows() {
+      viewRows = Object.keys(currentPlayers).map(pid => {
+        const p = currentPlayers[pid] || {};
+        const gs = p.gameState || null;
+        const turn = +(gs && gs.turn || 0);
+        const budget = +(gs && gs.budget || 0);
+        const ts = (gs && gs.ticketSales) || {};
+        const y = (+ts[0] || +ts.youth || 0);
+        const f = (+ts[1] || +ts.families || 0);
+        const s = (+ts[2] || +ts.seniors || 0);
+        const tickets = y + f + s;
+        const status = computeStatus(gs);
+        const lastUpdate = +(gs && gs.lastUpdate || p.lastUpdate || 0);
+        const mp = (gs && gs.marketingPlan) || {};
+        const activeMarketing = Object.values(mp).filter(v => +v > 0).length;
+        const creditsCount = ((gs && gs.requestedCredits) || []).length;
+        const boothsCount = ((gs && gs.rentedBooths) || []).length;
+        const objectsCount = countBoardObjects(gs && gs.board);
+        return {
+          pid, p, gs,
+          name: p.name || pid,
+          turn, budget, tickets, status, lastUpdate,
+          ticketSalesArr: [y, f, s],
+          ticketPrice: +(gs && gs.ticketPrice || 0),
+          salesTeam: (gs && gs.salesTeam) || null,
+          assistant: (gs && gs.assistant) || null,
+          website: !!(gs && gs.website),
+          activeMarketing, creditsCount, boothsCount, objectsCount,
+        };
+      });
+    }
+
+    function computeStatus(gs) {
+      if (!gs) return { key: "notstarted", label: "Not started", cls: "badge-gray" };
+      const fi = gs.finalInfo;
+      if (fi && fi.status === "complete") return { key: "complete", label: "Complete", cls: "badge-green" };
+      if (fi && fi.status === "ready")    return { key: "ready", label: "Ready for event", cls: "badge-amber" };
+      if ((+gs.turn || 0) === 0)          return { key: "notstarted", label: "Not started", cls: "badge-gray" };
+      return { key: "playing", label: "Playing", cls: "badge-blue" };
+    }
+
+    function countBoardObjects(board) {
+      if (!board) return 0;
+      return Object.values(board).filter(v => v && v !== "empty").length;
+    }
+
+    /* ===== Stats ===== */
+    function renderStats() {
+      const total = viewRows.length;
+      const playing = viewRows.filter(r => r.status.key === "playing").length;
+      const ready = viewRows.filter(r => r.status.key === "ready").length;
+      const complete = viewRows.filter(r => r.status.key === "complete").length;
+      const notStarted = viewRows.filter(r => r.status.key === "notstarted").length;
+
+      document.getElementById("stat-total").textContent = total;
+      document.getElementById("stat-total-sub").textContent =
+        notStarted > 0 ? `${notStarted} not started` : (total > 0 ? "All started" : "—");
+      document.getElementById("stat-playing").textContent = playing;
+      document.getElementById("stat-ready").textContent = ready;
+      document.getElementById("stat-complete").textContent = complete;
+
+      const sub = document.getElementById("ovw-subtitle");
+      const worldName = (currentWorldSettings && currentWorldSettings.name) || currentWorldId || "—";
+      const turnsTxt = currentWorldSettings && currentWorldSettings.maxTurns
+        ? ` · ${currentWorldSettings.maxTurns} turns`
+        : "";
+      sub.textContent = `World: ${worldName}${turnsTxt}`;
+    }
+
+    /* ===== Table ===== */
+    function renderTable() {
+      const tbody = document.getElementById("ovw-tbody");
+      tbody.innerHTML = "";
+
+      let rows = viewRows.slice();
+      if (searchTerm) rows = rows.filter(r => r.name.toLowerCase().includes(searchTerm));
+      rows.sort(cmp);
+
+      const empty = document.getElementById("ovw-empty");
+      if (rows.length === 0) {
+        empty.style.display = "block";
+        empty.textContent = searchTerm
+          ? `No students match "${searchTerm}".`
+          : "No students in this world yet.";
+        return;
+      }
+      empty.style.display = "none";
+
+      const maxTurns = (currentWorldSettings && currentWorldSettings.maxTurns) || 12;
+      const startBudget = (currentWorldSettings && currentWorldSettings.startBudget) || 0;
+
+      const frag = document.createDocumentFragment();
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.appendChild(cellStudent(r));
+        tr.appendChild(cellStatus(r));
+        tr.appendChild(cellProgress(r, maxTurns));
+        tr.appendChild(cellBudget(r, startBudget));
+        tr.appendChild(cellTickets(r));
+        tr.appendChild(cellResources(r));
+        tr.appendChild(cellLastUpdate(r));
+        tr.appendChild(cellBoard(r));
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+    }
+
+    function cmp(a, b) {
+      let av, bv;
+      switch (sortKey) {
+        case "turn":       av = a.turn;       bv = b.turn;       break;
+        case "budget":     av = a.budget;     bv = b.budget;     break;
+        case "tickets":    av = a.tickets;    bv = b.tickets;    break;
+        case "lastupdate": av = a.lastUpdate; bv = b.lastUpdate; break;
+        case "name":
+        default:           return sortDir * a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      }
+      if (av === bv) return a.name.localeCompare(b.name);
+      return sortDir * (av > bv ? 1 : -1);
+    }
+
+    /* ===== Cell builders ===== */
+    function cellStudent(r) {
+      const td = document.createElement("td");
+      const init = (r.name || "?").trim().split(/\s+/).map(s => s[0] || "").slice(0, 2).join("");
+      td.innerHTML = `
+        <div class="cell-student">
+          <span class="student-avatar">${escapeHtml(init || "?")}</span>
+          <div>
+            <div class="student-name">${escapeHtml(r.name)}</div>
+            <div class="student-meta">${escapeHtml(r.pid)}</div>
+          </div>
+        </div>`;
+      return td;
+    }
+
+    function cellStatus(r) {
+      const td = document.createElement("td");
+      td.innerHTML = `<span class="badge ${r.status.cls}">${escapeHtml(r.status.label)}</span>`;
+      return td;
+    }
+
+    function cellProgress(r, maxTurns) {
+      const td = document.createElement("td");
+      td.className = "progress-cell";
+      const pct = Math.max(0, Math.min(100, (r.turn / Math.max(1, maxTurns)) * 100));
+      let fillCls = "";
+      if (r.status.key === "notstarted") fillCls = " is-gray";
+      else if (r.status.key === "ready") fillCls = " is-amber";
+      td.innerHTML = `
+        <div class="progress-text">Turn ${r.turn} <span class="muted">/ ${maxTurns}</span></div>
+        <div class="progress-bar"><div class="progress-fill${fillCls}" style="width:${pct}%"></div></div>`;
+      return td;
+    }
+
+    function cellBudget(r, startBudget) {
+      const td = document.createElement("td");
+      const delta = r.budget - startBudget;
+      const cls = r.budget < 0 ? "num-cell is-neg" : "num-cell";
+      let dCls = "flat", arrow = "→";
+      if (delta > 0) { dCls = "up"; arrow = "↑"; }
+      else if (delta < 0) { dCls = "down"; arrow = "↓"; }
+      td.innerHTML = `
+        <div class="${cls}">€${formatNum(r.budget)}</div>
+        <div class="num-sub num-delta ${dCls}">${arrow} €${formatNum(Math.abs(delta))}</div>`;
+      return td;
+    }
+
+    function cellTickets(r) {
+      const td = document.createElement("td");
+      const groups = (globalSettings && globalSettings.groups) || ["Youth", "Families", "Seniors"];
+      const [y, f, s] = r.ticketSalesArr;
+      td.innerHTML = `
+        <div class="num-cell">${formatNum(r.tickets)}</div>
+        <div class="num-sub" title="${escapeHtml(groups[0])} / ${escapeHtml(groups[1])} / ${escapeHtml(groups[2])}">${formatNum(y)} · ${formatNum(f)} · ${formatNum(s)}</div>`;
+      return td;
+    }
+
+    function cellResources(r) {
+      const td = document.createElement("td");
+      const parts = [];
+      if (r.salesTeam)        parts.push(chip(svgUsers(), cap(r.salesTeam), `Sales team: ${cap(r.salesTeam)}`));
+      if (r.assistant)        parts.push(chip(svgUser(),  cap(r.assistant), `Assistant: ${cap(r.assistant)}`));
+      if (r.activeMarketing)  parts.push(chip(svgMega(),  r.activeMarketing, `${r.activeMarketing} active marketing channel(s)`));
+      if (r.boothsCount)      parts.push(chip(svgStore(), r.boothsCount, `${r.boothsCount} rented booth(s)`));
+      if (r.creditsCount)     parts.push(chip(svgCard(),  r.creditsCount, `${r.creditsCount} active credit(s)`));
+      if (r.objectsCount)     parts.push(chip(svgGrid(),  r.objectsCount, `${r.objectsCount} object(s) placed`));
+      if (r.website)          parts.push(chip(svgGlobe(), "Web", "Website launched"));
+      td.innerHTML = parts.length
+        ? `<div class="resource-icons">${parts.join("")}</div>`
+        : `<span class="resource-empty">—</span>`;
+      return td;
+    }
+
+    function chip(icon, val, title) {
+      return `<span class="resource-chip" title="${escapeHtml(title)}">${icon}<span>${escapeHtml(String(val))}</span></span>`;
+    }
+    function cap(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
+
+    function svgUsers() { return svgIcon('<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/>'); }
+    function svgUser()  { return svgIcon('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'); }
+    function svgMega()  { return svgIcon('<path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>'); }
+    function svgStore() { return svgIcon('<path d="M3 9l1-5h16l1 5"/><path d="M5 9v11h14V9"/><path d="M9 22V12h6v10"/>'); }
+    function svgCard()  { return svgIcon('<rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>'); }
+    function svgGrid()  { return svgIcon('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>'); }
+    function svgGlobe() { return svgIcon('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 0 20"/><path d="M12 2a15 15 0 0 0 0 20"/>'); }
+    function svgIcon(inner) {
+      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+    }
+
+    function cellLastUpdate(r) {
+      const td = document.createElement("td");
+      const abs = r.lastUpdate ? new Date(r.lastUpdate).toLocaleString() : "";
+      td.innerHTML = `<span title="${escapeHtml(abs)}" style="color:var(--gb-text-secondary,#6b7280);font-size:12px;">${formatRelative(r.lastUpdate)}</span>`;
+      return td;
+    }
+
+    function cellBoard(r) {
+      const td = document.createElement("td");
+      td.style.textAlign = "center";
+      const board = r.gs && r.gs.board;
+      if (!board) {
+        const span = document.createElement("span");
+        span.className = "board-thumb is-empty";
+        span.textContent = "—";
+        span.title = "No board yet";
+        td.appendChild(span);
+        return td;
+      }
+      const wrap = document.createElement("span");
+      wrap.className = "board-thumb";
+      wrap.setAttribute("tabindex", "0");
+      wrap.setAttribute("role", "button");
+      wrap.setAttribute("aria-label", `Preview board for ${r.name}`);
+      wrap.innerHTML = "<svg></svg>";
+      const svg = wrap.querySelector("svg");
+      renderBoardInto(svg, board, (currentWorldSettings && currentWorldSettings.gridSize) || 5, false);
+      wrap.addEventListener("mouseenter", () => showBoardPopup(r, wrap));
+      wrap.addEventListener("mouseleave", () => hideBoardPopup());
+      wrap.addEventListener("focus", () => showBoardPopup(r, wrap));
+      wrap.addEventListener("blur", () => hideBoardPopup());
+      td.appendChild(wrap);
+      return td;
+    }
+
+    /* ===== Board rendering (D3, mirrors index.html geometry) ===== */
+    function renderBoardInto(svgEl, board, gridSize, withIcons) {
+      const sel = d3.select(svgEl);
+      sel.selectAll("*").remove();
+
+      const objs = (globalSettings && globalSettings.objects) || {};
+      const hexW = 40;
+      const hexH = hexW * 0.5;
+
+      const cells = [];
       for (let row = 1; row <= gridSize; row++) {
         for (let col = gridSize - 1; col >= 0; col--) {
-          const id = letters[col] + row;
-          const cx = origin[0] + (hexW * (0.5 * (col + row)));
-          const cy = origin[1] - (hexH * (0.5 * (col - row)));
-          const objKey = board[id];
-          const obj = (globalSettings.objects || {})[objKey] || {};
-          const color = obj.color || "#9ca3af";
-
-          const points = [
-            [cx - hexW * 0.5, cy],
-            [cx, cy + hexH * 0.5],
-            [cx + hexW * 0.5, cy],
-            [cx, cy - hexH * 0.5]
-          ];
-
-          svg.append("polygon")
-            .attr("points", points.map(p => p.join(",")).join(" "))
-            .attr("fill", color)
-            .attr("stroke", "#111827")
-            .attr("stroke-width", 0.7);
+          const id = LETTERS[col] + row;
+          const cx = (hexW * (0.5 * (col + row)));
+          const cy = -(hexH * (0.5 * (col - row)));
+          cells.push({ id, cx, cy });
         }
+      }
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      cells.forEach(c => {
+        if (c.cx - hexW * 0.5 < minX) minX = c.cx - hexW * 0.5;
+        if (c.cx + hexW * 0.5 > maxX) maxX = c.cx + hexW * 0.5;
+        const topReach = withIcons ? c.cy - hexH * 1.5 : c.cy - hexH * 0.5;
+        if (topReach < minY) minY = topReach;
+        if (c.cy + hexH * 0.5 > maxY) maxY = c.cy + hexH * 0.5;
+      });
+      const pad = 4;
+      sel.attr("viewBox", `${minX - pad} ${minY - pad} ${(maxX - minX) + pad * 2} ${(maxY - minY) + pad * 2}`)
+         .attr("preserveAspectRatio", "xMidYMid meet");
+
+      // Tiles
+      cells.forEach(c => {
+        const objKey = board[c.id];
+        const obj = objs[objKey] || {};
+        const color = obj.color || (objKey ? "#9ca3af" : "#e5e7eb");
+        const points = [
+          [c.cx - hexW * 0.5, c.cy],
+          [c.cx, c.cy + hexH * 0.5],
+          [c.cx + hexW * 0.5, c.cy],
+          [c.cx, c.cy - hexH * 0.5]
+        ];
+        sel.append("polygon")
+          .attr("points", points.map(p => p.join(",")).join(" "))
+          .attr("fill", color)
+          .attr("stroke", "#1f2937")
+          .attr("stroke-width", withIcons ? 0.6 : 0.3)
+          .attr("stroke-opacity", 0.55);
+      });
+
+      // Icons on top (popup only)
+      if (withIcons) {
+        cells.forEach(c => {
+          const obj = objs[board[c.id]] || {};
+          if (!obj.icon) return;
+          sel.append("image")
+            .attr("href", obj.icon)
+            .attr("x", c.cx - hexW * 0.8)
+            .attr("y", c.cy - hexH * 1.4)
+            .attr("width", hexW * 1.6)
+            .attr("height", hexH * 2.2)
+            .attr("preserveAspectRatio", "xMidYMid meet");
+        });
       }
     }
 
-    initOverview();
+    /* ===== Board popup ===== */
+    let popupHideTimer = null;
+    function showBoardPopup(row, anchor) {
+      clearTimeout(popupHideTimer);
+      const pop = document.getElementById("board-popup");
+      document.getElementById("bp-title").textContent = row.name;
+      const maxT = (currentWorldSettings && currentWorldSettings.maxTurns) || "?";
+      document.getElementById("bp-meta").textContent =
+        `Turn ${row.turn}/${maxT}  ·  €${formatNum(row.budget)}`;
+
+      const svg = document.getElementById("bp-svg");
+      renderBoardInto(svg, (row.gs && row.gs.board) || {},
+        (currentWorldSettings && currentWorldSettings.gridSize) || 5, true);
+
+      const foot = document.getElementById("bp-foot");
+      const items = [
+        `<span>Objects&nbsp;<strong>${row.objectsCount}</strong></span>`,
+        `<span>Tickets&nbsp;<strong>${formatNum(row.tickets)}</strong></span>`,
+        `<span>Ticket €&nbsp;<strong>${row.ticketPrice}</strong></span>`,
+      ];
+      if (row.activeMarketing) items.push(`<span>Marketing&nbsp;<strong>${row.activeMarketing}</strong></span>`);
+      if (row.boothsCount)     items.push(`<span>Booths&nbsp;<strong>${row.boothsCount}</strong></span>`);
+      if (row.creditsCount)    items.push(`<span>Credits&nbsp;<strong>${row.creditsCount}</strong></span>`);
+      foot.innerHTML = items.join("");
+
+      positionPopup(pop, anchor);
+      pop.classList.add("is-visible");
+      pop.setAttribute("aria-hidden", "false");
+    }
+
+    function hideBoardPopup() {
+      clearTimeout(popupHideTimer);
+      popupHideTimer = setTimeout(() => {
+        const pop = document.getElementById("board-popup");
+        pop.classList.remove("is-visible");
+        pop.setAttribute("aria-hidden", "true");
+      }, 90);
+    }
+
+    function positionPopup(pop, anchor) {
+      const rect = anchor.getBoundingClientRect();
+      const pw = pop.offsetWidth || 380;
+      const ph = pop.offsetHeight || 360;
+      let x = rect.right + 12;
+      let y = rect.top + rect.height / 2 - ph / 2;
+      if (x + pw > window.innerWidth - 16) x = rect.left - pw - 12;
+      if (x < 16) x = 16;
+      y = Math.max(16, Math.min(y, window.innerHeight - ph - 16));
+      pop.style.left = x + "px";
+      pop.style.top = y + "px";
+    }
+
+    /* ===== Utilities ===== */
+    function formatNum(n) {
+      n = +n || 0;
+      return n.toLocaleString("en-US");
+    }
+    function formatRelative(ts) {
+      if (!ts) return "—";
+      const diff = Date.now() - ts;
+      if (diff < 0) return "just now";
+      const s = Math.floor(diff / 1000);
+      if (s < 60) return "just now";
+      const m = Math.floor(s / 60);
+      if (m < 60) return m + "m ago";
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + "h ago";
+      const d = Math.floor(h / 24);
+      if (d < 7) return d + "d ago";
+      return new Date(ts).toLocaleDateString();
+    }
+    function escapeHtml(s) {
+      return String(s == null ? "" : s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+
+    init();
   </script>
 </body>
 </html>

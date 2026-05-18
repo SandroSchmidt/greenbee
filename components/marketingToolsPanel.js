@@ -1,4 +1,50 @@
-
+/**
+ * MarketingToolsPanel — a self-contained marketing tools panel for GreenBee.
+ *
+ * No dependencies. Vanilla JS + injected stylesheet. Themeable via CSS variables.
+ *
+ * Renders four (or N) per-turn spend sliders and a list of one-time assets
+ * with three states: buyable, can't afford, and owned.
+ *
+ * USAGE
+ * -----
+ *   const panel = new MarketingToolsPanel({
+ *     mountTo: document.querySelector('#marketing-popover'),
+ *     budget: 4915,
+ *     channels: [
+ *       { id: 'billboards', label: 'Billboards',    value: 76,  min: 0, max: 200 },
+ *       { id: 'busTrain',   label: 'Bus and train', value: 58,  min: 0, max: 200 },
+ *       { id: 'social',     label: 'Social media',  value: 65,  min: 0, max: 200 },
+ *       { id: 'tv',         label: 'TV',            value: 117, min: 0, max: 300 },
+ *     ],
+ *     assets: [
+ *       { id: 'website', label: 'Website', blurb: 'Permanent boost to reach', price: 1200, owned: false },
+ *     ],
+ *     onChannelChange: (id, value) => console.log('channel', id, value),
+ *     onAssetBuy:      (id)        => console.log('buy', id),
+ *   });
+ *   panel.show();
+ *
+ *   // later, when state changes elsewhere:
+ *   panel.setBudget(3715);
+ *   panel.setAssetOwned('website', true);
+ *   panel.setChannelValue('tv', 90);
+ *
+ *   // full re-render:
+ *   panel.update({ channels: [...] });
+ *
+ *   // teardown:
+ *   panel.close();
+ *
+ * THEMING
+ * -------
+ *   Override any of these CSS variables on :root or .mt-panel to fit your tokens:
+ *     --mt-bg, --mt-surface, --mt-border,
+ *     --mt-text, --mt-text-secondary, --mt-text-tertiary,
+ *     --mt-accent-bg, --mt-accent-text, --mt-accent-strong, --mt-accent-strong-hover,
+ *     --mt-radius-sm, --mt-radius-md, --mt-radius-lg,
+ *     --mt-font-family
+ */
 
 const MARKETING_TOOLS_STYLES = `
 .mt-panel {

@@ -77,7 +77,8 @@ const TURN_SUMMARY_STYLES = `
   transform: scale(0.97);
   transition: transform 150ms ease;
   max-height: calc(100vh - 32px);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 .ts-modal-backdrop--visible .ts-modal {
   transform: scale(1);
@@ -89,6 +90,7 @@ const TURN_SUMMARY_STYLES = `
   padding: 18px 24px 16px;
   border-bottom: 0.5px solid var(--ts-border, rgba(0, 0, 0, 0.1));
   gap: 12px;
+  flex: 0 0 auto;
 }
 .ts-modal__title {
   margin: 0;
@@ -121,6 +123,12 @@ const TURN_SUMMARY_STYLES = `
 .ts-modal__close:hover {
   background: var(--ts-surface, #f5f5f5);
   border-color: var(--ts-text-tertiary, #9a9a9a);
+}
+.ts-modal__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow:auto;
 }
 .ts-modal__hero {
   padding: 22px 24px 20px;
@@ -584,7 +592,7 @@ class TurnSummaryModal {
             </svg>
           </button>
         </header>
-
+        <div class="ts-modal__body">
         <section class="ts-modal__hero">
           <p class="ts-modal__label">Closing balance</p>
           <div class="ts-modal__hero-row">
@@ -615,7 +623,7 @@ class TurnSummaryModal {
         </section>
 
         ${groupsSectionHtml}
-
+        </div>
         <footer class="ts-modal__footer">
           <div class="ts-modal__footer-info">
             Ticket price <span class="ts-modal__strong">${this._formatMoney(o.ticketPrice)}</span>${reasonablenessHtml}
