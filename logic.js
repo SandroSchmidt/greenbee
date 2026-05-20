@@ -85,6 +85,8 @@ function calculateTicketPriceReasonableness({
   ticketPrice,
   infrastructuralSpendings,
   infrastructureDivisor,
+  gameState,
+  SPONSORS_LIST,
 
   previousPriceFactors = [],
   cumulativeSalesFactor = 0,
@@ -138,26 +140,32 @@ function calculateTicketPriceReasonableness({
 
   let sponsorsMultiplier = 1.0;
   if(gameState?.sponsors){
-    const sponsorsCatalog = typeof SPONSORS_LIST !== "undefined"
-      ? SPONSORS_LIST
-      : (typeof window !== "undefined" && Array.isArray(window.SPONSORS_LIST) ? window.SPONSORS_LIST : []);
-    gameState?.sponsors.forEach(itm=>{
-      const sponsor = sponsorsCatalog.find(spo => spo.id == itm.id);
-      if(!sponsor){
-        sponsorsMultiplier *= 1.0;
-      }
-      else{
-        const possibleOffers = Array.isArray(sponsor.possible_offers) ? sponsor.possible_offers : [];
-        const sponsorMultiplier = (100 + (possibleOffers[itm.deal]?.ticket_reasonableness_boost || 0)) / 100;
-        sponsorsMultiplier *= sponsorMultiplier;
-      }
-    })
+    const sponsorsEffect = getAccumulatedSponsorEffects(gameState, SPONSORS_LIST);
+    const sponsorMultiplier = (100 + (sponsorsEffect.ticket_reasonableness_boost || 0)) / 100;
+    sponsorsMultiplier *= sponsorMultiplier;
   }
 
-  return clamp(historyAdjustedFactor * salesMultiplier * sponsorsMultiplier, 0, maxFactor);
+  //console.log("Branding MULTIPLIER IN TICKET REASONABLENESS")
+  let brandingMultiplier = 1.0;
+  if(gameState.brandingPackage){
+    brandingMultiplier = 1.03; //three percents add-on
+  }
+  let wifiMultiplier = 1.0;
+  if(gameState.premiumWifi){
+    wifiMultiplier=1.01; //1%
+  }
+
+  let salesTeamMultiplier = 1.0;
+  if(gameState?.salesTeam == 'ironpath'){
+    const randPercentIncrease = randomInt(5,15);
+    salesTeamMultiplier = (100+randPercentIncrease)/100;
+  }
+
+  console.log("sales team multiplier: ", salesTeamMultiplier);
+  return clamp(historyAdjustedFactor * salesMultiplier * sponsorsMultiplier * brandingMultiplier * wifiMultiplier * salesTeamMultiplier, 0, maxFactor);
 }
 
-function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, globalSettings, options = {}) {
+function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, globalSettings, SPONSORS_LIST, options = {}) {
   const opts = options || {};
 
   const groupPopulation = Array.isArray(worldSettings && worldSettings.population)
@@ -171,6 +179,11 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
   const marketingScore = Array.isArray(gameState && gameState.interest)
     ? gameState.interest.map(v => Math.max(0, Number(v) || 0))
     : [0, 0, 0];
+  
+  if(gameState?.salesTeam && gameState?.salesTeam=='northwave'){
+    marketingScore.forEach((itm,idx)=>marketingScore[idx] = itm+5);
+  }
+
 
   const infrastructureDivisor = Number(opts.infrastructureDivisor || getInfrastructureDivisor(worldSettings, gameState, {
     deterministic: !!opts.deterministic,
@@ -184,6 +197,8 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
     ticketPrice: gameState && gameState.ticketPrice,
     infrastructuralSpendings: gameState && gameState.infrastructuralSpendings,
     infrastructureDivisor,
+    gameState: gameState,
+    SPONSORS_LIST: SPONSORS_LIST,
     previousPriceFactors: Array.isArray(gameState && gameState.priceReasonablenessProgress)
       ? gameState.priceReasonablenessProgress
       : [],
@@ -192,7 +207,7 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
   });
 
   const remaining = groupPopulation.map((total, i) => Math.max(0, total - (sold[i] || 0)));
-  const rules = (globalSettings && globalSettings.baseRules) || {};
+  const rules = (globalSettings && globalSettings?.baseRules) || {};
   const marketingK = Number(rules.marketingSaturationK || 50);
   const marketingWeight = Number(rules.ticketMarketingWeight ?? 0.40);
   const maxDemand = Number(rules.ticketMaxDemand ?? 1.0);
@@ -1457,4 +1472,31 @@ function getTicketSalesPercentage(gameState) {
 
   if (capacity <= 0) return 0;
   return (totalTicketSales / capacity) * 100;
+}
+
+function getAccumulatedSponsorEffects(gameState, SPONSORS_LIST){
+  const effectsAccumulated = {
+       suitability_effect: [0, 0, 0],
+       marketing_effect: [0, 0, 0, 0],
+       ticket_reasonableness_boost: 0,
+  }
+  
+  if(!gameState?.sponsors || gameState?.sponsors.length<1){
+    return effectsAccumulated;
+  }
+
+  gameState.sponsors.forEach(itm=>{
+    const sponsor = SPONSORS_LIST.find(spo => spo.id == itm.id);
+    sponsor.possible_offers[itm.deal].suitability_effect.forEach((val, idx)=>{
+      effectsAccumulated.suitability_effect[idx] += val;
+    })
+
+     sponsor.possible_offers[itm.deal].marketing_effect.forEach((val, idx)=>{
+      effectsAccumulated.marketing_effect[idx] += val;
+    })
+
+    effectsAccumulated.ticket_reasonableness_boost += sponsor.possible_offers[itm.deal].ticket_reasonableness_boost;
+  })
+
+  return effectsAccumulated;
 }

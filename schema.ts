@@ -320,6 +320,8 @@ export type DeskItem = DeskReportItem | DeskProposalItem | DeskNewsItem | DeskBr
 export interface DeskItemBase {
   id: string;
   sender: string;
+  senderRole?: string;
+  senderIconUrl?: string;
   turn?: number;
   timestamp?: string;
   title: string;
@@ -331,6 +333,7 @@ export interface DeskItemBase {
 
 export interface DeskReportItem extends DeskItemBase {
   type: "report";
+  severity?: "info" | "warning" | "alert";
 }
 
 export interface DeskNewsItem extends DeskItemBase {
@@ -341,6 +344,7 @@ export interface DeskActionableItem extends DeskItemBase {
   status?: ProposalStatus;
   expiresInTurns?: number;
   terms?: DeskProposalTerm[];
+  feeLabel?: string;
 }
 
 export interface DeskProposalItem extends DeskActionableItem {

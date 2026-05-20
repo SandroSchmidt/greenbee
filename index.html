@@ -21,6 +21,7 @@
   <script src="components/objectActionPanel.js"></script>
   <script src="data/speakers.js"></script>
   <script src="data/sponsors.js"></script>
+  <script src="components/popupOffersAndReports.js"></script>
 </head>
 <style>
   /* =========================================================
@@ -1708,7 +1709,7 @@
         name: "Northwave Outreach",
         initials: "NW",
         color: "#2563eb",
-        tagline: "Audience growth specialists",
+        tagline: "Squeezing maximum from your marketing budget",
         bio: "A modern marketing team focused on reach, campaign efficiency and channel mix. Best when you want stronger awareness and more visitors coming through the gate.",
         stats: ["Marketing boost", "More visitor demand"],
         fee: 250
@@ -1886,6 +1887,14 @@
           }
         }
       });
+
+      if(gameState?.sponsors){
+        const sponsorsEffect = getAccumulatedSponsorEffects(gameState, SPONSORS_LIST);
+        res.forEach((itm, idx)=>{
+          res[idx] += sponsorsEffect.suitability_effect[idx];
+        })
+      }
+      
       return res;
     }
 
@@ -2118,6 +2127,7 @@
     }
 
     function applyCurrentFinalNotification() {
+      console.log("LaStT ReacHHEDdd... IFIFIFIFIFIFIFIIFIFIFIFIFIFIFIFIFIFIFIFIFI");
       rightStatusMenu.clearWarning();
       if (!rightStatusMenu || typeof rightStatusMenu.setNotification !== "function") return;
       const notification = getFinalNotificationConfig();
@@ -3234,7 +3244,7 @@
 
       const suitability = computesuitability();
       gameState.interest = computeGlobalInterestFromMarketing();
-      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, {
+      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, SPONSORS_LIST, {
         mutate: false,
         deterministic: true,
       });
@@ -3481,7 +3491,7 @@
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
-      const ticketResult = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, { mutate: true });
+      const ticketResult = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, SPONSORS_LIST, { mutate: true });
       const sponsorsIncome = calculateSponsorsIncome(currentTurn+1, gameState.sponsors);
       console.log("PSOJNSORS INOCME: ", sponsorsIncome)
       const ticketIncome = Number(ticketResult.ticketIncome || 0);
@@ -3596,7 +3606,7 @@
         gameState.branding_proposal = null;
       }
       const wifiCoinFlip = randomBetween(0.0, 1.0);
-      if(!gameState.premiumWifi && wifiCoinFlip>0.5){
+      if(!gameState.premiumWifi && (wifiCoinFlip>0.5 || gameState.turn==worldSettings.maxTurns)){
         gameState.premiumWifi_proposal = premiumWifiProposal;
       } else if (gameState?.premiumWifi_proposal && gameState?.premiumWifi_proposal?.status != "accepted") {
         gameState.premiumWifi_proposal = null;
@@ -3614,7 +3624,16 @@
       updateAll();
       if (finalTurnReached) applyCurrentFinalNotification();
       await saveGameState(worldId, playerId, gameState);
-      showTurnReport(report);
+      showTurnReport(report, () => {
+        if(finalTurnReached){
+          console.log("Generating final offers...");
+        }
+        const { popupOffers, popupReports } = generateOffersAndReportsData(gameState, worldSettings);
+        if(finalTurnReached){
+          console.log("Popup offers and reports: ", popupOffers, popupReports)
+        }
+        showPopupOffersAndReports(popupOffers, popupReports);
+      });
     }
 
     async function restartGame() {
@@ -4068,15 +4087,16 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function buildBrandingDeskItem() {
 
       const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
-      const senderName = salesTeam?.name ?? "Sales Team";
+      const senderName = salesTeam?.name ?? "GreenBee Partner Desk";
       const fee = 300;
 
       const item = {
         id: 'branding_deal1',
         type: "branding",
         sender: senderName,
+        senderRole: salesTeam ? "Sales team" : "Partnership office",
         turn: Number(gameState.turn),
-        title: `Branding Package Offer`,
+        title: `Brand Visibility Package`,
         preview: `A branded promotion push for ${formatEuro(fee)} (flat) to make the event more attractive to sponsors, vendors and visitors.`,
         body: `${senderName} proposes a branding package that strengthens the event's presentation and commercial appeal. The package is positioned as a broad visibility boost to help attract stronger sponsor interest, better vendor attention and more visitor confidence.`,
         terms: [
@@ -4084,6 +4104,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           {label: "Primary effect", value: "Higher sponsor, vendor and visitor appeal"}
         ],
         fee: fee,
+        feeLabel: formatEuro(fee),
       }
 
       if(gameState.brandingPackage){
@@ -4096,15 +4117,16 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function buildPremiumWifiDeskItem() {
 
       const salesTeam = SALES_TEAMS.find(itm => itm.id == gameState.salesTeam);
-      const senderName = salesTeam?.name ?? "Sales Team";
+      const senderName = salesTeam?.name ?? "GreenBee Partner Desk";
       const fee = 300;
 
       const item = {
         id: 'wifi_deal1',
         type: "wifi",
         sender: senderName,
+        senderRole: salesTeam ? "Sales team" : "Infrastructure office",
         turn: Number(gameState.turn),
-        title: `Premium Wi-Fi Offer`,
+        title: `Premium Wi-Fi Upgrade`,
         preview: `A premium connectivity upgrade for ${formatEuro(fee)} (flat) to improve the visitor and vendor experience.`,
         body: `${senderName} proposes a premium Wi-Fi package for the event. The upgrade gives guests, vendors and sponsors a more reliable on-site connection and improves the event's overall service quality.`,
         terms: [
@@ -4112,6 +4134,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
           {label: "Primary effect", value: "Premium on-site connectivity"}
         ],
         fee: fee,
+        feeLabel: formatEuro(fee),
       }
 
       if(gameState.premiumWifi){
@@ -4312,61 +4335,77 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     }
 
     async function acceptBrandingPackageOffer(itemId){
-      if (!gameState || !itemId) return;
-      if (finalEventInProgress || hasStoredFinalResults()) return;
-      if (gameState.brandingPackage) return;
-      if (!gameState.branding_proposal) return;
+      if (!gameState || !itemId) return false;
+      if (finalEventInProgress || hasStoredFinalResults()) return false;
+      if (gameState.brandingPackage) return false;
+      if (!gameState.branding_proposal) return false;
 
       const brandingPackageOffer = gameState.branding_proposal;
-      gameState.budget -= brandingPackageOffer.fee;
+      const fee = Math.max(0, Number(brandingPackageOffer.fee || 0));
+      if (fee > Number(gameState.budget || 0)) {
+        alert(`Not enough budget for the branding package (${formatEuro(fee)}).`);
+        return false;
+      }
+
+      gameState.budget -= fee;
       gameState.brandingPackage = true;
       gameState.branding_proposal.status = "accepted";
 
       updateAll();
       renderDeskMenu();
       await saveGameState(worldId, playerId, gameState);
+      return true;
     }
 
     async function declineBrandingPackageOffer(itemId){
-      if (!gameState || !itemId) return;
-      if (finalEventInProgress || hasStoredFinalResults()) return;
-      if (gameState.brandingPackage) return;
-      if (!gameState.branding_proposal) return;
+      if (!gameState || !itemId) return false;
+      if (finalEventInProgress || hasStoredFinalResults()) return false;
+      if (gameState.brandingPackage) return false;
+      if (!gameState.branding_proposal) return false;
 
       gameState.branding_proposal.status = "declined";
 
       updateAll();
       renderDeskMenu();
       await saveGameState(worldId, playerId, gameState);
+      return true;
     }
 
     async function acceptPremiumWifiOffer(itemId){
-      if (!gameState || !itemId) return;
-      if (finalEventInProgress || hasStoredFinalResults()) return;
-      if (gameState.premiumWifi) return;
-      if (!gameState.premiumWifi_proposal) return;
+      if (!gameState || !itemId) return false;
+      if (finalEventInProgress || hasStoredFinalResults()) return false;
+      if (gameState.premiumWifi) return false;
+      if (!gameState.premiumWifi_proposal) return false;
 
       const premiumWifiOffer = gameState.premiumWifi_proposal;
-      gameState.budget -= premiumWifiOffer.fee;
+      const fee = Math.max(0, Number(premiumWifiOffer.fee || 0));
+      if (fee > Number(gameState.budget || 0)) {
+        alert(`Not enough budget for premium Wi-Fi (${formatEuro(fee)}).`);
+        return false;
+      }
+
+      gameState.budget -= fee;
       gameState.premiumWifi = true;
       gameState.premiumWifi_proposal.status = "accepted";
 
       updateAll();
       renderDeskMenu();
       await saveGameState(worldId, playerId, gameState);
+      return true;
     }
 
     async function declinePremiumWifiOffer(itemId){
-      if (!gameState || !itemId) return;
-      if (finalEventInProgress || hasStoredFinalResults()) return;
-      if (gameState.premiumWifi) return;
-      if (!gameState.premiumWifi_proposal) return;
+      if (!gameState || !itemId) return false;
+      if (finalEventInProgress || hasStoredFinalResults()) return false;
+      if (gameState.premiumWifi) return false;
+      if (!gameState.premiumWifi_proposal) return false;
 
       gameState.premiumWifi_proposal.status = "declined";
 
       updateAll();
       renderDeskMenu();
       await saveGameState(worldId, playerId, gameState);
+      return true;
     }
 
     function acceptDeskItem(id) {
@@ -4851,8 +4890,188 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
       //clearVisitorParticles();
     }
 
-    function showTurnReport(report) {
+    function generateOffersAndReportsData(gameState, worldSettings){
+      const reports = [];
+      const offers = [];
+      const turn = Number(gameState && gameState.turn || 0);
+      const maxTurns = Number(worldSettings && worldSettings.maxTurns || gameState && gameState.maxTurns || 10);
+      const probabilityOfShowing = Math.min(1, turn / Math.max(1, maxTurns + maxTurns * 0.2)); // 20% buffer keeps warnings from saturating too early.
+      const budget = Number(gameState && gameState.budget || 0);
+
+      if (!gameState?.salesTeam && (randomBetween(0.0, 1.0) <= probabilityOfShowing || turn >= maxTurns)) {
+        const assistantInfo = gameState?.assistant
+          ? ASSISTANTS.find(itm => itm.id == gameState.assistant)
+          : null;
+        const severity = turn >= maxTurns || probabilityOfShowing > 0.65
+          ? "alert"
+          : probabilityOfShowing > 0.35 ? "warning" : "info";
+
+        reports.push({
+          id: `sales-team-gap-${turn}`,
+          type: "report",
+          severity,
+          ...(assistantInfo ? {
+            sender: assistantInfo.name,
+            senderRole: assistantInfo.tagline || "Assistant",
+            senderIconUrl: assistantInfo.icon,
+          } : {
+            sender: "Operations",
+            senderRole: "Planning report",
+          }),
+          turn,
+          title: "No sales team hired",
+          preview: "Sponsor and vendor outreach is running without dedicated support.",
+          body: probabilityOfShowing < 0.5
+            ? "You do not have a sales team hired at the moment. That can reduce sponsor confidence and vendor interest as the event plan develops."
+            : "Sponsors and vendors are starting to notice the lack of dedicated sales coverage. Hiring a sales team can improve outreach quality before the event locks in.",
+        });
+      }
+
+      const proposalIsPending = proposal => proposal && (proposal.status || "pending") === "pending";
+      const proposalFee = proposal => Math.max(0, Number(proposal && proposal.fee || 0));
+      const isAffordable = proposal => proposalFee(proposal) <= budget;
+      const getOfferSender = proposal => {
+        const salesTeam = typeof getHiredSalesTeam === "function" ? getHiredSalesTeam() : null;
+        const storedSender = proposal && proposal.sender && proposal.sender !== "Sales Team"
+          ? proposal.sender
+          : null;
+        return {
+          sender: storedSender || (salesTeam ? salesTeam.name : "GreenBee Partner Desk"),
+          senderRole: proposal?.senderRole || (salesTeam ? "Sales team" : "Partner offer"),
+          ...(proposal?.senderIconUrl && !String(proposal.senderIconUrl).includes("...") ? { senderIconUrl: proposal.senderIconUrl } : {}),
+        };
+      };
+      const buildPopupOffer = (proposal, defaults) => {
+        const fee = proposalFee(proposal);
+        const feeLabel = formatEuro(fee);
+        const existingTerms = Array.isArray(proposal?.terms)
+          ? proposal.terms.filter(term => term && String(term.label || "").toLowerCase() !== "fee")
+          : [];
+
+        return {
+          ...proposal,
+          ...getOfferSender(proposal),
+          id: proposal.id,
+          type: defaults.type,
+          turn: Number(proposal.turn ?? turn),
+          title: defaults.title,
+          preview: proposal.preview || defaults.preview,
+          body: proposal.body || defaults.body,
+          terms: [
+            { label: "Fee", value: feeLabel },
+            ...(existingTerms.length ? existingTerms : defaults.terms),
+          ],
+          feeLabel,
+          status: proposal.status || "pending",
+        };
+      };
+
+      if (proposalIsPending(gameState?.branding_proposal) && !gameState.brandingPackage && isAffordable(gameState.branding_proposal)) {
+        offers.push(buildPopupOffer(gameState.branding_proposal, {
+          type: "branding",
+          title: "Branding Package Offer",
+          preview: `A branded promotion push for ${formatEuro(proposalFee(gameState.branding_proposal))} to strengthen sponsor, vendor and visitor appeal.`,
+          body: "This package improves the event's commercial presentation with stronger visual branding and promotional positioning. It is meant to make the plan easier for sponsors, vendors and visitors to trust.",
+          terms: [
+            { label: "Primary effect", value: "Higher sponsor, vendor and visitor appeal" },
+          ],
+        }));
+      }
+
+      const isLastChance = turn >= maxTurns;
+      if (proposalIsPending(gameState?.premiumWifi_proposal) && !gameState.premiumWifi && isAffordable(gameState.premiumWifi_proposal) && isLastChance) {
+        offers.push(buildPopupOffer(gameState.premiumWifi_proposal, {
+          type: "wifi",
+          title: isLastChance ? "Last Chance: Premium Wi-Fi Upgrade" : "Premium Wi-Fi Upgrade",
+          preview: `A premium connectivity upgrade for ${formatEuro(proposalFee(gameState.premiumWifi_proposal))} to improve the visitor and vendor experience.`,
+          body: "This upgrade adds a more reliable on-site connection for guests, vendors and sponsors. It improves perceived service quality and supports smoother event-day operations.",
+          terms: [
+            { label: "Primary effect", value: "Premium on-site connectivity" },
+          ],
+        }));
+      }
+
+      return {
+        popupReports: reports,
+        popupOffers: offers,
+      };
+    }
+
+    function showPopupOffersAndReports(offers = [], reports = []){
+      if (typeof PopupPanel === "undefined") return;
+
+      const queue = [
+        ...(Array.isArray(reports) ? reports : []),
+        ...(Array.isArray(offers) ? offers : []),
+      ].filter(item => item && item.id && item.type);
+
+      if (!queue.length) return;
+
+      let activePopup = null;
+      let index = 0;
+
+      const showNext = () => {
+        if (activePopup || index >= queue.length) return;
+
+        const item = queue[index++];
+        let actionInProgress = false;
+        let popup = null;
+
+        const closeThisPopup = () => {
+          if (popup) popup.close();
+        };
+
+        const runAction = async (handler, id) => {
+          if (actionInProgress) return;
+          actionInProgress = true;
+          try {
+            const result = typeof handler === "function" ? await handler(id) : undefined;
+            if (result !== false) {
+              closeThisPopup();
+            } else {
+              actionInProgress = false;
+            }
+          } catch (err) {
+            actionInProgress = false;
+            console.error("Popup action failed:", err);
+          }
+        };
+
+        popup = new PopupPanel({
+          item,
+          autoClose: false,
+          onAccept: id => runAction(acceptDeskItem, id),
+          onDecline: id => runAction(declineDeskItem, id),
+          onDismiss: () => closeThisPopup(),
+          onClose: () => {
+            if (activePopup === popup) {
+              activePopup = null;
+            }
+            setTimeout(showNext, 170);
+          },
+        });
+        activePopup = popup;
+        activePopup.show();
+      };
+
+      showNext();
+    }
+
+    function showTurnReport(report, onAfterClose) {
       const groups = getGroupLabels();
+      let afterCloseHandled = false;
+      const runAfterClose = () => {
+        if (afterCloseHandled) return;
+        afterCloseHandled = true;
+        if (typeof onAfterClose === "function") {
+          setTimeout(onAfterClose, 170);
+        }
+      };
+      let continueLabel = null;
+      if(report.turn >= worldSettings.maxTurns){
+        continueLabel = `Final Preparations →`
+      }
+
       const modal = new TurnSummaryModal({
         turnNumber: report.turn,
         openingBalance: report.openingBudget,
@@ -4868,7 +5087,11 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         ticketPrice: report.ticketPrice,
         reasonableness: { current: report.priceReasonableness, target: 1.0 },
         onContinue: () => { modal.close(); },
-        onClose:    () => console.log('summary dismissed'),
+        onClose:    () => {
+          console.log('summary dismissed');
+          runAfterClose();
+        },
+        continueLabel,
       });
 
       modal.show();
@@ -5124,7 +5347,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function getAssistantProjectionActual(){
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
-      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, {
+      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, SPONSORS_LIST, {
         mutate: false,
         deterministic: true,
       });
