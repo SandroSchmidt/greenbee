@@ -62,7 +62,11 @@ async function loadGlobalSettings() {
 
 async function saveGlobalSettings(newSettings) {
   globalsettingsCache = newSettings;
-  await globalRef.set(newSettings);
+  try {
+      await globalRef.set(newSettings);
+  } catch (error) {
+      console.log("Error in save global settings: ", error);
+  }
 }
 
 // ===== World Settings (pro Welt) =================================

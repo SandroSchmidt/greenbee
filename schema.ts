@@ -52,6 +52,35 @@ export interface GlobalSettings {
 
   marketingChannels: Record<MarketingChannelKey, MarketingChannelDefinition>;
   baseRules: BaseRules;
+  salesTeams: SalesTeam;
+  boothsPriceAdjustmentRange: {
+    from:number,
+    to:number,
+  }
+}
+
+interface SalesTeamEffect {
+  active: boolean;
+  value: {from: number, to:number};
+}
+
+interface SalesTeamEffects {
+  ticket_price_reasonableness: SalesTeamEffect;
+  marketing_impact: SalesTeamEffect;
+  vendor_offer_boost: SalesTeamEffect;
+}
+
+interface SalesTeam {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  tagline: string;
+  bio: string;
+  stats: string[];
+  icon: string;
+  fee: number;
+  effects: SalesTeamEffects;
 }
 
 export type Vec3Labels = [string, string, string];

@@ -1006,6 +1006,13 @@
     font-size: 15px;
     letter-spacing: .04em;
     flex-shrink: 0;
+    overflow: hidden;
+  }
+  .hire-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
   .hire-name{
     font-size: 14.5px;
@@ -1287,7 +1294,8 @@
     border: 0.5px solid var(--oap-border, rgba(0, 0, 0, 0.1));
   }
 
-  .assistant-hired-icon img { 
+  .assistant-hired-icon img,
+  .sales-team-hired-icon img {
     width: 100%;
     height: 100%;
     scale: 140%;
@@ -1692,40 +1700,6 @@
     const FONT_SIZE = "10px";
     const FONT_FAMILY = "system-ui, sans-serif";
 
-    // ===== Sales teams (placeholder data) =====
-    const SALES_TEAMS = [
-      {
-        id: "ironpath",
-        name: "Ironpath Sales Co.",
-        initials: "IS",
-        color: "#0f172a",
-        tagline: "Ticket yield specialists",
-        bio: "Commercial ticketing specialists who are strong at positioning the event as higher-value. Best when you want to improve ticket conversion and support a slightly stronger ticket price.",
-        stats: ["Ticket sales boost", "Slight ticket price lift"],
-        fee: 250
-      },
-      {
-        id: "northwave",
-        name: "Northwave Outreach",
-        initials: "NW",
-        color: "#2563eb",
-        tagline: "Squeezing maximum from your marketing budget",
-        bio: "A modern marketing team focused on reach, campaign efficiency and channel mix. Best when you want stronger awareness and more visitors coming through the gate.",
-        stats: ["Marketing boost", "More visitor demand"],
-        fee: 250
-      },
-      {
-        id: "havenfield",
-        name: "Havenfield Partners",
-        initials: "HF",
-        color: "#16a34a",
-        tagline: "Vendor relations specialists",
-        bio: "A partnership-led team with a strong network of local vendors and exhibitors. Best when you want to attract more stand offers and negotiate better proposal quality for board placements.",
-        stats: ["More vendor interest", "Better stand offers"],
-        fee: 250
-      }
-    ];
-
     const ASSISTANTS = [
       {
         id: "mira",
@@ -1762,7 +1736,7 @@
       }
     ];
 
-    // ===== Spielzustand =====
+    // ===== Game state =====
     let globalSettings = null;
     let worldSettings = null;
     let worldId = "";
@@ -1777,7 +1751,8 @@
     let selectedTileId = null;
     let finalEventInProgress = false;
 
-    
+
+    let SALES_TEAMS = [];
 
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     const MARKETING_WEBSITE_PRICE = 1200;
@@ -3180,8 +3155,8 @@
         if(salesTeamObj){
           salesTeamIconPlace.classList.remove('gb-row__value');
           salesTeamIconPlace.classList.add('sales-team-hired-icon');
-          salesTeamIconPlace.style.background = salesTeamObj.color;
-          salesTeamIconPlace.innerHTML = salesTeamObj.initials || '';
+          salesTeamIconPlace.style.background = '';
+          salesTeamIconPlace.innerHTML = `<img src="${salesTeamObj.icon}" alt="${salesTeamObj.name}" />`;
         } else {
           salesTeamIconPlace.classList.remove('sales-team-hired-icon');
           salesTeamIconPlace.classList.add('gb-row__value');
@@ -3704,6 +3679,7 @@
       avatar.textContent = ((studentRecord && studentRecord.name || playerId)[0] || '-').toUpperCase();
 
       globalSettings = await loadGlobalSettings();
+      SALES_TEAMS = globalSettings?.salesTeams ?? [];
       worldSettings = await loadWorldSettings(worldId);
 
       let existing = await loadGameState(worldId, playerId);
@@ -5176,7 +5152,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
         card.innerHTML = `
           ${isHired ? `<div class="hire-card-badge">✓ Hired</div>` : ""}
           <div class="hire-head">
-            <div class="hire-avatar" style="background:${team.color}">${team.initials}</div>
+            <div class="hire-avatar" style="${team.icon ? '' : `background:${team.color}`}">${team.icon ? `<img src="${team.icon}" alt="${team.name}">` : team.initials}</div>
             <div class="grow" style="min-width:0;">
               <div class="hire-name nowrap-ellipsis">${team.name}</div>
               <div class="hire-tagline">${team.tagline}</div>

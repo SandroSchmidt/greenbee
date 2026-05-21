@@ -156,9 +156,16 @@ function calculateTicketPriceReasonableness({
   }
 
   let salesTeamMultiplier = 1.0;
-  if(gameState?.salesTeam == 'ironpath'){
-    const randPercentIncrease = randomInt(5,15);
-    salesTeamMultiplier = (100+randPercentIncrease)/100;
+  
+  if(gameState?.salesTeam){
+    const salesTeam = globalSettings.salesTeams.find(itm=>itm.id == gameState.salesTeam);
+    if(salesTeam.effects['ticket_price_reasonableness'].active){
+      low_high = [salesTeam.effects['ticket_price_reasonableness'].value.from, 
+      salesTeam.effects['ticket_price_reasonableness'].value.to];
+      const randPercentIncrease = randomInt(low_high[0], low_high[1]);
+      salesTeamMultiplier = (100+randPercentIncrease)/100;
+      console.log("Sales team multiplier: ", salesTeamMultiplier);
+    }
   }
 
   console.log("sales team multiplier: ", salesTeamMultiplier);
@@ -180,8 +187,13 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
     ? gameState.interest.map(v => Math.max(0, Number(v) || 0))
     : [0, 0, 0];
   
-  if(gameState?.salesTeam && gameState?.salesTeam=='northwave'){
-    marketingScore.forEach((itm,idx)=>marketingScore[idx] = itm+5);
+  if(gameState?.salesTeam){
+    const salesTeam = globalSettings.salesTeams.find(itm=>itm.id == gameState.salesTeam);
+    if(salesTeam.effects['marketing_impact'].active){
+      const randAddon = randomInt(salesTeam.effects['marketing_impact'].value.from, salesTeam.effects['marketing_impact'].value.to)
+      marketingScore.forEach((itm,idx)=>marketingScore[idx] = itm+randAddon);
+      console.log("Added rand Addon: ", randAddon);
+    }
   }
 
 
@@ -402,10 +414,18 @@ function calculateVendorOfferPrice({
   const objects = globalSettings?.objects || {};
   const obj = objects[stand.obj_key] || {};
 
-  const low_high = (gameState?.salesTeam && gameState?.salesTeam == 'havenfield') ? [10, 50] : [-10, 25];
-  
-  const addRandomToBasePrice = randomInt(low_high[0], low_high[1]);
-  const basePrice = Math.max(1, Number(obj.price + addRandomToBasePrice || 0));
+  let low_high = [globalSettings?.boothsPriceAdjustmentRange?.from ?? 0, globalSettings?.boothsPriceAdjustmentRange?.to ?? 0];
+
+  if(gameState?.salesTeam){
+    const salesTeam = globalSettings.salesTeams.find(itm=>itm.id == gameState.salesTeam);
+    if(salesTeam.effects['vendor_offer_boost'].active){
+      low_high = [salesTeam.effects['vendor_offer_boost'].value.from, 
+      salesTeam.effects['vendor_offer_boost'].value.to];
+    }
+  }
+
+  const priceVariance = randomInt(low_high[0], low_high[1]);
+  const basePrice = Math.max(1, Number(obj.price + priceVariance || 0));
   //console.log("Base price> ", basePrice)
   // Ticket sales make vendors more confident.
   // Range roughly: 0.85x -> 1.35x
