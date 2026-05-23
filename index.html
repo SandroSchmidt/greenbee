@@ -1856,7 +1856,7 @@
         //adding suitability points that speaker brings to the table
         const speakerAppointment = (gameState?.appointedSpeakers ?? []).find(itm => itm.tileId == tile);
         if(speakerAppointment){
-          const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id == speakerAppointment.speakerId);
+          const appointedSpeaker = globalSettings.speakers.find(itm=>itm.id == speakerAppointment.speakerId);
           if (appointedSpeaker && Array.isArray(appointedSpeaker.suitability)) {
             appointedSpeaker.suitability.forEach((v, i)=> {res[i] += Number(v || 0); });
           }
@@ -1864,7 +1864,7 @@
       });
 
       if(gameState?.sponsors){
-        const sponsorsEffect = getAccumulatedSponsorEffects(gameState, SPONSORS_LIST);
+        const sponsorsEffect = getAccumulatedSponsorEffects(gameState, globalSettings.sponsors);
         res.forEach((itm, idx)=>{
           res[idx] += sponsorsEffect.suitability_effect[idx];
         })
@@ -2676,7 +2676,7 @@
     function getAppointedSpeakerForTile(tileId) {
       const appointment = getSpeakerAppointmentForTile(tileId);
       if (!appointment) return null;
-      const speaker = SPEAKERS_LIST.find(item => item.id === appointment.speakerId);
+      const speaker = globalSettings.speakers.find(item => item.id === appointment.speakerId);
       if (!speaker) return null;
       return Object.assign({}, speaker, {
         appointmentId: appointment.appointmentId,
@@ -2694,7 +2694,7 @@
           .filter(appointment => appointment && appointment.tileId !== tileId)
           .map(appointment => appointment.speakerId)
       );
-      return SPEAKERS_LIST.filter(speaker => !unavailableSpeakerIds.has(speaker.id));
+      return globalSettings.speakers.filter(speaker => !unavailableSpeakerIds.has(speaker.id));
     }
 
     async function onAppointSpeaker(speakerId, tileId){
@@ -2706,7 +2706,7 @@
         };
       }
 
-      const speaker = SPEAKERS_LIST.find(itm => itm.id == speakerId);
+      const speaker = globalSettings.speakers.find(itm => itm.id == speakerId);
       if(!speaker){
         return {error: 'Speaker not found.'};
       }
@@ -3219,7 +3219,7 @@
 
       const suitability = computesuitability();
       gameState.interest = computeGlobalInterestFromMarketing();
-      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, SPONSORS_LIST, {
+      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, {
         mutate: false,
         deterministic: true,
       });
@@ -3429,7 +3429,7 @@
 
     function calculateSponsorsIncome(turn, sponsors){
       const total = sponsors.reduce((acc, itm)=>{
-        const sponsor = SPONSORS_LIST.find(spo => spo.id == itm.id);
+        const sponsor = globalSettings.sponsors.find(spo => spo.id == itm.id);
         if(sponsor.possible_offers[itm.deal].amount<=0){
           return 0;
         }
@@ -3466,7 +3466,7 @@
 
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
-      const ticketResult = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, SPONSORS_LIST, { mutate: true });
+      const ticketResult = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, { mutate: true });
       const sponsorsIncome = calculateSponsorsIncome(currentTurn+1, gameState.sponsors);
       console.log("PSOJNSORS INOCME: ", sponsorsIncome)
       const ticketIncome = Number(ticketResult.ticketIncome || 0);
@@ -3586,7 +3586,7 @@
       } else if (gameState?.premiumWifi_proposal && gameState?.premiumWifi_proposal?.status != "accepted") {
         gameState.premiumWifi_proposal = null;
       }
-      const sponsoringOffers = getInterestedSponsors(gameState, SPONSORS_LIST);
+      const sponsoringOffers = getInterestedSponsors(gameState, globalSettings?.sponsors ?? []);
       console.log("interested sponsors: ", sponsoringOffers);
       addGeneratedProposalsToGameState(vendorProposals);
       addGeneratedSponsoringOffersToGameState(sponsoringOffers);
@@ -3762,7 +3762,7 @@
 
         const speakerAppointment = gameState?.appointedSpeakers.find(itm=>itm.tileId == id);
         if(speakerAppointment){
-            const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id==speakerAppointment.speakerId);
+            const appointedSpeaker = globalSettings.speakers.find(itm=>itm.id==speakerAppointment.speakerId);
             for(let i=0; i<3; i++){
                 suit[i] += Number(appointedSpeaker?.suitability?.[i] || 0);
             }
@@ -4006,8 +4006,8 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     }
 
     function getSponsorDefinition(sponsorId) {
-      const sponsors = typeof window !== "undefined" && Array.isArray(window.SPONSORS_LIST) ? window.SPONSORS_LIST : [];
-      return sponsors.find(sponsor => sponsor && sponsor.id === sponsorId) || null;
+      const sponsors = globalSettings.sponsors ?? [];
+      return sponsors.find(sponsor => sponsor.id === sponsorId) || null;
     }
 
     function getSponsorOfferDefinition(sponsorId, dealIndex) {
@@ -4289,7 +4289,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
 
       gameState.sponsoring_offers = gameState.sponsoring_offers.filter(item => item && item.id !== sponsorId);
 
-      const sponsorObj = SPONSORS_LIST.find(itm=>itm.id == offer.id);
+      const sponsorObj = (globalSettings?.sponsors ?? []).find(itm=>itm.id == offer.id);
       const dealObj = sponsorObj.possible_offers[offer.deal];
       if(dealObj.amount>0){
         gameState.budget += dealObj.amount;
@@ -5323,7 +5323,7 @@ Suitability (G1/G2/G3): ${suitability[0]||0} / ${suitability[1]||0} / ${suitabil
     function getAssistantProjectionActual(){
       gameState.interest = computeGlobalInterestFromMarketing();
       const suitability = computesuitability();
-      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, SPONSORS_LIST, {
+      const preview = calculateTicketsAfterTurn(suitability, worldSettings, gameState, globalSettings, {
         mutate: false,
         deterministic: true,
       });

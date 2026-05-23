@@ -11,6 +11,9 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <!-- Hier muss DEIN firebase.initializeApp({...})-Code stehen -->
   <script src="functions.js"></script>
+  <script src="components/universalsettings/sponsors-component.js"></script>
+  <script src="components/universalsettings/speakers-component.js"></script>
+  <script src="components/universalsettings/vendor-offers-settings-component.js"></script>
 </head>
 <style>
 /* ===============================
@@ -1237,6 +1240,7 @@ body.theme-dark .icon-trigger .empty-icon {
   .st-effect { grid-template-columns: auto 1fr; row-gap: 8px; }
   .st-effect-range { grid-column: span 2; justify-self: end; }
 }
+
 </style>
 <body class="theme-light">
   <header id="main-header">
@@ -1401,26 +1405,36 @@ body.theme-dark .icon-trigger .empty-icon {
   </button>
 </section>
 
+<!--SPONSORS LIST-->
+<div id="sponsors-mount"></div>
+<div id="speakers-mount"></div>
+<div id="vendor-offers-settings-mount"></div>
 
     <section class="panel">
+      #?#
       <h2>Gameplay Calibrations</h2>
       <p class="text-muted">Universal control parameters (can be expanded later).</p>
       <label class="field">
         <span>Suitability saturation K (optional)</span>
         <input type="number" id="base-suitability-k" min="0">
       </label>
-      <h2>Booth Price Adjustment</h2>
+      <span>######################################## SEPARATOR #########################################</span>
+      <h2>Renting Booths Logic</h2>
+      <p class="st-panel-desc">Hire-able sales teams shown on the marketing panel.</p>
+      <h3>Booth Price Adjustment</h2>
       <p class="text-muted">Random adjustment applied to the booth’s base price when calculating the vendor’s initial offer.</p>
       <div class="" style="display: flex; gap: 5px;">
         <label class="field">
-          <span style="display:block" class="">From</span>
+          <span style="display:block; font-weight: 500;" class="">From</span>
           <input type="number" id="priceAdjustment-from" min="0">
         </label>
         <label class="field">
-          <span style="display:block" class="">To</span>
+          <span style="display:block; font-weight: 500;" class="">To</span>
           <input type="number" id="priceAdjustment-to" min="0">
         </label>
       </div>
+      <span>######################################## SEPARATOR #########################################</span>
+      <h2>Ticket Sales Logic</h2>
     </section>
 
 
@@ -1610,9 +1624,22 @@ body.theme-dark .icon-trigger .empty-icon {
       renderSalesTeamsTable(localGlobal.salesTeams);  
       document.getElementById("base-suitability-k").value =
         (localGlobal.baseRules && localGlobal.baseRules.suitabilitySaturationK) || "";
-      const boothsPriceAdjustmentRange = localGlobal?.boothsPriceAdjustmentRange;
-      document.getElementById("priceAdjustment-from").value = boothsPriceAdjustmentRange?.from ?? 0;
-      document.getElementById("priceAdjustment-to").value = boothsPriceAdjustmentRange?.to ?? 0;
+
+      if (!localGlobal.sponsors) localGlobal.sponsors = [];
+      sponsorsUI = SponsorsComponent.mount('#sponsors-mount', localGlobal.sponsors);
+
+      if (!localGlobal.speakers) localGlobal.speakers = [];
+      speakersUI = SpeakersComponent.mount('#speakers-mount', localGlobal.speakers); 
+
+      if (!localGlobal.baseRules.vendorProposalRules) localGlobal.baseRules.vendorProposalRules = {};
+
+      vendorOffersSettingsUI = VendorOffersSettingsComponent.mount(
+          '#vendor-offers-settings-mount',
+          localGlobal.baseRules.vendorProposalRules,
+          {objects: localGlobal.objects}
+      );
+
+      console.log("GLOBAL: ", localGlobal);
     }
 
     document.getElementById("save-global").addEventListener("click", async () => {
@@ -1665,14 +1692,15 @@ mrows.forEach(tr => {
 localGlobal.marketingChannels = channels;
 localGlobal.salesTeams = gatherSalesTeams();
       localGlobal.baseRules = {
-        suitabilitySaturationK: parseFloat(document.getElementById("base-suitability-k").value) || 0
+        suitabilitySaturationK: parseFloat(document.getElementById("base-suitability-k").value) || 0,
+        vendorProposalRules: vendorOffersSettingsUI.getData(),
       };
 
-      localGlobal.boothsPriceAdjustmentRange = {
-        from: parseInt(document.getElementById("priceAdjustment-from").value) ?? 0,
-        to: parseInt(document.getElementById("priceAdjustment-to").value) ?? 0
-      }
       console.log("localGlobal: ", localGlobal)
+
+      localGlobal.sponsors = sponsorsUI.getData();
+      localGlobal.speakers = speakersUI.getData();
+
 
       try {
         await saveGlobalSettings(localGlobal);
@@ -1707,6 +1735,8 @@ function renderMarketingTable() {
   });
 }
 document.getElementById("add-marketing").addEventListener("click", () => {
+  console.log("Not working for now - its interconnected with parameters in other structures like sponsors, sales teams etc., and changing number of chanels at the moment would break the logic. Would be covered on demand when this becomes important.")
+  return;
   const key = "mkt_" + Math.random().toString(36).slice(2,7);
 
   if (!localGlobal.marketingChannels) localGlobal.marketingChannels = {};
@@ -1720,6 +1750,8 @@ document.getElementById("add-marketing").addEventListener("click", () => {
 });
 document.querySelector("#marketing-table tbody").addEventListener("click", e => {
   if (e.target.dataset.action === "delete") {
+    alert("Not working for now - its interconnected with parameters in other structures like sponsors, sales teams etc., and changing number of chanels at the moment would break the logic. Would be covered on demand when this becomes important.");
+    return;
     const row = e.target.closest("tr");
     const key = row.querySelector('input[data-field="key"]').value.trim();
     if (key && localGlobal.marketingChannels && localGlobal.marketingChannels[key]) {
@@ -2072,6 +2104,10 @@ document.getElementById("add-sales-team-btn").addEventListener("click", () => {
   out.textContent = JSON.stringify(gatherSalesTeams(), null, 2);
   out.classList.add("show");
 });*/
+
+
+
+
 
     initPage();
   </script>

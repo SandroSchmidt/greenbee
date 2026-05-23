@@ -86,7 +86,7 @@ function calculateTicketPriceReasonableness({
   infrastructuralSpendings,
   infrastructureDivisor,
   gameState,
-  SPONSORS_LIST,
+  sponsors_list,
 
   previousPriceFactors = [],
   cumulativeSalesFactor = 0,
@@ -140,7 +140,7 @@ function calculateTicketPriceReasonableness({
 
   let sponsorsMultiplier = 1.0;
   if(gameState?.sponsors){
-    const sponsorsEffect = getAccumulatedSponsorEffects(gameState, SPONSORS_LIST);
+    const sponsorsEffect = getAccumulatedSponsorEffects(gameState, sponsors_list);
     const sponsorMultiplier = (100 + (sponsorsEffect.ticket_reasonableness_boost || 0)) / 100;
     sponsorsMultiplier *= sponsorMultiplier;
   }
@@ -172,7 +172,7 @@ function calculateTicketPriceReasonableness({
   return clamp(historyAdjustedFactor * salesMultiplier * sponsorsMultiplier * brandingMultiplier * wifiMultiplier * salesTeamMultiplier, 0, maxFactor);
 }
 
-function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, globalSettings, SPONSORS_LIST, options = {}) {
+function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, globalSettings, options = {}) {
   const opts = options || {};
 
   const groupPopulation = Array.isArray(worldSettings && worldSettings.population)
@@ -210,7 +210,7 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
     infrastructuralSpendings: gameState && gameState.infrastructuralSpendings,
     infrastructureDivisor,
     gameState: gameState,
-    SPONSORS_LIST: SPONSORS_LIST,
+    sponsors_list: globalSettings.sponsors,
     previousPriceFactors: Array.isArray(gameState && gameState.priceReasonablenessProgress)
       ? gameState.priceReasonablenessProgress
       : [],
@@ -330,10 +330,24 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
   );
 
   const availableStands = getAvailableVendorTiles(gameState);
+  if(availableStands.length<1){
+    return [];
+  }
 
   const proposals = [];
 
-  availableStands.forEach(stand => {
+  let salesTeamRandomOfferIncrease = randomInt(1, 3);
+  let addonsList = availableStands.map(() => 0)
+  console.log("sales team randomOffer incr: ", salesTeamRandomOfferIncrease);
+  console.log("addons: ", addonsList);
+  while(salesTeamRandomOfferIncrease > 0){
+    const randBoothIdx = randomInt(0, availableStands.length-1);
+    addonsList[randomBoothIdx] += 1;
+    salesTeamRandomOfferIncrease -= 1;
+  }
+  console.log("Addons after: ", addonsList);
+
+  availableStands.forEach((stand, standIdx) => {
     //console.log("AVAILABLE STAND: ", stand);
     const proximity = calculateVendorTileProximityScore(
       stand.tile,
@@ -350,6 +364,8 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
       proximityMultiplier: proximity.multiplier,
       maxOffersPerTile: opts.maxOffersPerTile,
     });
+
+    offerCount += addonsList[standIdx];
 
     const arrProps = [];
     for (let i = 0; i < offerCount; i++) {
@@ -386,16 +402,6 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
   return shuffleArray(proposals).slice(0, opts.maxTotalOffers);
     //.sort((a, b) => b.price - a.price)
 }
-
-function getBrandingProposal(gameState){
-return {
-  price: 200,
-  code: 'branding',
-  title: 'Branding Package',
-  vendorId: 'Sales Team XY'
-}
-}
-
 
 /* =========================================================
    OFFER PRICE
@@ -498,14 +504,6 @@ function calculateOfferCountForTile({
 
   // Base count can be 0 if the event is unattractive.
   let count = Math.floor(randomBetween(0, 1.25) + demandScore * 3);
-  
-  //console.log("Offer count for tile:", count);
-  // Sales team brings extra vendor leads.
-  // 1 to 3 offers.
-  // ## This should be applied overal - as up to three more proposals total, not per tile
-  if (gameState?.salesTeam) {
-    count += randomInt(1, 3);
-  }
 
   return clampInt(count, 0, maxOffersPerTile);
 }
@@ -1494,7 +1492,7 @@ function getTicketSalesPercentage(gameState) {
   return (totalTicketSales / capacity) * 100;
 }
 
-function getAccumulatedSponsorEffects(gameState, SPONSORS_LIST){
+function getAccumulatedSponsorEffects(gameState, sponsors_list){
   const effectsAccumulated = {
        suitability_effect: [0, 0, 0],
        marketing_effect: [0, 0, 0, 0],
@@ -1506,7 +1504,7 @@ function getAccumulatedSponsorEffects(gameState, SPONSORS_LIST){
   }
 
   gameState.sponsors.forEach(itm=>{
-    const sponsor = SPONSORS_LIST.find(spo => spo.id == itm.id);
+    const sponsor = sponsors_list.find(spo => spo.id == itm.id);
     sponsor.possible_offers[itm.deal].suitability_effect.forEach((val, idx)=>{
       effectsAccumulated.suitability_effect[idx] += val;
     })

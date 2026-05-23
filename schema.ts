@@ -51,12 +51,30 @@ export interface GlobalSettings {
   objects: Record<ObjectKey, GameObjectDefinition>;
 
   marketingChannels: Record<MarketingChannelKey, MarketingChannelDefinition>;
-  baseRules: BaseRules;
+  baseRules: {
+    suitabilitySaturationK: number,
+    vendorProposalRules: VendorOffersConfig,
+  };
+  
   salesTeams: SalesTeam;
   boothsPriceAdjustmentRange: {
     from:number,
     to:number,
   }
+  sponsors: Sponsor[];
+  speakers: Performer[];
+}
+
+interface Performer {
+    id: string,
+    name: string,
+    topic: string,
+    initials: string,
+    color: string,
+    appeal: string[],
+    suitability: Vec3,
+    fee: number,
+    icon: string
 }
 
 interface SalesTeamEffect {
@@ -83,6 +101,35 @@ interface SalesTeam {
   effects: SalesTeamEffects;
 }
 
+interface SponsorRequirementSet {
+  sales_team_required: boolean;
+  min_ticket_sales_percentage: number;
+  min_ticket_sales_efficiency_last_turns: number[];
+  min_suitability_per_group: number[];
+  min_infrastructural_investment: number;
+  min_vendors: number;
+  min_appointed_speakers: number;
+}
+
+interface SponsorOffer {
+  installments: number;
+  amount: number;
+  suitability_effect: number[];
+  marketing_effect: number[];
+  ticket_reasonableness_boost: number;
+}
+
+interface Sponsor {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  tagline: string;
+  icon: string;
+  requirement_sets: SponsorRequirementSet[];
+  possible_offers: SponsorOffer[];
+}
+
 export type Vec3Labels = [string, string, string];
 
 export interface GameObjectDefinition {
@@ -105,9 +152,6 @@ export interface MarketingChannelDefinition {
   icon?: string;
 }
 
-export interface BaseRules {
-  suitabilitySaturationK: number;
-}
 
 /**
  * /worlds/{worldId}/worldsettings
@@ -408,3 +452,78 @@ export type LoadGlobalSettingsResult = GlobalSettings;
 export type LoadWorldSettingsResult = WorldSettings;
 export type LoadPlayerListResult = Record<PlayerId, PlayerRecord>;
 export type LoadGameStateResult = PersistedGameState | null;
+
+
+// VENDOR OFFER SETTINGS
+
+export interface VendorOffersConfig {
+  maxOffersPerTile: number;
+  maxTotalOffers: number;
+  roundPriceTo: number;
+
+  offerCount: OfferCountConfig;
+  offerPrice: OfferPriceConfig;
+  proximity: ProximityConfig;
+  marketing: MarketingConfig;
+  vendorSuitability: VendorSuitabilityConfig;
+}
+
+export interface OfferCountConfig {
+  randomBaseMin: number;
+  randomBaseMax: number;
+  demandMultiplier: number;
+  salesTeamExtraOffersFrom: number;
+  salesTeamExtraOffersTo: number;
+  weights: OfferCountWeights;
+}
+
+export interface OfferCountWeights {
+  ticketSales: number;
+  salesEfficiency: number;
+  marketing: number;
+  proximity: number;
+}
+
+export interface OfferPriceConfig {
+  ticketSalesMinMultiplier: number;
+  ticketSalesBonusRange: number;
+
+  salesEfficiencyMinMultiplier: number;
+  salesEfficiencyBonusRange: number;
+
+  marketingMinMultiplier: number;
+  marketingBonusRange: number;
+
+  salesTeamMultiplierFrom: number;
+  salesTeamMultiplierTo: number;
+
+  marketNoiseFrom: number;
+  marketNoiseTo: number;
+}
+
+export interface ProximityConfig {
+  minMultiplier: number;
+  maxMultiplier: number;
+  penalties: ProximityModifier[];
+  bonuses: ProximityModifier[];
+  genericObjectBonusStrength: number;
+  genericObjectSaturationK: number;
+}
+
+export interface ProximityModifier {
+  object: string;
+  value: number;
+}
+
+export interface MarketingConfig {
+  saturationK: number;
+  websiteBoostFromPercent: number;
+  websiteBoostToPercent: number;
+}
+
+export interface VendorSuitabilityConfig {
+  regularFrom: number;
+  regularTo: number;
+  premiumFrom: number;
+  premiumTo: number;
+}
