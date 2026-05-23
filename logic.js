@@ -291,19 +291,80 @@ function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, glo
     console.log("STANDS: ", availableStands);
 }*/
 
+
+/* ####################################################################################### */
+/* ####################################################################################### */
+/* ####################################################################################### */
+
 /* ---------------------------------------------------------------------------------------- */
-/* ------------------------------VENDOR PROPOSALS LOGIC------------------------------------ */
+/* ------------------------------ VENDOR PROPOSALS LOGIC ---------------------------------- */
 /* ---------------------------------------------------------------------------------------- */
+
+const DEFAULT_VENDOR_PROPOSAL_RULES = {
+  maxOffersPerTile: 5,
+  maxTotalOffers: 12,
+  roundPriceTo: 10,
+
+  offerCount: {
+    randomBaseMin: 0,
+    randomBaseMax: 1.25,
+    demandMultiplier: 3,
+    salesTeamExtraOffersFrom: 1,
+    salesTeamExtraOffersTo: 3,
+    weights: {
+      ticketSales: 0.30,
+      salesEfficiency: 0.20,
+      marketing: 0.35,
+      proximity: 0.15,
+    },
+  },
+
+  offerPrice: {
+    baseBoothsPriceAdjustmentFrom: -10,
+    baseBoothsPriceAdjustmentTo: 15,
+
+    ticketSalesMinMultiplier: 0.85,
+    ticketSalesBonusRange: 0.5,
+
+    salesEfficiencyMinMultiplier: 0.6,
+    salesEfficiencyBonusRange: 0.8,
+
+    marketingMinMultiplier: 0.6,
+    marketingBonusRange: 0.8,
+
+    salesTeamMultiplierFrom: 1.2,
+    salesTeamMultiplierTo: 1.5,
+
+    marketNoiseFrom: 0.9,
+    marketNoiseTo: 1.2,
+  },
+
+  proximity: {
+    minMultiplier: 0.55,
+    maxMultiplier: 1.75,
+    penalties: [],
+    bonuses: [],
+    genericObjectBonusStrength: 0.16,
+    genericObjectSaturationK: 30,
+  },
+
+  marketing: {
+    saturationK: 50,
+    websiteBoostFromPercent: 12,
+    websiteBoostToPercent: 25,
+  },
+
+  vendorSuitability: {
+    regularFrom: 1,
+    regularTo: 9,
+    premiumFrom: 5,
+    premiumTo: 15,
+  },
+};
 
 function generateProposals(gameState, worldSettings, globalSettings, options = {}) {
-  const opts = {
-    maxOffersPerTile: 5,
-    maxTotalOffers: 12,
-    roundPriceTo: 10,
-    ...options,
-  };
-
-  const objects = globalSettings?.objects || {};
+  const rules = getVendorProposalRules(globalSettings, options);
+  console.log("RULES: ", rules);
   const population = Array.isArray(worldSettings?.population)
     ? worldSettings.population
     : [0, 0, 0];
@@ -326,81 +387,106 @@ function generateProposals(gameState, worldSettings, globalSettings, options = {
 
   const marketingFactor = calculateMarketingProposalFactor(
     gameState,
-    globalSettings
+    rules
   );
 
   const availableStands = getAvailableVendorTiles(gameState);
-  if(availableStands.length<1){
+  if (availableStands.length < 1) {
     return [];
   }
 
+  const salesTeamOfferAddons = getSalesTeamOfferAddons({
+    gameState,
+    availableStands,
+    maxOffersPerTile: rules.maxOffersPerTile,
+    salesTeamExtraOffersFrom: rules.offerCount.salesTeamExtraOffersFrom,
+    salesTeamExtraOffersTo: rules.offerCount.salesTeamExtraOffersTo,
+  });
+
   const proposals = [];
 
-  let salesTeamRandomOfferIncrease = randomInt(1, 3);
-  let addonsList = availableStands.map(() => 0)
-  console.log("sales team randomOffer incr: ", salesTeamRandomOfferIncrease);
-  console.log("addons: ", addonsList);
-  while(salesTeamRandomOfferIncrease > 0){
-    const randBoothIdx = randomInt(0, availableStands.length-1);
-    addonsList[randomBoothIdx] += 1;
-    salesTeamRandomOfferIncrease -= 1;
-  }
-  console.log("Addons after: ", addonsList);
-
   availableStands.forEach((stand, standIdx) => {
-    //console.log("AVAILABLE STAND: ", stand);
     const proximity = calculateVendorTileProximityScore(
       stand.tile,
       gameState,
       worldSettings,
-      globalSettings
+      globalSettings,
+      rules
     );
 
-    const offerCount = calculateOfferCountForTile({
-      gameState,
+    const baseOfferCount = calculateOfferCountForTile({
       totalSoldTicketsPercentage,
       avgSalesFactor,
       marketingFactor,
       proximityMultiplier: proximity.multiplier,
-      maxOffersPerTile: opts.maxOffersPerTile,
+      rules,
     });
 
-    offerCount += addonsList[standIdx];
+    const offerCount = clampInt(
+      baseOfferCount + Number(salesTeamOfferAddons[standIdx] || 0),
+      0,
+      rules.maxOffersPerTile
+    );
 
-    const arrProps = [];
     for (let i = 0; i < offerCount; i++) {
       const price = calculateVendorOfferPrice({
         stand,
         gameState,
         globalSettings,
+        rules,
         totalSoldTicketsPercentage,
         avgSalesFactor,
         marketingFactor,
         proximityMultiplier: proximity.multiplier,
-        roundPriceTo: opts.roundPriceTo,
       });
 
       proposals.push({
         price,
         obj_key: stand.obj_key,
         tile: stand.tile,
-        vendorSuitabilityByGroup: generateVendorSuitabilityByGroup(stand.obj_key),
-        vendorId: createVendorId(stand.tile, gameState.turn, i),
+        vendorSuitabilityByGroup: generateVendorSuitabilityByGroup(stand.obj_key, rules),
+        vendorId: createVendorId(stand.tile, gameState?.turn, i),
       });
-      arrProps.push({
-        price,
-        obj_key: stand.obj_key,
-        tile: stand.tile,
-        vendorSuitabilityByGroup: generateVendorSuitabilityByGroup(stand.obj_key),
-        vendorId: createVendorId(stand.tile, gameState.turn, i),
-      })
     }
   });
 
+  return shuffleArray(proposals).slice(0, rules.maxTotalOffers);
+}
 
-  //console.log("PROPOSALS: ", proposals);
-  return shuffleArray(proposals).slice(0, opts.maxTotalOffers);
-    //.sort((a, b) => b.price - a.price)
+function getSalesTeamOfferAddons({
+  gameState,
+  availableStands,
+  maxOffersPerTile,
+  salesTeamExtraOffersFrom,
+  salesTeamExtraOffersTo,
+}) {
+  const addonsList = availableStands.map(() => 0);
+
+  if (!gameState?.salesTeam || availableStands.length < 1) {
+    return addonsList;
+  }
+
+  let remainingAddons = randomInt(
+    salesTeamExtraOffersFrom,
+    salesTeamExtraOffersTo
+  );
+
+  // This distributes sales-team-generated offers overall, not once per booth.
+  // If a booth reaches maxOffersPerTile through addons, we try another booth.
+  let safety = availableStands.length * Math.max(1, remainingAddons) * 3;
+
+  while (remainingAddons > 0 && safety > 0) {
+    const randBoothIdx = randomInt(0, availableStands.length - 1);
+
+    if (addonsList[randBoothIdx] < maxOffersPerTile) {
+      addonsList[randBoothIdx] += 1;
+      remainingAddons -= 1;
+    }
+
+    safety -= 1;
+  }
+
+  return addonsList;
 }
 
 /* =========================================================
@@ -411,58 +497,59 @@ function calculateVendorOfferPrice({
   stand,
   gameState,
   globalSettings,
+  rules,
   totalSoldTicketsPercentage,
   avgSalesFactor,
   marketingFactor,
   proximityMultiplier,
-  roundPriceTo = 1,
 }) {
   const objects = globalSettings?.objects || {};
   const obj = objects[stand.obj_key] || {};
+  const priceRules = rules.offerPrice;
 
-  let low_high = [globalSettings?.boothsPriceAdjustmentRange?.from ?? 0, globalSettings?.boothsPriceAdjustmentRange?.to ?? 0];
+  let lowHigh = [
+    rules?.offerPrice?.baseBoothsPriceAdjustmentFrom ?? 0,
+    rules?.offerPrice?.baseBoothsPriceAdjustmentTo ?? 0,
+  ];
 
-  if(gameState?.salesTeam){
-    const salesTeam = globalSettings.salesTeams.find(itm=>itm.id == gameState.salesTeam);
-    if(salesTeam.effects['vendor_offer_boost'].active){
-      low_high = [salesTeam.effects['vendor_offer_boost'].value.from, 
-      salesTeam.effects['vendor_offer_boost'].value.to];
-    }
+  const salesTeam = getSalesTeamById(globalSettings, gameState?.salesTeam);
+  const vendorOfferBoost = salesTeam?.effects?.vendor_offer_boost;
+
+  if (gameState?.salesTeam && vendorOfferBoost?.active) {
+    lowHigh = [
+      vendorOfferBoost?.value?.from ?? lowHigh[0],
+      vendorOfferBoost?.value?.to ?? lowHigh[1],
+    ];
   }
 
-  const priceVariance = randomInt(low_high[0], low_high[1]);
+  const priceVariance = randomInt(lowHigh[0], lowHigh[1]);
   const basePrice = Math.max(1, Number(obj.price + priceVariance || 0));
-  //console.log("Base price> ", basePrice)
-  // Ticket sales make vendors more confident.
-  // Range roughly: 0.85x -> 1.35x
+
   const ticketSalesMultiplier =
-    0.85 + smoothstep(totalSoldTicketsPercentage) * 0.5;
+    priceRules.ticketSalesMinMultiplier +
+    smoothstep(totalSoldTicketsPercentage) * priceRules.ticketSalesBonusRange;
 
-   // console.log("Ticket sales multiplier> ", ticketSalesMultiplier);
-  // Recent sales efficiency also affects offer quality.
-  // Range roughly: 0.50x -> 1.80x
   const salesFactorMultiplier =
-    0.6 + clamp01(avgSalesFactor || 0) * 0.8;
+    priceRules.salesEfficiencyMinMultiplier +
+    clamp01(avgSalesFactor || 0) * priceRules.salesEfficiencyBonusRange;
 
-   // console.log("Sales factor multiplier> ", salesFactorMultiplier);
-  // Marketing attracts vendors.
-  // Range roughly: 0.5x -> 1.5x
   const marketingMultiplier =
-    0.6 + clamp01(marketingFactor) * 0.8;
+    priceRules.marketingMinMultiplier +
+    clamp01(marketingFactor) * priceRules.marketingBonusRange;
 
-    //console.log("Marketing multiplier> ", marketingMultiplier)
-  // Sales team negotiates better lease prices.
-  // Between +20% to +50%.
   const salesTeamMultiplier = gameState?.salesTeam
-    ? randomBetween(1.2, 1.5)
+    ? randomBetween(
+        priceRules.salesTeamMultiplierFrom,
+        priceRules.salesTeamMultiplierTo
+      )
     : 1;
 
-    //console.log("Sales multiplier> ", salesTeamMultiplier)
-  // Small natural randomness so offers do not feel robotic.
-  const marketNoise = randomBetween(0.9, 1.2);
+  const marketNoise = randomBetween(
+    priceRules.marketNoiseFrom,
+    priceRules.marketNoiseTo
+  );
 
-    //console.log("Market noise> ", marketNoise);
-  let price =
+  const price =
     basePrice *
     ticketSalesMultiplier *
     salesFactorMultiplier *
@@ -470,100 +557,101 @@ function calculateVendorOfferPrice({
     proximityMultiplier *
     salesTeamMultiplier *
     marketNoise;
-    
 
-    //console.log("Final price> ", roundToNearest(Math.max(1, price), roundPriceTo));
-  return roundToNearest(Math.max(1, price), roundPriceTo);
+  return roundToNearest(Math.max(1, price), rules.roundPriceTo);
 }
-
 
 /* =========================================================
    OFFER COUNT
 ========================================================= */
 
 function calculateOfferCountForTile({
-  gameState,
   totalSoldTicketsPercentage,
   avgSalesFactor,
   marketingFactor,
   proximityMultiplier,
-  maxOffersPerTile,
+  rules,
 }) {
+  const countRules = rules.offerCount;
+  const weights = countRules.weights || {};
+  const proximityRules = rules.proximity;
+
   const ticketScore = smoothstep(totalSoldTicketsPercentage);
   const salesScore = clamp01(avgSalesFactor || 0);
   const marketingScore = clamp01(marketingFactor);
 
-  // proximityMultiplier usually floats around 0.55 - 1.75.
-  const proximityScore = clamp01((proximityMultiplier - 0.55) / 1.2);
+  const proximityRange = Math.max(
+    0.000001,
+    Number(proximityRules.maxMultiplier || 0) - Number(proximityRules.minMultiplier || 0)
+  );
+
+  const proximityScore = clamp01(
+    (proximityMultiplier - proximityRules.minMultiplier) / proximityRange
+  );
 
   const demandScore =
-    ticketScore * 0.30 +
-    salesScore * 0.20 +
-    marketingScore * 0.35 +
-    proximityScore * 0.15;
+    ticketScore * Number(weights.ticketSales || 0) +
+    salesScore * Number(weights.salesEfficiency || 0) +
+    marketingScore * Number(weights.marketing || 0) +
+    proximityScore * Number(weights.proximity || 0);
 
-  // Base count can be 0 if the event is unattractive.
-  let count = Math.floor(randomBetween(0, 1.25) + demandScore * 3);
+  const count = Math.floor(
+    randomBetween(countRules.randomBaseMin, countRules.randomBaseMax) +
+    demandScore * countRules.demandMultiplier
+  );
 
-  return clampInt(count, 0, maxOffersPerTile);
+  return clampInt(count, 0, rules.maxOffersPerTile);
 }
-
 
 /* =========================================================
    PROXIMITY
 ========================================================= */
 
-function calculateVendorTileProximityScore(tile, gameState, worldSettings, globalSettings) {
+function getProximityModifierValue(neighborObjKey, bonusObjects = [], penaltyObjects = []) {
+  const neighborKey = String(neighborObjKey || '');
+  const normalizedNeighborKey = normalizeObjectKey(neighborKey);
+
+  const bonus = bonusObjects.find(item => {
+    const itemKey = String(item?.object || '');
+    return itemKey === neighborKey || normalizeObjectKey(itemKey) === normalizedNeighborKey;
+  });
+
+  if (bonus) {
+    return Number(bonus.value || 0);
+  }
+
+  const penalty = penaltyObjects.find(item => {
+    const itemKey = String(item?.object || '');
+    return itemKey === neighborKey || normalizeObjectKey(itemKey) === normalizedNeighborKey;
+  });
+
+  if (penalty) {
+    return 0 - Math.abs(Number(penalty.value || 0));
+  }
+
+  return 0;
+}
+
+function calculateVendorTileProximityScore(tile, gameState, worldSettings, globalSettings, rules) {
   const board = gameState?.board || {};
   const objects = globalSettings?.objects || {};
   const neighbors = getNeighborTiles(tile, worldSettings?.gridSize || 5);
+  const proximityRules = rules.proximity;
 
   let bonus = 0;
-  const reasons = [];
 
   neighbors.forEach(neighborTile => {
     const neighborObjKey = board[neighborTile];
     if (!neighborObjKey) return;
 
-    const normalized = normalizeObjectKey(neighborObjKey);
     const neighborObj = objects[neighborObjKey] || {};
 
-    if (isVendorStandKey(neighborObjKey)) {
-      const penalty = isPremiumStandKey(neighborObjKey) ? 0.22 : 0.16;
-      bonus -= penalty;
-      reasons.push({
-        tile: neighborTile,
-        obj_key: neighborObjKey,
-        effect: -penalty,
-        reason: "Nearby competing stand",
-      });
-      return;
-    }
+    bonus += getProximityModifierValue(
+      neighborObjKey,
+      proximityRules.bonuses,
+      proximityRules.penalties
+    );
 
-    if (normalized.includes("stage")) {
-      bonus += 0.28;
-      reasons.push({
-        tile: neighborTile,
-        obj_key: neighborObjKey,
-        effect: 0.28,
-        reason: "Stage nearby increases foot traffic",
-      });
-      return;
-    }
-
-    if (isDecorationLikeObject(normalized)) {
-      bonus += 0.14;
-      reasons.push({
-        tile: neighborTile,
-        obj_key: neighborObjKey,
-        effect: 0.14,
-        reason: "Decoration nearby improves attractiveness",
-      });
-      return;
-    }
-
-    // Generic useful nearby object.
-    // Uses suitability from object schema if available.
     const suitability = Array.isArray(neighborObj.suitability)
       ? neighborObj.suitability
       : [0, 0, 0];
@@ -573,25 +661,21 @@ function calculateVendorTileProximityScore(tile, gameState, worldSettings, globa
       0
     );
 
-    const genericBonus = saturate(positiveSuitability, 30) * 0.16;
+    const genericBonus =
+      saturate(positiveSuitability, proximityRules.genericObjectSaturationK) *
+      proximityRules.genericObjectBonusStrength;
 
-    if (genericBonus > 0) {
-      bonus += genericBonus;
-      reasons.push({
-        tile: neighborTile,
-        obj_key: neighborObjKey,
-        effect: genericBonus,
-        reason: "Attractive nearby object",
-      });
-    }
+    bonus += genericBonus;
   });
 
   return {
-    multiplier: clamp(1 + bonus, 0.55, 1.75),
-    reasons,
+    multiplier: clamp(
+      1 + bonus,
+      proximityRules.minMultiplier,
+      proximityRules.maxMultiplier
+    ),
   };
 }
-
 
 /* =========================================================
    AVAILABLE STANDS
@@ -604,7 +688,6 @@ function getAvailableVendorTiles(gameState) {
     : [];
 
   const rentedTiles = new Set(rentedBooths.map(booth => booth.tile));
-
   const available = [];
 
   Object.keys(board).forEach(tile => {
@@ -627,31 +710,32 @@ function isVendorStandKey(objKey) {
 }
 
 function isRegularStandKey(objKey) {
-  return normalizeObjectKey(objKey) === "stand";
+  return normalizeObjectKey(objKey) === 'stand';
 }
 
 function isPremiumStandKey(objKey) {
   const key = normalizeObjectKey(objKey);
-  return key === "premium stand" || key === "premium";
+  return key === 'premium stand' || key === 'premium';
 }
 
 function normalizeObjectKey(objKey) {
-  return String(objKey || "")
+  return String(objKey || '')
     .trim()
     .toLowerCase()
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ");
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ');
 }
-
 
 /* =========================================================
    VENDOR SUITABILITY
 ========================================================= */
 
-function generateVendorSuitabilityByGroup(objKey) {
+function generateVendorSuitabilityByGroup(objKey, rules) {
+  const suitabilityRules = rules.vendorSuitability;
+
   const total = isPremiumStandKey(objKey)
-    ? randomInt(5, 15)
-    : randomInt(1, 9);
+    ? randomInt(suitabilityRules.premiumFrom, suitabilityRules.premiumTo)
+    : randomInt(suitabilityRules.regularFrom, suitabilityRules.regularTo);
 
   return generateVec3WithExactSumAndMagnitudeLimit(total);
 }
@@ -670,36 +754,37 @@ function generateVec3WithExactSumAndMagnitudeLimit(total) {
   }
 
   const idx = randomInt(0, 2);
-  let returnArr = [0, 0, 0];
+  const returnArr = [0, 0, 0];
   returnArr[idx] = total;
   return returnArr;
 }
-
 
 /* =========================================================
    MARKETING FACTOR
 ========================================================= */
 
-function calculateMarketingProposalFactor(gameState, globalSettings) {
+function calculateMarketingProposalFactor(gameState, rules) {
   const interest = Array.isArray(gameState?.interest)
     ? gameState.interest
     : [0, 0, 0];
 
-  const rules = globalSettings?.baseRules || {};
-  const marketingK = Number(rules.marketingSaturationK || 50);
+  const marketingRules = rules.marketing;
+  const marketingK = Number(marketingRules.saturationK || 50);
 
   let interestFactor =
     interest.reduce((acc, v) => acc + saturate(v, marketingK), 0) / 3;
 
-  //console.log("interest factor before website accounted: ", interestFactor);
-  if(gameState?.website){
-    interestFactor = (interestFactor * (100+randomInt(12, 25))) / 100; 
+  if (gameState?.website) {
+    const websiteBoostPercent = randomInt(
+      marketingRules.websiteBoostFromPercent,
+      marketingRules.websiteBoostToPercent
+    );
+
+    interestFactor = (interestFactor * (100 + websiteBoostPercent)) / 100;
   }
 
-  //console.log("Interest factor: ", interestFactor);
-  return interestFactor
+  return interestFactor;
 }
-
 
 /* =========================================================
    BOARD HELPERS
@@ -725,7 +810,7 @@ function getNeighborTiles(tile, gridSize) {
 }
 
 function parseBoardTile(tile) {
-  const match = String(tile || "").match(/^([A-Z]+)(\d+)$/i);
+  const match = String(tile || '').match(/^([A-Z]+)(\d+)$/i);
   if (!match) return null;
 
   return {
@@ -750,7 +835,7 @@ function lettersToIndex(letters) {
 
 function indexToLetters(index) {
   let n = Number(index) + 1;
-  let result = "";
+  let result = '';
 
   while (n > 0) {
     const rem = (n - 1) % 26;
@@ -761,22 +846,149 @@ function indexToLetters(index) {
   return result;
 }
 
+/* =========================================================
+   CONFIG HELPERS
+========================================================= */
+
+function getVendorProposalRules(globalSettings, overrides = {}) {
+  const adminRules = globalSettings?.baseRules?.vendorProposalRules || {};
+  const merged = deepMerge(
+    DEFAULT_VENDOR_PROPOSAL_RULES,
+    adminRules,
+    overrides
+  );
+
+  normalizeVendorProposalRules(merged);
+  return merged;
+}
+
+function normalizeVendorProposalRules(rules) {
+  rules.maxOffersPerTile = Math.max(0, Math.round(Number(rules.maxOffersPerTile || 0)));
+  rules.maxTotalOffers = Math.max(0, Math.round(Number(rules.maxTotalOffers || 0)));
+  rules.roundPriceTo = Math.max(1, Math.round(Number(rules.roundPriceTo || 1)));
+
+  fixMinMax(rules.offerCount, 'randomBaseMin', 'randomBaseMax');
+  fixMinMax(rules.offerCount, 'salesTeamExtraOffersFrom', 'salesTeamExtraOffersTo');
+  fixMinMax(rules.offerPrice, 'salesTeamMultiplierFrom', 'salesTeamMultiplierTo');
+  fixMinMax(rules.offerPrice, 'marketNoiseFrom', 'marketNoiseTo');
+  fixMinMax(rules.proximity, 'minMultiplier', 'maxMultiplier');
+  fixMinMax(rules.marketing, 'websiteBoostFromPercent', 'websiteBoostToPercent');
+  fixMinMax(rules.vendorSuitability, 'regularFrom', 'regularTo');
+  fixMinMax(rules.vendorSuitability, 'premiumFrom', 'premiumTo');
+
+  rules.offerCount.salesTeamExtraOffersFrom = Math.max(
+    0,
+    Math.round(Number(rules.offerCount.salesTeamExtraOffersFrom || 0))
+  );
+  rules.offerCount.salesTeamExtraOffersTo = Math.max(
+    0,
+    Math.round(Number(rules.offerCount.salesTeamExtraOffersTo || 0))
+  );
+
+  rules.proximity.genericObjectSaturationK = Math.max(
+    1,
+    Number(rules.proximity.genericObjectSaturationK || 1)
+  );
+
+  rules.marketing.saturationK = Math.max(
+    1,
+    Number(rules.marketing.saturationK || 1)
+  );
+
+  rules.vendorSuitability.regularFrom = Math.max(
+    1,
+    Math.round(Number(rules.vendorSuitability.regularFrom || 1))
+  );
+  rules.vendorSuitability.regularTo = Math.max(
+    1,
+    Math.round(Number(rules.vendorSuitability.regularTo || 1))
+  );
+  rules.vendorSuitability.premiumFrom = Math.max(
+    1,
+    Math.round(Number(rules.vendorSuitability.premiumFrom || 1))
+  );
+  rules.vendorSuitability.premiumTo = Math.max(
+    1,
+    Math.round(Number(rules.vendorSuitability.premiumTo || 1))
+  );
+
+  rules.proximity.bonuses = Array.isArray(rules.proximity.bonuses)
+    ? rules.proximity.bonuses
+    : [];
+
+  rules.proximity.penalties = Array.isArray(rules.proximity.penalties)
+    ? rules.proximity.penalties
+    : [];
+}
+
+function fixMinMax(obj, minKey, maxKey) {
+  const min = Number(obj?.[minKey]);
+  const max = Number(obj?.[maxKey]);
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+  if (min <= max) return;
+
+  obj[minKey] = max;
+  obj[maxKey] = min;
+}
+
+function deepMerge(...objects) {
+  const output = {};
+
+  objects.forEach(obj => {
+    mergeInto(output, obj);
+  });
+
+  return output;
+}
+
+function mergeInto(target, source) {
+  if (!source || typeof source !== 'object') return target;
+
+  Object.keys(source).forEach(key => {
+    const value = source[key];
+
+    if (Array.isArray(value)) {
+      target[key] = value.slice();
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+        target[key] = {};
+      }
+      mergeInto(target[key], value);
+      return;
+    }
+
+    if (value !== undefined) {
+      target[key] = value;
+    }
+  });
+
+  return target;
+}
+
+function getSalesTeamById(globalSettings, salesTeamId) {
+  if (!salesTeamId) return null;
+
+  const salesTeams = globalSettings?.salesTeams;
+
+  if (Array.isArray(salesTeams)) {
+    return salesTeams.find(item => item?.id === salesTeamId) || null;
+  }
+
+  if (salesTeams && typeof salesTeams === 'object') {
+    if (salesTeams.id === salesTeamId) return salesTeams;
+    return salesTeams[salesTeamId] || null;
+  }
+
+  return null;
+}
 
 /* =========================================================
    MISC HELPERS
 ========================================================= */
-
-function isDecorationLikeObject(normalizedObjKey) {
-  return (
-    normalizedObjKey.includes("decor") ||
-    normalizedObjKey.includes("decoration") ||
-    normalizedObjKey.includes("plant") ||
-    normalizedObjKey.includes("flower") ||
-    normalizedObjKey.includes("garden") ||
-    normalizedObjKey.includes("bench") ||
-    normalizedObjKey.includes("bank")
-  );
-}
 
 function averageNestedNumbers(values) {
   if (!Array.isArray(values) || values.length === 0) return 0;
@@ -822,30 +1034,16 @@ function randomBetween(min, max) {
 function randomInt(min, max) {
   const lo = Math.ceil(Number(min || 0));
   const hi = Math.floor(Number(max || 0));
+
+  if (hi < lo) {
+    return lo;
+  }
+
   return Math.floor(Math.random() * (hi - lo + 1)) + lo;
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, Number(value || 0)));
-}
-
-function clamp01(value) {
-  return clamp(value, 0, 1);
 }
 
 function clampInt(value, min, max) {
   return Math.round(clamp(value, min, max));
-}
-
-function smoothstep(x) {
-  x = clamp01(x);
-  return x * x * (3 - 2 * x);
-}
-
-function saturate(value, k) {
-  const v = Math.max(0, Number(value || 0));
-  const kk = Math.max(1, Number(k || 1));
-  return v <= 0 ? 0 : v / (v + kk);
 }
 
 function shuffleArray(arr) {
@@ -858,6 +1056,7 @@ function shuffleArray(arr) {
 
   return copy;
 }
+
 
 
 /* ---------------------------------------------------------------------------------------- */

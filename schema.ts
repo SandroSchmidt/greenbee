@@ -55,12 +55,8 @@ export interface GlobalSettings {
     suitabilitySaturationK: number,
     vendorProposalRules: VendorOffersConfig,
   };
-  
-  salesTeams: SalesTeam;
-  boothsPriceAdjustmentRange: {
-    from:number,
-    to:number,
-  }
+
+  salesTeams: SalesTeam[];
   sponsors: Sponsor[];
   speakers: Performer[];
 }
@@ -485,6 +481,9 @@ export interface OfferCountWeights {
 }
 
 export interface OfferPriceConfig {
+  baseBoothsPriceAdjustmentFrom: number;
+  baseBoothsPriceAdjustmentTo: number;
+
   ticketSalesMinMultiplier: number;
   ticketSalesBonusRange: number;
 

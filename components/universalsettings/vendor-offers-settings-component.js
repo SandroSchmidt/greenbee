@@ -38,7 +38,7 @@
   var STYLE_ID = 'vendor-offers-settings-style';
   var PLACEHOLDER_DESC = 'Popup content';
 
-  var DEFAULT_VENDOR_OFFERS_SETTINGS = {
+  /*var DEFAULT_VENDOR_OFFERS_SETTINGS = {
     maxOffersPerTile: 5,
     maxTotalOffers: 12,
     roundPriceTo: 10,
@@ -51,6 +51,7 @@
       weights: { ticketSales: 0.30, salesEfficiency: 0.20, marketing: 0.35, proximity: 0.15 }
     },
     offerPrice: {
+      baseBoothsPriceAdjustmentFrom: -10, baseBoothsPriceAdjustmentFrom:15,
       ticketSalesMinMultiplier: 0.85, ticketSalesBonusRange: 0.5,
       salesEfficiencyMinMultiplier: 0.6, salesEfficiencyBonusRange: 0.8,
       marketingMinMultiplier: 0.6, marketingBonusRange: 0.8,
@@ -67,52 +68,139 @@
     },
     marketing: { saturationK: 50, websiteBoostFromPercent: 12, websiteBoostToPercent: 25 },
     vendorSuitability: { regularFrom: 1, regularTo: 9, premiumFrom: 5, premiumTo: 15 }
-  };
+  };*/
+
+  var DEFAULT_VENDOR_OFFERS_SETTINGS = {
+  maxOffersPerTile: 5,
+  maxTotalOffers: 12,
+  roundPriceTo: 10,
+
+  offerCount: {
+    randomBaseMin: 0,
+    randomBaseMax: 1.25,
+    demandMultiplier: 3,
+    salesTeamExtraOffersFrom: 1,
+    salesTeamExtraOffersTo: 3,
+    weights: {
+      ticketSales: 0.30,
+      salesEfficiency: 0.20,
+      marketing: 0.35,
+      proximity: 0.15,
+    },
+  },
+
+  offerPrice: {
+    baseBoothsPriceAdjustmentFrom: -10,
+    baseBoothsPriceAdjustmentTo: 15,
+
+    ticketSalesMinMultiplier: 0.85,
+    ticketSalesBonusRange: 0.5,
+
+    salesEfficiencyMinMultiplier: 0.6,
+    salesEfficiencyBonusRange: 0.8,
+
+    marketingMinMultiplier: 0.6,
+    marketingBonusRange: 0.8,
+
+    salesTeamMultiplierFrom: 1.2,
+    salesTeamMultiplierTo: 1.5,
+
+    marketNoiseFrom: 0.9,
+    marketNoiseTo: 1.2,
+  },
+
+  proximity: {
+    minMultiplier: 0.55,
+    maxMultiplier: 1.75,
+    penalties: [],
+    bonuses: [],
+    genericObjectBonusStrength: 0.16,
+    genericObjectSaturationK: 30,
+  },
+
+  marketing: {
+    saturationK: 50,
+    websiteBoostFromPercent: 12,
+    websiteBoostToPercent: 25,
+  },
+
+  vendorSuitability: {
+    regularFrom: 1,
+    regularTo: 9,
+    premiumFrom: 5,
+    premiumTo: 15,
+  },
+};
 
   // Add `description: '...'` to any field to override the placeholder tooltip.
   var FIELD_GROUPS = [
     { id: 'main', advanced: false, label: 'MAIN LIMITS', fields: [
-      { path: 'maxOffersPerTile', label: 'Max offers per booth', min: 0, step: 1 },
-      { path: 'maxTotalOffers', label: 'Max total vendor offers', min: 0, step: 1 },
-      { path: 'roundPriceTo', label: 'Round price to nearest', min: 1, step: 1 }
+      { 
+        path: 'maxOffersPerTile', 
+        label: 'Max offers per booth', 
+        description: `Maximum number of vendor offers that one available booth can receive in a turn.`, 
+        min: 0, 
+        step: 1 },
+      { 
+        path: 'maxTotalOffers',
+        label: 'Max total vendor offers', 
+        description: 'Maximum number of vendor offers shown to the player in one turn, across all booths.',
+        min: 0, 
+        step: 1,
+      },
+      { 
+        path: 'roundPriceTo', 
+        label: 'Round price to nearest',
+        description: 'Rounds final vendor offer prices to the nearest selected amount. Example: 10 creates cleaner prices like 120, 250, 430.',
+        min: 1, 
+        step: 1 
+      }
     ]},
-    { id: 'offerCount', advanced: true, label: 'OFFER COUNT', fields: [
-      { path: 'offerCount.randomBaseMin', label: 'Base randomness from', step: 0.05 },
-      { path: 'offerCount.randomBaseMax', label: 'Base randomness to', step: 0.05 },
-      { path: 'offerCount.demandMultiplier', label: 'Demand impact on count', min: 0, step: 0.1 },
-      { path: 'offerCount.salesTeamExtraOffersFrom', label: 'Sales team extra offers from', min: 0, step: 1 },
-      { path: 'offerCount.salesTeamExtraOffersTo', label: 'Sales team extra offers to', min: 0, step: 1 }
+    { id: 'offerCount', advanced: true, label: 'OFFER COUNT', description: 'Controls how event demand turns into the number of offers each booth receives.',
+      fields: [
+      { path: 'offerCount.randomBaseMin', label: 'Base randomness from', step: 0.05, description: 'Lowest random value added when calculating offer count, so results are not fully predictable.' },
+      { path: 'offerCount.randomBaseMax', label: 'Base randomness to', step: 0.05, description: 'Highest random value added when calculating offer count. Higher values make offers more luck-based.' },
+      { path: 'offerCount.demandMultiplier', label: 'Demand impact on count', min: 0, step: 0.1, description: 'Controls how strongly ticket sales, marketing, sales efficiency, and location increase offer count.' },
+      { path: 'offerCount.salesTeamExtraOffersFrom', label: 'Sales team extra offers from', min: 0, step: 1, description: 'Minimum extra vendor offers generated when the player has a sales team.'},
+      { path: 'offerCount.salesTeamExtraOffersTo', label: 'Sales team extra offers to', min: 0, step: 1, description: 'Maximum extra vendor offers generated when the player has a sales team.' }
     ]},
     { id: 'weights', advanced: true, label: 'DEMAND WEIGHTS', footer: 'normalize-weights', fields: [
-      { path: 'offerCount.weights.ticketSales', label: 'Ticket sales', min: 0, step: 0.01 },
-      { path: 'offerCount.weights.salesEfficiency', label: 'Sales efficiency', min: 0, step: 0.01 },
-      { path: 'offerCount.weights.marketing', label: 'Marketing', min: 0, step: 0.01 },
-      { path: 'offerCount.weights.proximity', label: 'Booth location', min: 0, step: 0.01 }
+      { path: 'offerCount.weights.ticketSales', label: 'Ticket sales', min: 0, step: 0.01, description:'How much total sold tickets affect vendor interest. Higher values make ticket sales more important.' },
+      { path: 'offerCount.weights.salesEfficiency', label: 'Sales efficiency', min: 0, step: 0.01, description: 'How much recent sales performance affects vendor interest.' },
+      { path: 'offerCount.weights.marketing', label: 'Marketing', min: 0, step: 0.01, description: 'How much audience interest from marketing affects vendor interest.' },
+      { path: 'offerCount.weights.proximity', label: 'Booth location', min: 0, step: 0.01, description: 'How much nearby objects and booth placement affect vendor interest.' }
     ]},
-    { id: 'offerPrice', advanced: true, label: 'OFFER PRICE MULTIPLIERS', fields: [
-      { path: 'offerPrice.ticketSalesMinMultiplier', label: 'Ticket sales min \u00d7', min: 0, step: 0.05 },
-      { path: 'offerPrice.ticketSalesBonusRange', label: 'Ticket sales bonus range', min: 0, step: 0.05 },
-      { path: 'offerPrice.salesEfficiencyMinMultiplier', label: 'Sales efficiency min \u00d7', min: 0, step: 0.05 },
-      { path: 'offerPrice.salesEfficiencyBonusRange', label: 'Sales efficiency bonus range', min: 0, step: 0.05 },
-      { path: 'offerPrice.marketingMinMultiplier', label: 'Marketing min \u00d7', min: 0, step: 0.05 },
-      { path: 'offerPrice.marketingBonusRange', label: 'Marketing bonus range', min: 0, step: 0.05 },
-      { path: 'offerPrice.salesTeamMultiplierFrom', label: 'Sales team boost from', min: 0, step: 0.05 },
-      { path: 'offerPrice.salesTeamMultiplierTo', label: 'Sales team boost to', min: 0, step: 0.05 },
-      { path: 'offerPrice.marketNoiseFrom', label: 'Market noise from', min: 0, step: 0.05 },
-      { path: 'offerPrice.marketNoiseTo', label: 'Market noise to', min: 0, step: 0.05 }
+    { id: 'offerPrice', advanced: true, label: 'OFFER PRICE MULTIPLIERS',  description: 'Controls how event performance affects the actual money offered by vendors.',
+       fields: [
+      { path: 'offerPrice.baseBoothsPriceAdjustmentFrom', label: 'Base Booths Price Adjustment From \u00d7', min: -500, step: 1, description: 'Min value added as adjustment to basePrice value thats used as a starting point for calculating realistic vendor offers for booths on the board. Base price is currently calculated as booth price in catalog plus price variance value. NOTE: This gets overriden if user has hired Sales Team with Vendor Offer Boost feature.' },
+      { path: 'offerPrice.baseBoothsPriceAdjustmentTo', label: 'Base Booths Price Adjustment To', min: -500, step: 1, description: 'Max value added as adjustment to basePrice value thats used as a starting point for calculating realistic vendor offers for booths on the board. Base price is currently calculated as booth price in catalog plus price variance value. NOTE: This gets overriden if user has hired Sales Team with Vendor Offer Boost feature.' },
+      { path: 'offerPrice.ticketSalesMinMultiplier', label: 'Ticket Sales Price Min Multiplier \u00d7', min: 0, step: 0.05, description: 'Offer price multiplier when ticket sales are very low. Lower values make poor ticket sales hurt vendor prices more.' },
+      { path: 'offerPrice.ticketSalesBonusRange', label: 'Ticket Sales Price Bonus Range', min: 0, step: 0.05, description: 'Extra multiplier added as ticket sales improve. Max multiplier is minimum plus this value.' },
+      { path: 'offerPrice.salesEfficiencyMinMultiplier', label: 'Sales Efficiency Price Min Multiplier \u00d7', min: 0, step: 0.05, description: 'Offer price multiplier when recent sales efficiency is poor.' },
+      { path: 'offerPrice.salesEfficiencyBonusRange', label: 'Sales Efficiency Price Bonus Range', min: 0, step: 0.05, description: 'Extra multiplier added from strong recent sales efficiency.' },
+      { path: 'offerPrice.marketingMinMultiplier', label: 'Marketing Price Min Multiplier \u00d7', min: 0, step: 0.05, description: 'Offer price multiplier when marketing interest is low.' },
+      { path: 'offerPrice.marketingBonusRange', label: 'Marketing Price Bonus Range', min: 0, step: 0.05, description: 'Extra multiplier added from strong marketing interest.' },
+      { path: 'offerPrice.salesTeamMultiplierFrom', label: 'Sales Team Price Boost From', min: 0, step: 0.05, description: 'Minimum price multiplier when the player has a sales team.' },
+      { path: 'offerPrice.salesTeamMultiplierTo', label: 'Sales Team Price Boost To', min: 0, step: 0.05, description: 'Maximum price multiplier when the player has a sales team.' },
+      { path: 'offerPrice.marketNoiseFrom', label: 'Market Noise From', min: 0, step: 0.05, description: 'Lowest random market variation applied to offer price.' },
+      { path: 'offerPrice.marketNoiseTo', label: 'Market Noise To', min: 0, step: 0.05, description: 'Highest random market variation applied to offer price.' },
     ]},
-    { id: 'proximity', advanced: true, label: 'BOOTH LOCATION / PROXIMITY', custom: 'proximity' },
-    { id: 'marketing', advanced: true, label: 'MARKETING AND WEBSITE', fields: [
-      { path: 'marketing.saturationK', label: 'Marketing saturation K', min: 1, step: 1 },
-      { path: 'marketing.websiteBoostFromPercent', label: 'Website boost from (%)', min: 0, step: 1 },
-      { path: 'marketing.websiteBoostToPercent', label: 'Website boost to (%)', min: 0, step: 1 }
-    ]},
-    { id: 'vendorSuitability', advanced: true, label: 'VENDOR SUITABILITY', fields: [
-      { path: 'vendorSuitability.regularFrom', label: 'Regular vendor suitability from', min: 1, step: 1 },
-      { path: 'vendorSuitability.regularTo', label: 'Regular vendor suitability to', min: 1, step: 1 },
-      { path: 'vendorSuitability.premiumFrom', label: 'Premium vendor suitability from', min: 1, step: 1 },
-      { path: 'vendorSuitability.premiumTo', label: 'Premium vendor suitability to', min: 1, step: 1 }
-    ]}
+    { id: 'proximity', advanced: true, label: 'BOOTH LOCATION / PROXIMITY', custom: 'proximity', description: 'Controls how nearby objects change the value of a booth location.', },
+    { id: 'marketing', advanced: true, label: 'MARKETING AND WEBSITE', 
+      description: 'Controls how audience interest and website ownership affect vendor demand.',
+      fields: [
+        { path: 'marketing.saturationK', label: 'Marketing Saturation K', min: 1, step: 1, description: 'Controls how quickly audience interest turns into vendor interest. Lower values make marketing stronger earlier.' },
+        { path: 'marketing.websiteBoostFromPercent', label: 'Website Vendor Interest Boost From (%)', min: 0, step: 1, description: 'Minimum extra vendor interest boost if the player has a website.' },
+        { path: 'marketing.websiteBoostToPercent', label: 'Website Vendor Interest Boost To (%)', min: 0, step: 1, description: 'Maximum extra vendor interest boost if the player has a website.' },
+      ],},
+    { id: 'vendorSuitability', advanced: true, label: 'VENDOR SUITABILITY',
+      description: 'Controls how strong generated vendors are for regular and premium booths.',
+      fields: [
+        { path: 'vendorSuitability.regularFrom', label: 'Regular Vendor Suitability From', min: 1, step: 1, description: 'Minimum total suitability strength for vendors offering to rent regular booths.' },
+        { path: 'vendorSuitability.regularTo', label: 'Regular Vendor Suitability To', min: 1, step: 1, description: 'Maximum total suitability strength for vendors offering to rent regular booths.' },
+        { path: 'vendorSuitability.premiumFrom', label: 'Premium Vendor Suitability From', min: 1, step: 1, description: 'Minimum total suitability strength for vendors offering to rent premium booths.' },
+        { path: 'vendorSuitability.premiumTo', label: 'Premium Vendor Suitability To', min: 1, step: 1, description: 'Maximum total suitability strength for vendors offering to rent premium booths.' },
+      ],}
   ];
 
   // Inline SVG fallbacks used when an object has no `.icon` URL or the URL fails.
