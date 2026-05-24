@@ -14,6 +14,7 @@
   <script src="components/universalsettings/sponsors-component.js"></script>
   <script src="components/universalsettings/speakers-component.js"></script>
   <script src="components/universalsettings/vendor-offers-settings-component.js"></script>
+  <script src="components/universalsettings/ticket-sales-settings-component.js"></script>
 </head>
 <style>
 /* ===============================
@@ -1409,6 +1410,7 @@ body.theme-dark .icon-trigger .empty-icon {
 <div id="sponsors-mount"></div>
 <div id="speakers-mount"></div>
 <div id="vendor-offers-settings-mount"></div>
+<div id="ticket-sales-settings-mount"></div>
 
     <section class="panel">
       #?#
@@ -1632,12 +1634,25 @@ body.theme-dark .icon-trigger .empty-icon {
       speakersUI = SpeakersComponent.mount('#speakers-mount', localGlobal.speakers); 
 
       if (!localGlobal.baseRules.vendorProposalRules) localGlobal.baseRules.vendorProposalRules = {};
+      /*if (!localGlobal.baseRules.vendorProposalRules?.offerPrice?.baseBoothsPriceAdjustmentFrom){
+        localGlobal.baseRules.vendorProposalRules.offerPrice = {
+          baseBoothsPriceAdjustmentFrom:-10,
+          baseBoothsPriceAdjustmentTo:15,
+          ...localGlobal.baseRules.vendorProposalRules?.offerPrice,
+        }
+      }*/
+     if (!localGlobal.baseRules.ticketSalesRules) localGlobal.baseRules.ticketSalesRules = {};
 
       vendorOffersSettingsUI = VendorOffersSettingsComponent.mount(
           '#vendor-offers-settings-mount',
           localGlobal.baseRules.vendorProposalRules,
           {objects: localGlobal.objects}
       );
+
+      ticketSalesSettingsUI = TicketSalesSettingsComponent.mount(
+        '#ticket-sales-settings-mount',
+        localGlobal.baseRules.ticketSalesRules
+    );
 
       console.log("GLOBAL: ", localGlobal);
     }
@@ -1694,6 +1709,7 @@ localGlobal.salesTeams = gatherSalesTeams();
       localGlobal.baseRules = {
         suitabilitySaturationK: parseFloat(document.getElementById("base-suitability-k").value) || 0,
         vendorProposalRules: vendorOffersSettingsUI.getData(),
+        ticketSalesRules: ticketSalesSettingsUI.getData(),
       };
 
       console.log("localGlobal: ", localGlobal)

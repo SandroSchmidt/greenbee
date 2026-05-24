@@ -54,6 +54,7 @@ export interface GlobalSettings {
   baseRules: {
     suitabilitySaturationK: number,
     vendorProposalRules: VendorOffersConfig,
+    ticketSalesRules: TicketSalesConfig,
   };
 
   salesTeams: SalesTeam[];
@@ -449,8 +450,9 @@ export type LoadWorldSettingsResult = WorldSettings;
 export type LoadPlayerListResult = Record<PlayerId, PlayerRecord>;
 export type LoadGameStateResult = PersistedGameState | null;
 
-
-// VENDOR OFFER SETTINGS
+// ###############################################################
+// ################   VENDOR OFFER SETTINGS   ####################
+// ###############################################################
 
 export interface VendorOffersConfig {
   maxOffersPerTile: number;
@@ -525,4 +527,59 @@ export interface VendorSuitabilityConfig {
   regularTo: number;
   premiumFrom: number;
   premiumTo: number;
+}
+
+// ###########################################################
+// ################# TICKET SALES RULES ######################
+// ###########################################################
+
+export interface TicketSalesConfig {
+  infrastructure: InfrastructureDemandConfig;
+  priceReasonableness: PriceReasonablenessConfig;
+  marketing: MarketingDemandConfig;
+  demand: DemandConfig;
+}
+
+export interface InfrastructureDemandConfig {
+  populationDivisorMinMultiplier: number;
+  populationDivisorMaxMultiplier: number;
+
+  earlySupportMaxMultiplier: number;
+  earlySupportDurationTurns: number;
+
+  minInfrastructureDivisor: number;
+}
+
+export interface PriceReasonablenessConfig {
+  minOptimalPrice: number;
+  freeTicketFactor: number;
+  maxFactor: number;
+  idealFactor: number;
+  priceSteepness: number;
+
+  previousPriceFactorRecencyDecay: number;
+  previousPriceFactorMaxClamp: number;
+
+  historySensitivity: number;
+  historyAdjustmentMin: number;
+  historyAdjustmentMax: number;
+
+  salesSensitivity: number;
+  salesMomentumNeutralPoint: number;
+
+  brandingMultiplier: number;
+  premiumWifiMultiplier: number;
+}
+
+export interface MarketingDemandConfig {
+  saturationK: number;
+}
+
+export interface DemandConfig {
+  maxDemand: number;
+  minTurnsLeft: number;
+
+  soldOutSalesEfficiency: number;
+  minSalesEfficiency: number;
+  maxSalesEfficiency: number;
 }

@@ -1,11 +1,522 @@
+/* ---------------------------------------------------------------------------------------- */
+/* ------------------------------- TICKET SALES LOGIC ------------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
+
+const DEFAULT_TICKET_SALES_RULES = {
+  infrastructure: {
+    populationDivisorMinMultiplier: 0.1,
+    populationDivisorMaxMultiplier: 0.2,
+    earlyTurnSofteningTurns: 5,
+    minInfrastructureDivisor: 1,
+  },
+
+  priceReasonableness: {
+    minOptimalPrice: 0.5,
+
+    freeTicketFactor: 2.0,
+    maxFactor: 2.0,
+    idealFactor: 1.0,
+
+    priceSteepness: 1.8,
+
+    previousPriceFactorRecencyDecay: 0.7,
+    previousPriceFactorMaxClamp: 2.0,
+
+    historySensitivity: 0.25,
+    historyAdjustmentMin: -0.2,
+    historyAdjustmentMax: 0.2,
+
+    salesSensitivity: 0.15,
+    salesMomentumNeutralPoint: 0.5,
+
+    brandingMultiplier: 1.03,
+    premiumWifiMultiplier: 1.01,
+  },
+
+  marketing: {
+    saturationK: 50,
+  },
+
+  demand: {
+    maxDemand: 1.0,
+    minTurnsLeft: 1,
+
+    soldOutSalesEfficiency: 1,
+    minSalesEfficiency: 0,
+    maxSalesEfficiency: 1,
+  },
+};
+
+function calculateTicketsAfterTurn(worldSettings, gameState, globalSettings, options = {}) {
+  const rules = getTicketSalesRules(globalSettings, options.ticketSalesRulesOverrides);
+
+  const groupPopulation = Array.isArray(worldSettings?.population)
+    ? worldSettings.population.map(v => Math.max(0, Number(v) || 0))
+    : [0, 0, 0];
+
+  const sold = Array.isArray(gameState?.ticketSales)
+    ? gameState.ticketSales.map(v => Math.max(0, Number(v) || 0))
+    : [0, 0, 0];
+
+  const marketingScore = Array.isArray(gameState?.interest)
+    ? gameState.interest.map(v => Math.max(0, Number(v) || 0))
+    : [0, 0, 0];
+
+  applySalesTeamMarketingImpact(marketingScore, gameState, globalSettings);
+
+  const infrastructureDivisor = Number.isFinite(Number(options.infrastructureDivisor))
+    ? Number(options.infrastructureDivisor)
+    : getInfrastructureDivisor(worldSettings, gameState, rules, {
+        deterministic: !!options.deterministic,
+      });
+
+  const cumulativeSalesFactor = Number.isFinite(Number(options.cumulativeSalesFactor))
+    ? Number(options.cumulativeSalesFactor)
+    : averageNestedNumbers(gameState?.cumulativeSalesFactorProgress);
+
+  const priceReasonablenessFactor = calculateTicketPriceReasonableness({
+    ticketPrice: gameState?.ticketPrice,
+    infrastructuralSpendings: gameState?.infrastructuralSpendings,
+    infrastructureDivisor,
+    gameState,
+    globalSettings,
+    sponsorsList: globalSettings?.sponsors,
+    previousPriceFactors: Array.isArray(gameState?.priceReasonablenessProgress)
+      ? gameState.priceReasonablenessProgress
+      : [],
+    cumulativeSalesFactor,
+    rules,
+  });
+
+  const remaining = groupPopulation.map((total, i) => Math.max(0, total - (sold[i] || 0)));
+
+  const marketingK = Number(rules.marketing.saturationK);
+  const maxDemand = Number(rules.demand.maxDemand);
+
+  const maxTurns = Number(worldSettings?.maxTurns);
+  const currentTurn = Number(gameState?.turn || 0);
+  const turnsLeft = Math.max(
+    Number(rules.demand.minTurnsLeft || 1),
+    maxTurns - currentTurn
+  );
+
+  const newSales = [0, 0, 0];
+  const salesEfficiency = [0, 0, 0];
+
+  for (let i = 0; i < 3; i++) {
+    if (remaining[i] <= 0) {
+      newSales[i] = 0;
+      salesEfficiency[i] = rules.demand.soldOutSalesEfficiency;
+      continue;
+    }
+
+    const marketingFactor = saturate(marketingScore[i], marketingK);
+    const demand = clamp(marketingFactor * priceReasonablenessFactor, 0, maxDemand);
+
+    const baseSalesPace = remaining[i] / turnsLeft;
+    const tickets = Math.min(remaining[i], Math.round(baseSalesPace * demand));
+
+    newSales[i] = tickets;
+    salesEfficiency[i] = baseSalesPace > 0
+      ? clamp(
+          tickets / baseSalesPace,
+          rules.demand.minSalesEfficiency,
+          rules.demand.maxSalesEfficiency
+        )
+      : rules.demand.soldOutSalesEfficiency;
+  }
+
+  const ticketSalesRes = sold.map((oldVal, i) => oldVal + (newSales[i] || 0));
+  const totalNewSales = newSales.reduce((acc, itm) => acc + itm, 0);
+  const ticketIncome = totalNewSales * Math.max(0, Number(gameState?.ticketPrice || 0));
+
+  gameState.ticketSales = ticketSalesRes;
+
+  return {
+    ticketSalesRes,
+    newSales,
+    salesEfficiency,
+    priceReasonablenessRes: priceReasonablenessFactor,
+    cumulativeSalesFactor,
+    ticketIncome,
+    totalNewSales,
+    infrastructureDivisor,
+  };
+}
+
+/* =========================================================
+   INFRASTRUCTURE / OPTIMAL PRICE SUPPORT
+========================================================= */
+
+function getInfrastructureDivisor(worldSettings, gameState, rules, { deterministic = false } = {}) {
+  const population = Array.isArray(worldSettings?.population)
+    ? worldSettings.population
+    : [0, 0, 0];
+
+  const totalPopulation = population.reduce(
+    (sum, current) => sum + (Number(current) || 0),
+    0
+  );
+
+  const infrastructureRules = rules.infrastructure;
+
+  const min = totalPopulation * infrastructureRules.populationDivisorMinMultiplier;
+  const max = totalPopulation * infrastructureRules.populationDivisorMaxMultiplier;
+  const baseDivisor = deterministic ? (min + max) / 2 : randomBetween(min, max);
+
+  const turn = Number(gameState?.turn || 0);
+  const earlySupportMultiplier = getEarlyInfrastructureSupportMultiplier(
+     turn,
+     infrastructureRules
+  );
+
+  console.log("INFRASTRUCTURE DIVISOR: ",
+    infrastructureRules.minInfrastructureDivisor,
+    baseDivisor / earlySupportMultiplier
+  )
+  return Math.max(
+    infrastructureRules.minInfrastructureDivisor,
+    baseDivisor / earlySupportMultiplier
+  );
+}
+
+function getEarlyInfrastructureSupportMultiplier(turn, infrastructureRules) {
+  const maxMultiplier = Math.max(
+    1,
+    Number(infrastructureRules.earlySupportMaxMultiplier || 1)
+  );
+
+  const durationTurns = Math.max(
+    1,
+    Number(infrastructureRules.earlySupportDurationTurns || 1)
+  );
+
+  const progress = clamp01(Number(turn || 0) / durationTurns);
+  const easedProgress = smoothstep(progress);
+
+  return 1 + (maxMultiplier - 1) * (1 - easedProgress);
+}
+
+/* =========================================================
+   PRICE REASONABLENESS
+========================================================= */
+
+function calculateTicketPriceReasonableness({
+  ticketPrice,
+  infrastructuralSpendings,
+  infrastructureDivisor,
+  gameState,
+  globalSettings,
+  sponsorsList,
+  previousPriceFactors = [],
+  cumulativeSalesFactor = 0,
+  rules,
+}) {
+  const priceRules = rules.priceReasonableness;
+  const price = Math.max(0, Number(ticketPrice || 0));
+
+  if (price <= 0) {
+    return clamp(priceRules.freeTicketFactor, 0, priceRules.maxFactor);
+  }
+
+  const maxFactor = Number(priceRules.maxFactor || 2.0);
+  const idealFactor = Math.max(0.000001, Number(priceRules.idealFactor || 1.0));
+  const safeDivisor = Math.max(1, Number(infrastructureDivisor || 1));
+
+  const optimalPrice = Math.max(
+    Number(priceRules.minOptimalPrice || 0.5),
+    Math.max(0, Number(infrastructuralSpendings || 0)) / safeDivisor
+  );
+
+  const priceRatio = price / optimalPrice;
+
+  // priceRatio = 1 => idealFactor, cheaper approaches maxFactor, expensive approaches 0.
+  const curveA = maxFactor / idealFactor - 1;
+  let infrastructureFactor = maxFactor / (
+    1 + curveA * Math.pow(priceRatio, priceRules.priceSteepness)
+  );
+
+  infrastructureFactor = clamp(infrastructureFactor, 0, maxFactor);
+
+  const previousAverage = weightedRecentAverage(
+    previousPriceFactors,
+    priceRules.previousPriceFactorRecencyDecay,
+    priceRules.previousPriceFactorMaxClamp
+  );
+
+  let historyAdjustedFactor = infrastructureFactor;
+
+  if (previousAverage !== null) {
+    const improvement = infrastructureFactor - previousAverage;
+    const historyAdjustment = clamp(
+      improvement * priceRules.historySensitivity,
+      priceRules.historyAdjustmentMin,
+      priceRules.historyAdjustmentMax
+    );
+
+    historyAdjustedFactor += historyAdjustment;
+  }
+
+  historyAdjustedFactor = clamp(historyAdjustedFactor, 0, maxFactor);
+
+  // Social proof / scarcity effect from previous sales.
+  // Below neutral point => penalty, above neutral point => boost.
+  const salesMomentum = smoothstep(cumulativeSalesFactor);
+  const neutralPoint = clamp01(priceRules.salesMomentumNeutralPoint);
+  const neutralSafe = Math.max(0.000001, neutralPoint);
+
+  const salesMomentumCentered = (salesMomentum - neutralPoint) / neutralSafe;
+  const salesMultiplier = 1 + salesMomentumCentered * priceRules.salesSensitivity;
+
+  let sponsorsMultiplier = 1.0;
+  if (Array.isArray(gameState?.sponsors) && typeof getAccumulatedSponsorEffects === 'function') {
+    const sponsorsEffect = getAccumulatedSponsorEffects(gameState, sponsorsList);
+    sponsorsMultiplier *= (100 + (sponsorsEffect.ticket_reasonableness_boost || 0)) / 100;
+  }
+
+  const brandingMultiplier = gameState?.brandingPackage
+    ? priceRules.brandingMultiplier
+    : 1.0;
+
+  const wifiMultiplier = gameState?.premiumWifi
+    ? priceRules.premiumWifiMultiplier
+    : 1.0;
+
+  const salesTeamMultiplier = getSalesTeamTicketReasonablenessMultiplier(
+    gameState,
+    globalSettings
+  );
+
+  return clamp(
+    historyAdjustedFactor *
+      salesMultiplier *
+      sponsorsMultiplier *
+      brandingMultiplier *
+      wifiMultiplier *
+      salesTeamMultiplier,
+    0,
+    maxFactor
+  );
+}
+
+function weightedRecentAverage(values, recencyDecay = 0.7, maxClamp = 2.0) {
+  if (!Array.isArray(values) || values.length === 0) return null;
+
+  let weight = 1;
+  let total = 0;
+  let weightTotal = 0;
+
+  // assumes values are ordered oldest -> newest
+  for (let i = values.length - 1; i >= 0; i--) {
+    const value = clamp(values[i], 0, maxClamp);
+    total += value * weight;
+    weightTotal += weight;
+    weight *= recencyDecay;
+  }
+
+  return weightTotal > 0 ? total / weightTotal : null;
+}
+
+/* =========================================================
+   SALES TEAM EFFECTS
+========================================================= */
+
+function applySalesTeamMarketingImpact(marketingScore, gameState, globalSettings) {
+  const salesTeam = getSalesTeamById(globalSettings, gameState?.salesTeam);
+  const marketingImpact = salesTeam?.effects?.marketing_impact;
+
+  if (!marketingImpact?.active) return;
+
+  const randAddon = randomInt(
+    marketingImpact?.value?.from ?? 0,
+    marketingImpact?.value?.to ?? 0
+  );
+
+  marketingScore.forEach((value, idx) => {
+    marketingScore[idx] = value + randAddon;
+  });
+}
+
+function getSalesTeamTicketReasonablenessMultiplier(gameState, globalSettings) {
+  const salesTeam = getSalesTeamById(globalSettings, gameState?.salesTeam);
+  const reasonablenessEffect = salesTeam?.effects?.ticket_price_reasonableness;
+
+  if (!reasonablenessEffect?.active) {
+    return 1.0;
+  }
+
+  const randPercentIncrease = randomInt(
+    reasonablenessEffect?.value?.from ?? 0,
+    reasonablenessEffect?.value?.to ?? 0
+  );
+
+  return (100 + randPercentIncrease) / 100;
+}
+
+function getSalesTeamById(globalSettings, salesTeamId) {
+  if (!salesTeamId) return null;
+
+  const salesTeams = globalSettings?.salesTeams;
+
+  if (Array.isArray(salesTeams)) {
+    return salesTeams.find(item => item?.id === salesTeamId) || null;
+  }
+
+  if (salesTeams && typeof salesTeams === 'object') {
+    if (salesTeams.id === salesTeamId) return salesTeams;
+    return salesTeams[salesTeamId] || null;
+  }
+
+  return null;
+}
+
+/* =========================================================
+   RULES HELPERS
+========================================================= */
+
+function getTicketSalesRules(globalSettings, overrides = {}) {
+  const adminRules = globalSettings?.baseRules?.ticketSalesRules || {};
+  const merged = deepMerge(
+    DEFAULT_TICKET_SALES_RULES,
+    adminRules,
+    overrides || {}
+  );
+
+  normalizeTicketSalesRules(merged);
+  return merged;
+}
+
+function normalizeTicketSalesRules(rules) {
+  fixMinMax(rules.infrastructure, 'populationDivisorMinMultiplier', 'populationDivisorMaxMultiplier');
+  fixMinMax(rules.priceReasonableness, 'historyAdjustmentMin', 'historyAdjustmentMax');
+  fixMinMax(rules.demand, 'minSalesEfficiency', 'maxSalesEfficiency');
+
+  rules.infrastructure.minInfrastructureDivisor = Math.max(
+    1,
+    Number(rules.infrastructure.minInfrastructureDivisor || 1)
+  );
+
+  rules.infrastructure.earlyTurnSofteningTurns = Math.max(
+    1,
+    Number(rules.infrastructure.earlyTurnSofteningTurns || 1)
+  );
+
+  rules.priceReasonableness.minOptimalPrice = Math.max(
+    0.000001,
+    Number(rules.priceReasonableness.minOptimalPrice || 0.5)
+  );
+
+  rules.priceReasonableness.freeTicketFactor = Math.max(
+    0,
+    Number(rules.priceReasonableness.freeTicketFactor || 0)
+  );
+
+  rules.priceReasonableness.maxFactor = Math.max(
+    0.000001,
+    Number(rules.priceReasonableness.maxFactor || 2.0)
+  );
+
+  rules.priceReasonableness.idealFactor = Math.max(
+    0.000001,
+    Number(rules.priceReasonableness.idealFactor || 1.0)
+  );
+
+  rules.priceReasonableness.priceSteepness = Math.max(
+    0.000001,
+    Number(rules.priceReasonableness.priceSteepness || 1.8)
+  );
+
+  rules.priceReasonableness.previousPriceFactorRecencyDecay = clamp(
+    rules.priceReasonableness.previousPriceFactorRecencyDecay,
+    0,
+    1
+  );
+
+  rules.priceReasonableness.previousPriceFactorMaxClamp = Math.max(
+    0.000001,
+    Number(rules.priceReasonableness.previousPriceFactorMaxClamp || 2.0)
+  );
+
+  rules.priceReasonableness.salesMomentumNeutralPoint = clamp01(
+    rules.priceReasonableness.salesMomentumNeutralPoint
+  );
+
+  rules.marketing.saturationK = Math.max(
+    1,
+    Number(rules.marketing.saturationK || 50)
+  );
+
+  rules.demand.maxDemand = Math.max(
+    0,
+    Number(rules.demand.maxDemand || 0)
+  );
+
+  rules.demand.minTurnsLeft = Math.max(
+    1,
+    Number(rules.demand.minTurnsLeft || 1)
+  );
+}
+
+function fixMinMax(obj, minKey, maxKey) {
+  const min = Number(obj?.[minKey]);
+  const max = Number(obj?.[maxKey]);
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+  if (min <= max) return;
+
+  obj[minKey] = max;
+  obj[maxKey] = min;
+}
+
+function deepMerge(...objects) {
+  const output = {};
+
+  objects.forEach(obj => {
+    mergeInto(output, obj);
+  });
+
+  return output;
+}
+
+function mergeInto(target, source) {
+  if (!source || typeof source !== 'object') return target;
+
+  Object.keys(source).forEach(key => {
+    const value = source[key];
+
+    if (Array.isArray(value)) {
+      target[key] = value.slice();
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+        target[key] = {};
+      }
+      mergeInto(target[key], value);
+      return;
+    }
+
+    if (value !== undefined) {
+      target[key] = value;
+    }
+  });
+
+  return target;
+}
+
+/* =========================================================
+   MISC HELPERS
+========================================================= */
+
 function clamp01(v) {
   return Math.max(0, Math.min(1, Number(v || 0)));
 }
 
 function saturate(value, k) {
-    const v = Math.max(0, Number(value || 0));
-    const kk = Math.max(1, Number(k || 1));
-    return v <= 0 ? 0 : v / (v + kk);
+  const v = Math.max(0, Number(value || 0));
+  const kk = Math.max(1, Number(k || 1));
+  return v <= 0 ? 0 : v / (v + kk);
 }
 
 function clamp(value, min, max) {
@@ -16,27 +527,18 @@ function randomBetween(min, max) {
   return Number(min || 0) + Math.random() * (Number(max || 0) - Number(min || 0));
 }
 
+function randomInt(min, max) {
+  const lo = Math.ceil(Number(min || 0));
+  const hi = Math.floor(Number(max || 0));
+
+  if (hi < lo) return lo;
+
+  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+}
+
 function smoothstep(x) {
   x = clamp(x, 0, 1);
   return x * x * (3 - 2 * x);
-}
-
-function weightedRecentAverage(values, recencyDecay = 0.7) {
-  if (!Array.isArray(values) || values.length === 0) return null;
-
-  let weight = 1;
-  let total = 0;
-  let weightTotal = 0;
-
-  // assumes values are ordered oldest -> newest
-  for (let i = values.length - 1; i >= 0; i--) {
-    const value = clamp(values[i], 0, 2.0);
-    total += value * weight;
-    weightTotal += weight;
-    weight *= recencyDecay;
-  }
-
-  return weightTotal > 0 ? total / weightTotal : null;
 }
 
 function averageNestedNumbers(values) {
@@ -65,210 +567,6 @@ function averageNestedNumbers(values) {
 
   return count > 0 ? total / count : 0;
 }
-
-function getInfrastructureDivisor(worldSettings, gameState, { deterministic = false } = {}) {
-  const population = Array.isArray(worldSettings && worldSettings.population)
-    ? worldSettings.population
-    : [0, 0, 0];
-
-  const totalPopulation = population.reduce((sum, current) => sum + (Number(current) || 0), 0);
-  const min = totalPopulation * 0.1;
-  const max = totalPopulation * 0.2;
-  const baseDivisor = deterministic ? (min + max) / 2 : randomBetween(min, max);
-
-  // Soften optimal price pressure in the first five rounds.
-  const turn = Number(gameState && gameState.turn || 0);
-  return Math.max(1, baseDivisor / Math.max(1, 5 - turn));
-}
-
-function calculateTicketPriceReasonableness({
-  ticketPrice,
-  infrastructuralSpendings,
-  infrastructureDivisor,
-  gameState,
-  sponsors_list,
-
-  previousPriceFactors = [],
-  cumulativeSalesFactor = 0,
-
-  minOptimalPrice = 1,
-
-  // Higher = expensive tickets get punished faster.
-  priceSteepness = 1.8,
-
-  // How much previous rounds matter.
-  historySensitivity = 0.25,
-
-  // How much previous sales success matters.
-  salesSensitivity = 0.15,
-}) {
-  const price = Math.max(0, Number(ticketPrice || 0));
-
-  // Free tickets are maximally attractive, but still capped so the game cannot explode.
-  if (price <= 0) return 2.0;
-
-  const maxFactor = 2.0;
-  const idealFactor = 1.0;
-  const safeDivisor = Math.max(1, Number(infrastructureDivisor || 1));
-  const optimalPrice = Math.max(
-    Number(minOptimalPrice || 1),
-    Math.max(0, Number(infrastructuralSpendings || 0)) / safeDivisor
-  );
-
-  const priceRatio = price / optimalPrice;
-
-  // priceRatio = 1 => 1.0, cheaper approaches 2.0, expensive approaches 0.
-  const curveA = maxFactor / idealFactor - 1;
-  let infrastructureFactor = maxFactor / (1 + curveA * Math.pow(priceRatio, priceSteepness));
-  infrastructureFactor = clamp(infrastructureFactor, 0, maxFactor);
-
-  const previousAverage = weightedRecentAverage(previousPriceFactors);
-  let historyAdjustedFactor = infrastructureFactor;
-
-  if (previousAverage !== null) {
-    const improvement = infrastructureFactor - previousAverage;
-    const historyAdjustment = clamp(improvement * historySensitivity, -0.2, 0.2);
-    historyAdjustedFactor += historyAdjustment;
-  }
-
-  historyAdjustedFactor = clamp(historyAdjustedFactor, 0, maxFactor);
-
-  // Social proof / scarcity effect from previous sales.
-  // 0% sold => slight penalty, 50% sold => neutral, 100% sold => boost.
-  const salesMomentum = smoothstep(cumulativeSalesFactor);
-  const salesMultiplier = 1 + (salesMomentum - 0.5) * 2 * salesSensitivity;
-
-  let sponsorsMultiplier = 1.0;
-  if(gameState?.sponsors){
-    const sponsorsEffect = getAccumulatedSponsorEffects(gameState, sponsors_list);
-    const sponsorMultiplier = (100 + (sponsorsEffect.ticket_reasonableness_boost || 0)) / 100;
-    sponsorsMultiplier *= sponsorMultiplier;
-  }
-
-  //console.log("Branding MULTIPLIER IN TICKET REASONABLENESS")
-  let brandingMultiplier = 1.0;
-  if(gameState.brandingPackage){
-    brandingMultiplier = 1.03; //three percents add-on
-  }
-  let wifiMultiplier = 1.0;
-  if(gameState.premiumWifi){
-    wifiMultiplier=1.01; //1%
-  }
-
-  let salesTeamMultiplier = 1.0;
-  
-  if(gameState?.salesTeam){
-    const salesTeam = globalSettings.salesTeams.find(itm=>itm.id == gameState.salesTeam);
-    if(salesTeam.effects['ticket_price_reasonableness'].active){
-      low_high = [salesTeam.effects['ticket_price_reasonableness'].value.from, 
-      salesTeam.effects['ticket_price_reasonableness'].value.to];
-      const randPercentIncrease = randomInt(low_high[0], low_high[1]);
-      salesTeamMultiplier = (100+randPercentIncrease)/100;
-      console.log("Sales team multiplier: ", salesTeamMultiplier);
-    }
-  }
-
-  console.log("sales team multiplier: ", salesTeamMultiplier);
-  return clamp(historyAdjustedFactor * salesMultiplier * sponsorsMultiplier * brandingMultiplier * wifiMultiplier * salesTeamMultiplier, 0, maxFactor);
-}
-
-function calculateTicketsAfterTurn(suitabilityVec, worldSettings, gameState, globalSettings, options = {}) {
-  const opts = options || {};
-
-  const groupPopulation = Array.isArray(worldSettings && worldSettings.population)
-    ? worldSettings.population.map(v => Math.max(0, Number(v) || 0))
-    : [0, 0, 0];
-
-  const sold = Array.isArray(gameState && gameState.ticketSales)
-    ? gameState.ticketSales.map(v => Math.max(0, Number(v) || 0))
-    : [0, 0, 0];
-
-  const marketingScore = Array.isArray(gameState && gameState.interest)
-    ? gameState.interest.map(v => Math.max(0, Number(v) || 0))
-    : [0, 0, 0];
-  
-  if(gameState?.salesTeam){
-    const salesTeam = globalSettings.salesTeams.find(itm=>itm.id == gameState.salesTeam);
-    if(salesTeam.effects['marketing_impact'].active){
-      const randAddon = randomInt(salesTeam.effects['marketing_impact'].value.from, salesTeam.effects['marketing_impact'].value.to)
-      marketingScore.forEach((itm,idx)=>marketingScore[idx] = itm+randAddon);
-      console.log("Added rand Addon: ", randAddon);
-    }
-  }
-
-
-  const infrastructureDivisor = Number(opts.infrastructureDivisor || getInfrastructureDivisor(worldSettings, gameState, {
-    deterministic: !!opts.deterministic,
-  }));
-
-  const cumulativeSalesFactor = Number.isFinite(Number(opts.cumulativeSalesFactor))
-    ? Number(opts.cumulativeSalesFactor)
-    : averageNestedNumbers(gameState && gameState.cumulativeSalesFactorProgress);
-
-  const priceReasonablenessFactor = calculateTicketPriceReasonableness({
-    ticketPrice: gameState && gameState.ticketPrice,
-    infrastructuralSpendings: gameState && gameState.infrastructuralSpendings,
-    infrastructureDivisor,
-    gameState: gameState,
-    sponsors_list: globalSettings.sponsors,
-    previousPriceFactors: Array.isArray(gameState && gameState.priceReasonablenessProgress)
-      ? gameState.priceReasonablenessProgress
-      : [],
-    cumulativeSalesFactor,
-    minOptimalPrice: 0.5,
-  });
-
-  const remaining = groupPopulation.map((total, i) => Math.max(0, total - (sold[i] || 0)));
-  const rules = (globalSettings && globalSettings?.baseRules) || {};
-  const marketingK = Number(rules.marketingSaturationK || 50);
-  const marketingWeight = Number(rules.ticketMarketingWeight ?? 0.40);
-  const maxDemand = Number(rules.ticketMaxDemand ?? 1.0);
-
-  const maxTurns = Number((worldSettings && worldSettings.maxTurns) || 10);
-  const currentTurn = Number((gameState && gameState.turn) || 0);
-  const turnsLeft = Math.max(1, maxTurns - currentTurn);
-
-  const newSales = [0, 0, 0];
-  const salesEfficiency = [0, 0, 0];
-
-  for (let i = 0; i < 3; i++) {
-    if (remaining[i] <= 0) {
-      newSales[i] = 0;
-      salesEfficiency[i] = 1;
-      continue;
-    }
-
-    const marketingFactor = saturate(marketingScore[i], marketingK);
-
-
-    const demand = clamp(marketingFactor * priceReasonablenessFactor, 0, maxDemand);
-
-    const baseSalesPace = remaining[i] / turnsLeft;
-    const tickets = Math.min(remaining[i], Math.round(baseSalesPace * demand));
-    newSales[i] = tickets;
-    salesEfficiency[i] = baseSalesPace > 0 ? clamp(tickets / baseSalesPace, 0, 1) : 1;
-  }
-
-  const ticketSalesRes = sold.map((oldVal, i) => oldVal + (newSales[i] || 0));
-  const totalNewSales = newSales.reduce((acc, itm) => acc + itm, 0);
-  const ticketIncome = totalNewSales * Math.max(0, Number(gameState && gameState.ticketPrice || 0));
-
- 
-  gameState.ticketSales = ticketSalesRes;
-  
-
-  return {
-    ticketSalesRes,
-    newSales,
-    salesEfficiency,
-    priceReasonablenessRes: priceReasonablenessFactor,
-    cumulativeSalesFactor,
-    ticketIncome,
-    totalNewSales,
-    infrastructureDivisor,
-  };
-}
-
 
 /* VENDORS PROPOSALS LOGIC */
 
