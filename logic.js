@@ -1,3 +1,293 @@
+/* ----------------------------------------------------------------------------------------*/
+/* ------------------------------- HELPER FUNCTIONS ---------------------------------------*/
+/* ----------------------------------------------------------------------------------------*/
+
+/* Numeric helpers */
+
+function averageNestedNumbers(values) {
+  if (!Array.isArray(values) || values.length === 0) return 0;
+
+  let total = 0;
+  let count = 0;
+
+  values.forEach(item => {
+    if (Array.isArray(item)) {
+      item.forEach(v => {
+        const n = Number(v);
+        if (Number.isFinite(n)) {
+          total += n;
+          count += 1;
+        }
+      });
+    } else {
+      const n = Number(item);
+      if (Number.isFinite(n)) {
+        total += n;
+        count += 1;
+      }
+    }
+  });
+
+  return count > 0 ? total / count : 0;
+}
+
+function averageNumbers(value) {
+  if (Array.isArray(value)) {
+    if (value.length < 1) return 0;
+    return value.reduce((sum, current) => sum + Number(current || 0), 0) / value.length;
+  }
+
+  return Number(value || 0);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, Number(value || 0)));
+}
+
+function clamp01(v) {
+  return Math.max(0, Math.min(1, Number(v || 0)));
+}
+
+function clampInt(value, min, max) {
+  return Math.round(clamp(value, min, max));
+}
+
+function meetsMinimum(value, minimum) {
+  if (minimum == null) return true;
+  return Number(value || 0) >= Number(minimum || 0);
+}
+
+function meetsVectorMinimum(values, minimums) {
+  if (!Array.isArray(minimums) || minimums.length < 1) return true;
+  if (!Array.isArray(values)) return false;
+
+  return minimums.every((minimum, index) => (
+    Number(values[index] || 0) >= Number(minimum || 0)
+  ));
+}
+
+function roundToNearest(value, nearest) {
+  const n = Math.max(1, Number(nearest || 1));
+  return Math.round(Number(value || 0) / n) * n;
+}
+
+function saturate(value, k) {
+  const v = Math.max(0, Number(value || 0));
+  const kk = Math.max(1, Number(k || 1));
+  return v <= 0 ? 0 : v / (v + kk);
+}
+
+const saturation = (x, power = 1, k = 1) => {
+  return Math.pow(x / (x + k), power);
+};
+
+function saturationSigned(x, power = 1, k = 1) {
+  const value = Number(x || 0);
+  const magnitude = Math.abs(value);
+  const safeK = Math.max(0.000001, Number(k || 1));
+
+  if (magnitude === 0) return 0;
+
+  const result = Math.pow(magnitude / (magnitude + safeK), power);
+
+  return value < 0 ? -result : result;
+}
+
+function smoothstep(x) {
+  x = clamp(x, 0, 1);
+  return x * x * (3 - 2 * x);
+}
+
+/* Random and collection helpers */
+
+function getArrayOfKind(size, kind){
+  const returnArr= [];
+  for(let i=0; i<size; i++){
+    returnArr.push(kind);
+  }
+  return returnArr
+}
+
+function randomBetween(min, max) {
+  return Number(min || 0) + Math.random() * (Number(max || 0) - Number(min || 0));
+}
+
+function randomInt(min, max) {
+  const lo = Math.ceil(Number(min || 0));
+  const hi = Math.floor(Number(max || 0));
+
+  if (hi < lo) {
+    return lo;
+  }
+
+  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+}
+
+function shuffleArray(arr) {
+  const copy = arr.slice();
+
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = randomInt(0, i);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+
+  return copy;
+}
+
+function weightedPick(candidates, weights) {
+  const total = weights.reduce((a, b) => a + b, 0);
+  // Fallback: if every weight is 0 (all surroundings unsuitable), stay put.
+  if (total <= 0) {
+    //if all the candidate squares are unsuitable we just randomly pick one (uniform probabilities)
+    const sqIdx = randomInt(0, candidates.length-1);
+    return candidates[sqIdx];
+  }
+  let r = Math.random() * total;
+  for (let i = 0; i < candidates.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return candidates[i];
+  }
+  return candidates[candidates.length - 1];
+}
+
+/* Object and config helpers */
+
+function deepMerge(...objects) {
+  const output = {};
+
+  objects.forEach(obj => {
+    mergeInto(output, obj);
+  });
+
+  return output;
+}
+
+function fixMinMax(obj, minKey, maxKey) {
+  const min = Number(obj?.[minKey]);
+  const max = Number(obj?.[maxKey]);
+
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return;
+  if (min <= max) return;
+
+  obj[minKey] = max;
+  obj[maxKey] = min;
+}
+
+function mergeInto(target, source) {
+  if (!source || typeof source !== 'object') return target;
+
+  Object.keys(source).forEach(key => {
+    const value = source[key];
+
+    if (Array.isArray(value)) {
+      target[key] = value.slice();
+      return;
+    }
+
+    if (value && typeof value === 'object') {
+      if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
+        target[key] = {};
+      }
+      mergeInto(target[key], value);
+      return;
+    }
+
+    if (value !== undefined) {
+      target[key] = value;
+    }
+  });
+
+  return target;
+}
+
+/* IDs and lookup helpers */
+
+function createVendorId(tile, turn, index) {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `vendor_${tile}_t${turn || 0}_${index}_${rand}`;
+}
+
+/* Board and tile helpers */
+
+const rows_notation = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+function getNeighborSquares(squareId, rows, cols) {
+  const m = squareId.match(/^([A-Z]+)(\d+)$/);
+  let row = 0;
+  for (const ch of m[1]) row = row * 26 + (ch.charCodeAt(0) - 64);
+  row -= 1;
+  const col = parseInt(m[2], 10) - 1;
+
+  const neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = row + dr, nc = col + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+        neighbors.push(rows_notation[nr] + (nc + 1));
+      }
+    }
+  }
+  return neighbors;
+}
+
+function getNeighborTiles(tile, gridSize) {
+  const parsed = parseBoardTile(tile);
+  if (!parsed) return [];
+
+  const { col, row } = parsed;
+  const size = Math.max(1, Number(gridSize || 5));
+
+  const candidates = [
+    { col: col - 1, row },
+    { col: col + 1, row },
+    { col, row: row - 1 },
+    { col, row: row + 1 },
+  ];
+
+  return candidates
+    .filter(p => p.col >= 0 && p.col < size && p.row >= 1 && p.row <= size)
+    .map(p => tileFromCoords(p.col, p.row));
+}
+
+function indexToLetters(index) {
+  let n = Number(index) + 1;
+  let result = '';
+
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    result = String.fromCharCode(65 + rem) + result;
+    n = Math.floor((n - 1) / 26);
+  }
+
+  return result;
+}
+
+function lettersToIndex(letters) {
+  let n = 0;
+
+  for (let i = 0; i < letters.length; i++) {
+    n = n * 26 + (letters.charCodeAt(i) - 64);
+  }
+
+  return n - 1;
+}
+
+function parseBoardTile(tile) {
+  const match = String(tile || '').match(/^([A-Z]+)(\d+)$/i);
+  if (!match) return null;
+
+  return {
+    col: lettersToIndex(match[1].toUpperCase()),
+    row: Number(match[2]),
+  };
+}
+
+function tileFromCoords(col, row) {
+  return indexToLetters(col) + String(row);
+}
+
+
 /* ---------------------------------------------------------------------------------------- */
 /* ------------------------------- TICKET SALES LOGIC ------------------------------------- */
 /* ---------------------------------------------------------------------------------------- */
@@ -455,117 +745,6 @@ function normalizeTicketSalesRules(rules) {
     1,
     Number(rules.demand.minTurnsLeft || 1)
   );
-}
-
-function fixMinMax(obj, minKey, maxKey) {
-  const min = Number(obj?.[minKey]);
-  const max = Number(obj?.[maxKey]);
-
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return;
-  if (min <= max) return;
-
-  obj[minKey] = max;
-  obj[maxKey] = min;
-}
-
-function deepMerge(...objects) {
-  const output = {};
-
-  objects.forEach(obj => {
-    mergeInto(output, obj);
-  });
-
-  return output;
-}
-
-function mergeInto(target, source) {
-  if (!source || typeof source !== 'object') return target;
-
-  Object.keys(source).forEach(key => {
-    const value = source[key];
-
-    if (Array.isArray(value)) {
-      target[key] = value.slice();
-      return;
-    }
-
-    if (value && typeof value === 'object') {
-      if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
-        target[key] = {};
-      }
-      mergeInto(target[key], value);
-      return;
-    }
-
-    if (value !== undefined) {
-      target[key] = value;
-    }
-  });
-
-  return target;
-}
-
-/* =========================================================
-   MISC HELPERS
-========================================================= */
-
-function clamp01(v) {
-  return Math.max(0, Math.min(1, Number(v || 0)));
-}
-
-function saturate(value, k) {
-  const v = Math.max(0, Number(value || 0));
-  const kk = Math.max(1, Number(k || 1));
-  return v <= 0 ? 0 : v / (v + kk);
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, Number(value || 0)));
-}
-
-function randomBetween(min, max) {
-  return Number(min || 0) + Math.random() * (Number(max || 0) - Number(min || 0));
-}
-
-function randomInt(min, max) {
-  const lo = Math.ceil(Number(min || 0));
-  const hi = Math.floor(Number(max || 0));
-
-  if (hi < lo) return lo;
-
-  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
-}
-
-function smoothstep(x) {
-  x = clamp(x, 0, 1);
-  return x * x * (3 - 2 * x);
-}
-
-function averageNestedNumbers(values) {
-  if (!Array.isArray(values) || values.length === 0) return 0;
-
-  let total = 0;
-  let count = 0;
-
-  values.forEach(item => {
-    if (Array.isArray(item)) {
-      item.forEach(v => {
-        const n = Number(v);
-        if (Number.isFinite(n)) {
-          total += n;
-          count += 1;
-        }
-      });
-    } else {
-      const n = Number(item);
-      if (Number.isFinite(n)) {
-        total += n;
-        count += 1;
-      }
-    }
-  });
-
-  return count > 0 ? total / count : 0;
 }
 
 /* VENDORS PROPOSALS LOGIC */
@@ -1084,65 +1263,6 @@ function calculateMarketingProposalFactor(gameState, rules) {
   return interestFactor;
 }
 
-/* =========================================================
-   BOARD HELPERS
-========================================================= */
-
-function getNeighborTiles(tile, gridSize) {
-  const parsed = parseBoardTile(tile);
-  if (!parsed) return [];
-
-  const { col, row } = parsed;
-  const size = Math.max(1, Number(gridSize || 5));
-
-  const candidates = [
-    { col: col - 1, row },
-    { col: col + 1, row },
-    { col, row: row - 1 },
-    { col, row: row + 1 },
-  ];
-
-  return candidates
-    .filter(p => p.col >= 0 && p.col < size && p.row >= 1 && p.row <= size)
-    .map(p => tileFromCoords(p.col, p.row));
-}
-
-function parseBoardTile(tile) {
-  const match = String(tile || '').match(/^([A-Z]+)(\d+)$/i);
-  if (!match) return null;
-
-  return {
-    col: lettersToIndex(match[1].toUpperCase()),
-    row: Number(match[2]),
-  };
-}
-
-function tileFromCoords(col, row) {
-  return indexToLetters(col) + String(row);
-}
-
-function lettersToIndex(letters) {
-  let n = 0;
-
-  for (let i = 0; i < letters.length; i++) {
-    n = n * 26 + (letters.charCodeAt(i) - 64);
-  }
-
-  return n - 1;
-}
-
-function indexToLetters(index) {
-  let n = Number(index) + 1;
-  let result = '';
-
-  while (n > 0) {
-    const rem = (n - 1) % 26;
-    result = String.fromCharCode(65 + rem) + result;
-    n = Math.floor((n - 1) / 26);
-  }
-
-  return result;
-}
 
 /* =========================================================
    CONFIG HELPERS
@@ -1219,181 +1339,13 @@ function normalizeVendorProposalRules(rules) {
     : [];
 }
 
-function fixMinMax(obj, minKey, maxKey) {
-  const min = Number(obj?.[minKey]);
-  const max = Number(obj?.[maxKey]);
-
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return;
-  if (min <= max) return;
-
-  obj[minKey] = max;
-  obj[maxKey] = min;
-}
-
-function deepMerge(...objects) {
-  const output = {};
-
-  objects.forEach(obj => {
-    mergeInto(output, obj);
-  });
-
-  return output;
-}
-
-function mergeInto(target, source) {
-  if (!source || typeof source !== 'object') return target;
-
-  Object.keys(source).forEach(key => {
-    const value = source[key];
-
-    if (Array.isArray(value)) {
-      target[key] = value.slice();
-      return;
-    }
-
-    if (value && typeof value === 'object') {
-      if (!target[key] || typeof target[key] !== 'object' || Array.isArray(target[key])) {
-        target[key] = {};
-      }
-      mergeInto(target[key], value);
-      return;
-    }
-
-    if (value !== undefined) {
-      target[key] = value;
-    }
-  });
-
-  return target;
-}
-
-function getSalesTeamById(globalSettings, salesTeamId) {
-  if (!salesTeamId) return null;
-
-  const salesTeams = globalSettings?.salesTeams;
-
-  if (Array.isArray(salesTeams)) {
-    return salesTeams.find(item => item?.id === salesTeamId) || null;
-  }
-
-  if (salesTeams && typeof salesTeams === 'object') {
-    if (salesTeams.id === salesTeamId) return salesTeams;
-    return salesTeams[salesTeamId] || null;
-  }
-
-  return null;
-}
-
-/* =========================================================
-   MISC HELPERS
-========================================================= */
-
-function averageNestedNumbers(values) {
-  if (!Array.isArray(values) || values.length === 0) return 0;
-
-  let total = 0;
-  let count = 0;
-
-  values.forEach(item => {
-    if (Array.isArray(item)) {
-      item.forEach(v => {
-        const n = Number(v);
-        if (Number.isFinite(n)) {
-          total += n;
-          count += 1;
-        }
-      });
-    } else {
-      const n = Number(item);
-      if (Number.isFinite(n)) {
-        total += n;
-        count += 1;
-      }
-    }
-  });
-
-  return count > 0 ? total / count : 0;
-}
-
-function createVendorId(tile, turn, index) {
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `vendor_${tile}_t${turn || 0}_${index}_${rand}`;
-}
-
-function roundToNearest(value, nearest) {
-  const n = Math.max(1, Number(nearest || 1));
-  return Math.round(Number(value || 0) / n) * n;
-}
-
-function randomBetween(min, max) {
-  return Number(min || 0) + Math.random() * (Number(max || 0) - Number(min || 0));
-}
-
-function randomInt(min, max) {
-  const lo = Math.ceil(Number(min || 0));
-  const hi = Math.floor(Number(max || 0));
-
-  if (hi < lo) {
-    return lo;
-  }
-
-  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
-}
-
-function clampInt(value, min, max) {
-  return Math.round(clamp(value, min, max));
-}
-
-function shuffleArray(arr) {
-  const copy = arr.slice();
-
-  for (let i = copy.length - 1; i > 0; i--) {
-    const j = randomInt(0, i);
-    [copy[i], copy[j]] = [copy[j], copy[i]];
-  }
-
-  return copy;
-}
-
-
-
 /* ---------------------------------------------------------------------------------------- */
-/* --------------------------VENDORS SATISFACTION LOGIC------------------------------------ */
+/* -------------------------- SATISFACTION RULES CONFIG ----------------------------------- */
 /* ---------------------------------------------------------------------------------------- */
 
-function computeVendorsSatisfaction(gameState, tileId) {
-  console.log("");
-}
 
-/* ---------------------------------------------------------------------------------------- */
-/* --------------------------VISITORS SATISFACTION LOGIC----------------------------------- */
-/* ---------------------------------------------------------------------------------------- */
 
-const saturation = (x, power = 1, k=1) => {
-      return Math.pow(x / (x + k), power);
-};
-
-function getVisitorsSatisfaction(peopleTracker, groupCount = 3) {
-  const satisfactionByGroup = Array.from({ length: groupCount }, () => []);
-
-  for (const person of peopleTracker) {
-    const satisfactionVector = person.satisfactionProgress;
-    const personSatisfactionMEAN = satisfactionVector.reduce((sum, value) => sum + value, 0) / satisfactionVector.length;
-    satisfactionByGroup[person.group].push(personSatisfactionMEAN);
-  }
-
-  const averageSatisfactionByGroup = satisfactionByGroup.map(groupValues =>{
-   return groupValues.reduce((sum, value) => sum + value, 0) / groupValues.length
-  });
-
-  console.log("SATISFACTION BY GROUP: ", satisfactionByGroup);
-  console.log("Average satisfaction by group: ", averageSatisfactionByGroup);
-
-  return averageSatisfactionByGroup
-}
-
-/* ________________________________________________________________________________________ */
-// so basically just getting how similar is visitors vector to vendors suitability vector
+// just getting how similar is visitors vector to vendors suitability vector
 // it shows us how proportional our visitors strucutre is to what vendor would expect based on his suitability vector
 const kosinusSimilarity = (a, b) => {
   if (a.length !== b.length) {
@@ -1423,284 +1375,602 @@ const kosinusSimilarity = (a, b) => {
 function normalizeVector(x){
   console.log("VECx", x);
   let copy = x.slice();
-  for(let i; i<x.length; i++){
+  for(let i = 0; i<x.length; i++){
     if(copy[i]<0){
       copy[i] = 0;
     }
   }
 
+  if(copy.every(itm=>itm==0)){
+    return copy;
+  }
+
   return copy.map(itm=>itm/copy.reduce((acc, itm)=>acc+itm, 0));
 }
 
-function getVendorsSatisfaction(tileVisits, gameState){
-  const similarityArr = gameState.rentedBooths.map(itm=>{
-    const normalizedVector1 = normalizeVector(itm.vendorSuitabilityByGroup)
-    console.log("Vendor suit passed---")
-    console.log("TILE VISITS: ", tileVisits)
-    const normalizedVector2 = normalizeVector(tileVisits[itm.tile]);
-    const similarity = kosinusSimilarity(normalizedVector1, normalizedVector2);
+const DEFAULT_SATISFACTION_RULES = {
+  simulation: {
+    entryGateCount: 6,
+    simulationSteps: 20,
+    fallbackGateTile: "A1",
+  },
+
+  suitabilityNet: {
+    emptySquareSuitability: [0, 0, 0],
+    emptySquareEffectPower: 1,
+    emptySquareAbsorptionPower: 0,
+  },
+
+  movement: {
+    includeCurrentSquareAsCandidate: true,
+    minMovementSuitability: 0,
+    currentSquareStayMultiplier: 0.5,
+    revisitPenaltyMultiplier: 0.66,
+  },
+
+  visitors: {
+    finalGroupSatisfactionFloor: 0,
+    satisfactionSaturationPower: 1,
+    satisfactionSaturationK: 1,
+  },
+
+  vendors: {
+    vectorMatching: {
+      negativeSuitabilityFloor: 0,
+      zeroVectorSimilarity: 0,
+    },
+
+    visits: {
+      satisfactionSaturationPower: 2,
+      satisfactionSaturationK: 200,
+    },
+  },
+};
+
+function getSatisfactionRules(globalSettings, overrides = {}) {
+  const adminRules = globalSettings?.baseRules?.movementsAndSatisfactionRules || {};
+
+  const merged = deepMerge(
+    DEFAULT_SATISFACTION_RULES,
+    adminRules,
+    overrides || {}
+  );
+
+  normalizeSatisfactionRules(merged);
+  return merged;
+}
+
+function normalizeSatisfactionRules(rules) {
+  rules.simulation.entryGateCount = Math.max(
+    1,
+    Math.round(Number(rules.simulation.entryGateCount || 1))
+  );
+
+  rules.simulation.simulationSteps = Math.max(
+    0,
+    Math.round(Number(rules.simulation.simulationSteps || 0))
+  );
+
+  rules.simulation.fallbackGateTile = String(
+    rules.simulation.fallbackGateTile || "A1"
+  );
+
+  rules.suitabilityNet.emptySquareSuitability = normalizeVec3(
+    rules.suitabilityNet.emptySquareSuitability,
+    [0, 0, 0]
+  );
+
+  rules.suitabilityNet.emptySquareEffectPower = Number(
+    rules.suitabilityNet.emptySquareEffectPower ?? 1
+  );
+
+  rules.suitabilityNet.emptySquareAbsorptionPower = clamp(
+    rules.suitabilityNet.emptySquareAbsorptionPower ?? 0,
+    0,
+    1
+  );
+
+  rules.movement.includeCurrentSquareAsCandidate = Boolean(
+    rules.movement.includeCurrentSquareAsCandidate
+  );
+
+  rules.movement.minMovementSuitability = Number(
+    rules.movement.minMovementSuitability ?? 0
+  );
+
+  rules.movement.currentSquareStayMultiplier = Math.max(
+    0,
+    Number(rules.movement.currentSquareStayMultiplier ?? 0.5)
+  );
+
+  rules.movement.revisitPenaltyMultiplier = Math.max(
+    0,
+    Number(rules.movement.revisitPenaltyMultiplier ?? 0.66)
+  );
+
+  rules.visitors.finalGroupSatisfactionFloor = Number(
+    rules.visitors.finalGroupSatisfactionFloor ?? 0
+  );
+
+  rules.visitors.satisfactionSaturationPower = Math.max(
+    0.000001,
+    Number(rules.visitors.satisfactionSaturationPower || 1)
+  );
+
+  rules.visitors.satisfactionSaturationK = Math.max(
+    0.000001,
+    Number(rules.visitors.satisfactionSaturationK || 1)
+  );
+
+  rules.vendors.vectorMatching.negativeSuitabilityFloor = Number(
+    rules.vendors.vectorMatching.negativeSuitabilityFloor ?? 0
+  );
+
+  rules.vendors.vectorMatching.zeroVectorSimilarity = Number(
+    rules.vendors.vectorMatching.zeroVectorSimilarity ?? 0
+  );
+
+  rules.vendors.visits.satisfactionSaturationPower = Math.max(
+    0.000001,
+    Number(rules.vendors.visits.satisfactionSaturationPower || 2)
+  );
+
+  rules.vendors.visits.satisfactionSaturationK = Math.max(
+    0.000001,
+    Number(rules.vendors.visits.satisfactionSaturationK || 200)
+  );
+}
+
+function normalizeVec3(value, fallback = [0, 0, 0]) {
+  const source = Array.isArray(value) ? value : fallback;
+
+  return [0, 1, 2].map(index => Number(source[index] ?? fallback[index] ?? 0));
+}
+
+/* ---------------------------------------------------------------------------------------- */
+/* -------------------------- VISITORS SATISFACTION LOGIC --------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
+
+function getVisitorsSatisfaction(peopleTracker, rules, groupCount = 3) {
+  const satisfactionByGroup = Array.from({ length: groupCount }, () => []);
+  const visitorRules = rules.visitors;
+
+  for (const person of peopleTracker) {
+    const satisfactionVector = Array.isArray(person.satisfactionProgress)
+      ? person.satisfactionProgress
+      : [];
+
+    if (satisfactionVector.length < 1) {
+      satisfactionByGroup[person.group].push(visitorRules.finalGroupSatisfactionFloor);
+      continue;
+    }
+
+    const personSatisfactionMean = satisfactionVector.reduce(
+      (sum, value) => sum + Number(value || 0),
+      0
+    ) / satisfactionVector.length;
+
+    satisfactionByGroup[person.group].push(personSatisfactionMean);
+  }
+
+  const averageSatisfactionByGroup = satisfactionByGroup.map(groupValues => {
+    if (!Array.isArray(groupValues) || groupValues.length < 1) {
+      return visitorRules.finalGroupSatisfactionFloor;
+    }
+
+    const groupAverage = groupValues.reduce(
+      (sum, value) => sum + Number(value || 0),
+      0
+    ) / groupValues.length;
+
+    return Math.max(visitorRules.finalGroupSatisfactionFloor, groupAverage);
+  });
+
+  console.log("SATISFACTION BY GROUP: ", satisfactionByGroup);
+  console.log("Average satisfaction by group: ", averageSatisfactionByGroup);
+
+  return averageSatisfactionByGroup;
+}
+
+/* ---------------------------------------------------------------------------------------- */
+/* -------------------------- VENDORS SATISFACTION LOGIC ---------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
+
+
+function getVendorsSatisfaction(tileVisits, gameState, rules) {
+  const rentedBooths = Array.isArray(gameState?.rentedBooths)
+    ? gameState.rentedBooths
+    : [];
+
+  if (rentedBooths.length < 1) {
+    return 0;
+  }
+
+  const vectorRules = rules.vendors.vectorMatching;
+  const visitRules = rules.vendors.visits;
+
+  const similarityArr = rentedBooths.map(booth => {
+    const normalizedVector1 = normalizeVector(
+      booth.vendorSuitabilityByGroup,
+      vectorRules
+    );
+
+    const normalizedVector2 = normalizeVector(
+      tileVisits?.[booth.tile] || [0, 0, 0],
+      vectorRules
+    );
+
+    const similarity = kosinusSimilarity(
+      normalizedVector1,
+      normalizedVector2,
+      vectorRules.zeroVectorSimilarity
+    );
+
     console.log("Vector1: ", normalizedVector1);
     console.log("Vector2: ", normalizedVector2);
     console.log("Similarity: ", similarity);
+
     return similarity;
-  })
+  });
 
-  const visitsSatisfaction = gameState.rentedBooths.map(itm=>{
-    const visits= tileVisits[itm.tile].reduce((acc, itm)=>acc+itm, 0);
-    return saturation(visits, 2, 200);
-  })
+  const visitsSatisfaction = rentedBooths.map(booth => {
+    const visits = (tileVisits?.[booth.tile] || [0, 0, 0]).reduce(
+      (acc, value) => acc + Number(value || 0),
+      0
+    );
 
-  console.log("SIMilarity arr: ", similarityArr)
+    return saturation(
+      visits,
+      visitRules.satisfactionSaturationPower,
+      visitRules.satisfactionSaturationK
+    );
+  });
+
+  console.log("SIMilarity arr: ", similarityArr);
   console.log("VISITS satisfaction: ", visitsSatisfaction);
+
   const combined = [];
-  for(let i=0; i<visitsSatisfaction.length; i++){
-    combined[i] = similarityArr[i]*visitsSatisfaction[i];
+  for (let i = 0; i < visitsSatisfaction.length; i++) {
+    combined[i] = similarityArr[i] * visitsSatisfaction[i];
   }
+
+  const overall = combined.length > 0
+    ? combined.reduce((acc, value) => acc + Number(value || 0), 0) / combined.length
+    : 0;
+
   console.log("combined: ", combined);
-  console.log("overall satisfaction: ", combined.reduce((acc, itm)=>acc+itm, 0)/combined.length);
-  return combined.reduce((acc, itm)=>acc+itm, 0)/combined.length;
+  console.log("overall satisfaction: ", overall);
+
+  return overall;
 }
 
-/* ________________________________________________________________________________________ */
+/* ---------------------------------------------------------------------------------------- */
+/* -------------------------- EVENT SIMULATION -------------------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
 
-const rows_notation = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-function getArrayOfKind(size, kind){
-  const returnArr= [];
-  for(let i=0; i<size; i++){
-    returnArr.push(kind);
-  }
-  return returnArr
-}
-
-function getBatches(populationArray, batchSize, numberOfRandomPeopleAirdrops){
+function getBatches(populationArray, batchSize, numberOfRandomPeopleAirdrops) {
   const batches = [];
-  console.log("hEreweare");
-  for(let i=0; i<numberOfRandomPeopleAirdrops; i++){
-    const to = i !== (numberOfRandomPeopleAirdrops-1) ? i*batchSize+batchSize : 10000000000;
-    batches.push(populationArray.slice(i*batchSize,to));
+
+  for (let i = 0; i < numberOfRandomPeopleAirdrops; i++) {
+    const to = i !== (numberOfRandomPeopleAirdrops - 1)
+      ? i * batchSize + batchSize
+      : 10000000000;
+
+    batches.push(populationArray.slice(i * batchSize, to));
   }
+
   console.log("BATCHES: ", batches);
   return batches;
 }
 
-function pickGates(rows, cols, gameState, numberOfRandomPeopleAirdrops){
+function pickGates(rows, cols, gameState, numberOfRandomPeopleAirdrops, rules) {
   const entryRing = [];
-  for(let i=0; i<rows; i++){
-    for(let j=0; j<cols; j++){
-      const col = j+1;
-      if(i==0 || i==rows-1 || j==0 || j==cols-1){
-        //basically all the edging squares
-        entryRing.push(rows_notation[i]+col);
+
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const col = j + 1;
+
+      if (i === 0 || i === rows - 1 || j === 0 || j === cols - 1) {
+        entryRing.push(rows_notation[i] + col);
       }
     }
   }
-  console.log("ENTRY LAYER: ", entryRing);
-  const pickedGates = []
 
-  
-  const freeSquares = entryRing.filter(itm=>!gameState.board[itm]);
+  console.log("ENTRY LAYER: ", entryRing);
+
+  const pickedGates = [];
+  const freeSquares = entryRing.filter(tile => !gameState.board[tile]);
+
   console.log("FREE SQR: ", freeSquares);
-  if(freeSquares.length<1){
-    return ["A1"];
+
+  if (freeSquares.length < 1) {
+    return [rules.simulation.fallbackGateTile];
   }
-  if(freeSquares.length<=numberOfRandomPeopleAirdrops){
+
+  if (freeSquares.length <= numberOfRandomPeopleAirdrops) {
     return freeSquares;
   }
 
-  while(pickedGates.length!==numberOfRandomPeopleAirdrops){
-    const randNum = randomInt(0,freeSquares.length-1);
-    if(!pickedGates.find(itm=>itm==freeSquares[randNum])){
+  while (pickedGates.length !== numberOfRandomPeopleAirdrops) {
+    const randNum = randomInt(0, freeSquares.length - 1);
+
+    if (!pickedGates.find(tile => tile === freeSquares[randNum])) {
       pickedGates.push(freeSquares[randNum]);
     }
   }
-  console.log("Picked Gates: ", pickedGates)
+
+  console.log("Picked Gates: ", pickedGates);
   return pickedGates;
 }
 
-function initialArrangement(gates, batches){
+function initialArrangement(gates, batches) {
   let batchesFormatted = batches.slice();
-  while(gates.length<batchesFormatted.length){
-    batchesFormatted = [[...batchesFormatted[0],...batchesFormatted[1]],...batchesFormatted.slice(2)];
+
+  while (gates.length < batchesFormatted.length) {
+    batchesFormatted = [
+      [...batchesFormatted[0], ...batchesFormatted[1]],
+      ...batchesFormatted.slice(2),
+    ];
+
     console.log("Batches formatted: ", batchesFormatted);
   }
+
   const peopleTracker = [];
-  gates.forEach((itm, i)=>{
-    batchesFormatted[i].map(group => {
-      const personNote = {
-        group: group,
-        currentSquare: itm,
-        visitedSquaresHistory: [itm],
+
+  gates.forEach((gate, i) => {
+    const batch = Array.isArray(batchesFormatted[i]) ? batchesFormatted[i] : [];
+
+    batch.forEach(group => {
+      peopleTracker.push({
+        group,
+        currentSquare: gate,
+        visitedSquaresHistory: [gate],
         totalAccumulatedSuitability: [0, 0, 0],
-        satisfactionProgress: []
-      }
-      peopleTracker.push(personNote)
-    })
-  })
+        satisfactionProgress: [],
+      });
+    });
+  });
+
   console.log("People tracker: ", peopleTracker);
   return peopleTracker;
-  //console.log("BAtches formatted: ", batchesFormatted);
 }
-/* ---------------------------------------------------------------------------------------- */
-/* --------------------------EVENT SIMULATION----------------------------------- */
-/* ---------------------------------------------------------------------------------------- */
-function eventSimulation(gameState, worldSettings, globalSettings){
-  const numberOfRandomPeopleAirdrops = 6;
-  const peopleArr= shuffleArray([...getArrayOfKind(gameState.ticketSales[0], 0), //youth
-  ...getArrayOfKind(gameState.ticketSales[1], 1), //families
-  ...getArrayOfKind(gameState.ticketSales[2], 2)]); //senior citizens
+
+function eventSimulation(gameState, worldSettings, globalSettings, options = {}) {
+  const rules = getSatisfactionRules(globalSettings, options.movementsAndSatisfactionRules);
+
+  const numberOfRandomPeopleAirdrops = rules.simulation.entryGateCount;
+
+  const peopleArr = shuffleArray([
+    ...getArrayOfKind(gameState.ticketSales[0], 0),
+    ...getArrayOfKind(gameState.ticketSales[1], 1),
+    ...getArrayOfKind(gameState.ticketSales[2], 2),
+  ]);
+
   console.log("People arr: ", peopleArr);
-  const batchSize = Math.round(peopleArr.length/numberOfRandomPeopleAirdrops);
-  const batches = getBatches(peopleArr, batchSize, numberOfRandomPeopleAirdrops);
-  const gates = pickGates(worldSettings.gridSize, worldSettings.gridSize, gameState, numberOfRandomPeopleAirdrops);
+
+  const batchSize = Math.max(
+    1,
+    Math.round(peopleArr.length / numberOfRandomPeopleAirdrops)
+  );
+
+  const batches = getBatches(
+    peopleArr,
+    batchSize,
+    numberOfRandomPeopleAirdrops
+  );
+
+  const gates = pickGates(
+    worldSettings.gridSize,
+    worldSettings.gridSize,
+    gameState,
+    numberOfRandomPeopleAirdrops,
+    rules
+  );
+
   const peopleTracker = initialArrangement(gates, batches);
 
-  const dataForSuitabilityNet = prepareDataForBoardSuitabilityNet(gameState, worldSettings, globalSettings);
-  const netResult = mapBoardSuitabilityNet(worldSettings.gridSize, worldSettings.gridSize, dataForSuitabilityNet)
- 
+  const dataForSuitabilityNet = prepareDataForBoardSuitabilityNet(
+    gameState,
+    worldSettings,
+    globalSettings,
+    rules
+  );
 
-  const numberOfSimulations = 20;
-  runSimulationSteps(peopleTracker, worldSettings.gridSize, worldSettings.gridSize, netResult, dataForSuitabilityNet, numberOfSimulations);
+  const netResult = mapBoardSuitabilityNet(
+    worldSettings.gridSize,
+    worldSettings.gridSize,
+    dataForSuitabilityNet
+  );
+
+  runSimulationSteps(
+    peopleTracker,
+    worldSettings.gridSize,
+    worldSettings.gridSize,
+    netResult,
+    dataForSuitabilityNet,
+    rules.simulation.simulationSteps,
+    rules
+  );
+
   console.log("Final people tracker: ", peopleTracker);
   console.log("SUITABILITY NET: ", netResult);
-  const tileVisits = getVisitCountsByTile(peopleTracker, worldSettings.gridSize, worldSettings.gridSize);
+
+  const tileVisits = getVisitCountsByTile(
+    peopleTracker,
+    worldSettings.gridSize,
+    worldSettings.gridSize
+  );
+
   console.log("Tile visits: ", tileVisits);
-  const visitorsSatisfaction = getVisitorsSatisfaction(peopleTracker);
-  const vendorsSatisfaction = getVendorsSatisfaction(tileVisits, gameState);
+
+  const visitorsSatisfaction = getVisitorsSatisfaction(peopleTracker, rules);
+  const vendorsSatisfaction = getVendorsSatisfaction(tileVisits, gameState, rules);
+
   return {
-    visitorsSatisfaction: visitorsSatisfaction,
-    vendorsSatisfaction: vendorsSatisfaction,
-    tileVisits: tileVisits,
-    peopleTracker: peopleTracker,
-  }
+    visitorsSatisfaction,
+    vendorsSatisfaction,
+    tileVisits,
+    peopleTracker,
+  };
 }
 
-/* -----------------------------------------------------------------------------------------*/
-function prepareDataForBoardSuitabilityNet(gameState, worldSettings, globalSettings){
+/* ---------------------------------------------------------------------------------------- */
+/* -------------------------- BOARD SUITABILITY NET --------------------------------------- */
+/* ---------------------------------------------------------------------------------------- */
+
+function prepareDataForBoardSuitabilityNet(gameState, worldSettings, globalSettings, rules) {
   const data = [];
-  for(let i=0; i<worldSettings.gridSize; i++){
-    for (let j=0; j<worldSettings.gridSize; j++){
-      const col = j+1;
-      const tileId = rows_notation[i]+col;
+  const netRules = rules.suitabilityNet;
+
+  for (let i = 0; i < worldSettings.gridSize; i++) {
+    for (let j = 0; j < worldSettings.gridSize; j++) {
+      const col = j + 1;
+      const tileId = rows_notation[i] + col;
       const objKey = gameState.board[tileId];
-      if(!objKey){
-        const emptySquareInfo = {
-            square: tileId,
-            object: "Empty",
-            suitability: [0, 0, 0],
-            effectPower: 1,
-            absorptionPower: 0,
-        };
-        data.push(emptySquareInfo);
-      }
-      else {
-        const object = globalSettings.objects[objKey];
-        const suitability = object.suitability.slice();
-        const booth = (gameState?.rentedBooths ?? []).find(itm => itm.tile === tileId);
-        const vendorSuitability = booth && (booth.vendorSuitabilityByGroup.slice() || booth.suitability.slice());
-        if (Array.isArray(vendorSuitability)){
-          vendorSuitability.forEach((v, i) => { suitability[i] += Number(v || 0); });
-        }
 
-        //adding suitability points that speaker brings to the table
-        const speakerAppointment = (gameState?.appointedSpeakers ?? []).find(itm => itm.tileId == tileId);
-        if(speakerAppointment){
-          const appointedSpeaker = SPEAKERS_LIST.find(itm=>itm.id == speakerAppointment.speakerId);
-          if (appointedSpeaker && Array.isArray(appointedSpeaker.suitability)) {
-            appointedSpeaker.suitability.forEach((v, i)=> {suitability[i] += Number(v || 0); });
-          }
-        }
-        
-        const occupiedSquareInfo = {
+      if (!objKey) {
+        data.push({
           square: tileId,
-          object: objKey,
-          suitability: suitability,
-          effectPower: object?.effect ?? 0,
-          absorptionPower: object?.absorption ?? 0,
-        }
+          object: "Empty",
+          suitability: netRules.emptySquareSuitability.slice(),
+          effectPower: netRules.emptySquareEffectPower,
+          absorptionPower: netRules.emptySquareAbsorptionPower,
+        });
 
-        data.push(occupiedSquareInfo);
+        continue;
       }
+
+      const object = globalSettings.objects[objKey];
+      const suitability = Array.isArray(object?.suitability)
+        ? object.suitability.slice()
+        : [0, 0, 0];
+
+      const booth = (gameState?.rentedBooths ?? []).find(item => item.tile === tileId);
+      const vendorSuitability = booth && (
+        Array.isArray(booth.vendorSuitabilityByGroup)
+          ? booth.vendorSuitabilityByGroup.slice()
+          : Array.isArray(booth.suitability)
+            ? booth.suitability.slice()
+            : null
+      );
+
+      if (Array.isArray(vendorSuitability)) {
+        vendorSuitability.forEach((value, index) => {
+          suitability[index] += Number(value || 0);
+        });
+      }
+
+      const speakerAppointment = (gameState?.appointedSpeakers ?? [])
+        .find(item => item.tileId === tileId);
+
+      if (speakerAppointment) {
+        const appointedSpeaker = SPEAKERS_LIST.find(
+          item => item.id === speakerAppointment.speakerId
+        );
+
+        if (appointedSpeaker && Array.isArray(appointedSpeaker.suitability)) {
+          appointedSpeaker.suitability.forEach((value, index) => {
+            suitability[index] += Number(value || 0);
+          });
+        }
+      }
+
+      data.push({
+        square: tileId,
+        object: objKey,
+        suitability,
+        effectPower: object?.effect ?? 0,
+        absorptionPower: object?.absorption ?? 0,
+      });
     }
   }
+
   console.log("DATA: ", data);
   return data;
 }
 
-
 function mapBoardSuitabilityNet(rows, cols, items) {
-  // ---- ID helpers (Excel-style: A1, B2, ... AA1, etc.) ----
   const parseId = id => {
     const m = id.match(/^([A-Z]+)(\d+)$/);
     if (!m) throw new Error(`Invalid square ID: ${id}`);
+
     let row = 0;
     for (const ch of m[1]) row = row * 26 + (ch.charCodeAt(0) - 64);
-    return { row: row - 1, col: parseInt(m[2], 10) - 1 };
+
+    return {
+      row: row - 1,
+      col: parseInt(m[2], 10) - 1,
+    };
   };
+
   const makeId = (row, col) => {
-    let letters = '', r = row + 1;
+    let letters = "";
+    let r = row + 1;
+
     while (r > 0) {
       letters = String.fromCharCode(65 + (r - 1) % 26) + letters;
       r = Math.floor((r - 1) / 26);
     }
+
     return letters + (col + 1);
   };
 
-  // ---- Board lookup ----
   const board = Array.from({ length: rows }, () => Array(cols).fill(null));
+
   for (const item of items) {
     const { row, col } = parseId(item.square);
-    if (row >= 0 && row < rows && col >= 0 && col < cols) board[row][col] = item;
+    if (row >= 0 && row < rows && col >= 0 && col < cols) {
+      board[row][col] = item;
+    }
   }
 
   const dim = items[0]?.suitability?.length ?? 3;
 
-  // ---- Result grid ----
   const result = Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => Array(dim).fill(0))
   );
 
-  // ---- Parent rule: one step toward origin from relative offset (dr, dc).
-  // For a cell at Chebyshev distance L from the source, this yields its
-  // unique "upstream" neighbor at distance L-1. Matches the branching
-  // described in the spec (cardinals → 1 child, diagonals → 3 children).
   const parentOf = (dr, dc) => {
-    const adr = Math.abs(dr), adc = Math.abs(dc);
+    const adr = Math.abs(dr);
+    const adc = Math.abs(dc);
+
     if (adr > adc) return [dr - Math.sign(dr), dc];
     if (adc > adr) return [dr, dc - Math.sign(dc)];
     return [dr - Math.sign(dr), dc - Math.sign(dc)];
   };
 
-  // ---- Propagate from each source ----
   for (const item of items) {
     const { suitability, effectPower = 0 } = item;
-    if (!suitability || suitability.every(v => v === 0)) continue;
+    if (!suitability || suitability.every(value => value === 0)) continue;
 
     const { row: sr, col: sc } = parseId(item.square);
     if (sr < 0 || sr >= rows || sc < 0 || sc >= cols) continue;
 
-    // Source's own square: full suitability (layer 0, no falloff, no absorption)
-    for (let i = 0; i < dim; i++) result[sr][sc][i] += suitability[i];
+    for (let i = 0; i < dim; i++) {
+      result[sr][sc][i] += suitability[i];
+    }
 
-    // factor[r][c] = multiplier on this source's suitability that reaches (r, c)
     const factor = Array.from({ length: rows }, () => Array(cols).fill(null));
     factor[sr][sc] = 1;
 
     const maxLayer = Math.max(sr, rows - 1 - sr, sc, cols - 1 - sc);
+
     for (let layer = 1; layer <= maxLayer; layer++) {
       for (let dr = -layer; dr <= layer; dr++) {
         for (let dc = -layer; dc <= layer; dc++) {
           if (Math.max(Math.abs(dr), Math.abs(dc)) !== layer) continue;
-          const tr = sr + dr, tc = sc + dc;
+
+          const tr = sr + dr;
+          const tc = sc + dc;
           if (tr < 0 || tr >= rows || tc < 0 || tc >= cols) continue;
 
           const [pdr, pdc] = parentOf(dr, dc);
-          const pr = sr + pdr, pc = sc + pdc;
+          const pr = sr + pdr;
+          const pc = sc + pdc;
           const pf = factor[pr][pc];
           if (pf === null) continue;
 
-          // Parent absorbs power flowing through it to its children,
-          // EXCEPT when parent is the source (source emits, doesn't absorb its own emission).
-          const parentIsSource = (pr === sr && pc === sc);
+          const parentIsSource = pr === sr && pc === sc;
           const parentObj = board[pr][pc];
           const passThrough = parentIsSource || !parentObj
             ? 1
@@ -1708,123 +1978,116 @@ function mapBoardSuitabilityNet(rows, cols, items) {
 
           const f = pf * effectPower * passThrough;
           factor[tr][tc] = f;
-          for (let i = 0; i < dim; i++) result[tr][tc][i] += suitability[i] * f;
+
+          for (let i = 0; i < dim; i++) {
+            result[tr][tc][i] += suitability[i] * f;
+          }
         }
       }
     }
   }
 
-  // ---- Format output ----
   const out = [];
+
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      out.push({ square: makeId(r, c), suitability: result[r][c] });
+      out.push({
+        square: makeId(r, c),
+        suitability: result[r][c],
+      });
     }
   }
+
   return out;
 }
 
-
 /* ---------------------------------------------------------------------------------------- */
-/* --------------------------SIMULATION STEPPING----------------------------------- */
+/* -------------------------- SIMULATION STEPPING ----------------------------------------- */
 /* ---------------------------------------------------------------------------------------- */
 
-function getNeighborSquares(squareId, rows, cols) {
-  const m = squareId.match(/^([A-Z]+)(\d+)$/);
-  let row = 0;
-  for (const ch of m[1]) row = row * 26 + (ch.charCodeAt(0) - 64);
-  row -= 1;
-  const col = parseInt(m[2], 10) - 1;
+function pickNextSquare(person, rows, cols, netLookup, rules) {
+  const movementRules = rules.movement;
 
-  const neighbors = [];
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      if (dr === 0 && dc === 0) continue;
-      const nr = row + dr, nc = col + dc;
-      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-        neighbors.push(rows_notation[nr] + (nc + 1));
-      }
+  const candidates = movementRules.includeCurrentSquareAsCandidate
+    ? [person.currentSquare, ...getNeighborSquares(person.currentSquare, rows, cols)]
+    : getNeighborSquares(person.currentSquare, rows, cols);
+
+  if (candidates.length < 1) {
+    return person.currentSquare;
+  }
+
+  const weights = candidates.map(square => {
+    const netSuit = netLookup[square]?.suitability ?? [0, 0, 0];
+    let value = netSuit[person.group] ?? 0;
+
+    value = Math.max(movementRules.minMovementSuitability, Number(value || 0));
+
+    if (square === person.currentSquare) {
+      value *= movementRules.currentSquareStayMultiplier;
     }
-  }
-  return neighbors;
-}
 
-function weightedPick(candidates, weights) {
-  const total = weights.reduce((a, b) => a + b, 0);
-  // Fallback: if every weight is 0 (all surroundings unsuitable), stay put.
-  if (total <= 0) {
-    //if all the candidate squares are unsuitable we just randomly pick one (uniform probabilities)
-    const sqIdx = randomInt(0, candidates.length-1);
-    return candidates[sqIdx];
-  } 
-  let r = Math.random() * total;
-  for (let i = 0; i < candidates.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return candidates[i];
-  }
-  return candidates[candidates.length - 1];
-}
+    const visitCount = person.visitedSquaresHistory.reduce(
+      (count, visitedSquare) => count + (visitedSquare === square ? 1 : 0),
+      0
+    );
 
+    for (let i = 0; i < visitCount; i++) {
+      value *= movementRules.revisitPenaltyMultiplier;
+    }
 
-function pickNextSquare(person, rows, cols, netLookup) {
-  // Candidate set: current square (person can stay) + all 8-neighbors.
-  // We put currentSquare first so the "stay put" fallback in weightedPick is sensible.
-  let candidates = [person.currentSquare, ...getNeighborSquares(person.currentSquare, rows, cols)];
-
-  const weights = candidates.map(sq => {
-    const netSuit = netLookup[sq]?.suitability ?? [0, 0, 0];
-    // 1. Take only the value for this person's group.
-    let val = netSuit[person.group] ?? 0;
-    // 2. Clamp negatives to 0 (negative * positive multipliers stays negative,
-    //    so clamping after multiplication would also work — but doing it here
-    //    is clearer and avoids surprises later).
-    if (val < 0) val = 0;
-    // 3. Penalise current square (lower chance of staying).
-    if (sq === person.currentSquare) val *= 0.5;
-    // 4. Penalise per prior visit (compounding 0.66 per visit).
-    const visitCount = person.visitedSquaresHistory.reduce((n, v) => n + (v === sq ? 1 : 0), 0);
-    for (let i = 0; i < visitCount; i++) val *= 0.66;
-    return val;
+    return value;
   });
 
   return weightedPick(candidates, weights);
 }
 
-function runSimulationSteps(peopleTracker, rows, cols, netResult, dataForSuitabilityNet, numberOfSimulations) {
-  // Build O(1) lookups by square id once, instead of .find() inside the inner loop.
+function runSimulationSteps(
+  peopleTracker,
+  rows,
+  cols,
+  netResult,
+  dataForSuitabilityNet,
+  numberOfSimulations,
+  rules
+) {
   const netLookup = {};
-  for (const itm of netResult) netLookup[itm.square] = itm;
+  for (const item of netResult) netLookup[item.square] = item;
+
   const dataLookup = {};
-  for (const itm of dataForSuitabilityNet) dataLookup[itm.square] = itm;
+  for (const item of dataForSuitabilityNet) dataLookup[item.square] = item;
+
+  const visitorRules = rules.visitors;
 
   for (let step = 0; step < numberOfSimulations; step++) {
     for (const person of peopleTracker) {
-      const nextSquare = pickNextSquare(person, rows, cols, netLookup);
+      const nextSquare = pickNextSquare(person, rows, cols, netLookup, rules);
+
       person.currentSquare = nextSquare;
       person.visitedSquaresHistory.push(nextSquare);
 
-      // Accumulate the raw square suitability (NOT the net value).
       const squareSuit = dataLookup[nextSquare]?.suitability;
-      if (squareSuit) {
-        for (let i = 0; i < person.totalAccumulatedSuitability.length; i++) {
-          person.totalAccumulatedSuitability[i] += squareSuit[i] ?? 0;
-        }
+      if (!squareSuit) continue;
 
-        const satisfaction = saturation(Math.max(0, squareSuit[person.group]), 1)
-        person.satisfactionProgress.push(satisfaction);
+      for (let i = 0; i < person.totalAccumulatedSuitability.length; i++) {
+        person.totalAccumulatedSuitability[i] += squareSuit[i] ?? 0;
       }
+
+      const satisfaction = saturationSigned(
+        squareSuit[person.group],
+        visitorRules.satisfactionSaturationPower,
+        visitorRules.satisfactionSaturationK
+      );
+
+      person.satisfactionProgress.push(satisfaction);
     }
   }
 
   return peopleTracker;
 }
 
-
 function getVisitCountsByTile(peopleTracker, rows, cols) {
   const counts = {};
 
-  // Pre-fill every tile with [0, 0, 0] so downstream code doesn't have to
-  // null-check missing keys (heatmap rendering, scoring, etc).
   for (let i = 0; i < rows; i++) {
     for (let j = 0; j < cols; j++) {
       counts[rows_notation[i] + (j + 1)] = [0, 0, 0];
@@ -1840,6 +2103,8 @@ function getVisitCountsByTile(peopleTracker, rows, cols) {
   return counts;
 }
 
+
+/* -------------------------------------------------------------- */
 
 //SPONSOR LOGIC
 
@@ -1929,15 +2194,6 @@ function meetsRecentTicketSalesEfficiency(history, requiredLastTurns) {
   ));
 }
 
-function averageNumbers(value) {
-  if (Array.isArray(value)) {
-    if (value.length < 1) return 0;
-    return value.reduce((sum, current) => sum + Number(current || 0), 0) / value.length;
-  }
-
-  return Number(value || 0);
-}
-
 function getTicketSalesEfficiencyHistory(gameState) {
   if (Array.isArray(gameState?.cumulativeSalesFactorProgress)) {
     return gameState.cumulativeSalesFactorProgress;
@@ -1988,6 +2244,8 @@ function getTicketSalesPercentage(gameState) {
   if (capacity <= 0) return 0;
   return (totalTicketSales / capacity) * 100;
 }
+
+
 
 function getAccumulatedSponsorEffects(gameState, sponsors_list){
   const effectsAccumulated = {

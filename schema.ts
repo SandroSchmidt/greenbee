@@ -52,9 +52,9 @@ export interface GlobalSettings {
 
   marketingChannels: Record<MarketingChannelKey, MarketingChannelDefinition>;
   baseRules: {
-    suitabilitySaturationK: number,
     vendorProposalRules: VendorOffersConfig,
     ticketSalesRules: TicketSalesConfig,
+    movementsAndSatisfactionRules: MovementsSatisfactionConfig,
   };
 
   salesTeams: SalesTeam[];
@@ -583,3 +583,33 @@ export interface DemandConfig {
   minSalesEfficiency: number;
   maxSalesEfficiency: number;
 }
+
+
+
+interface MovementsSatisfactionConfig{
+    simulation: {
+      entryGateCount: number,
+      simulationSteps: number,
+      fallbackGateTile: string,
+    },
+    suitabilityNet: {
+      emptySquareSuitability: Vec3,
+      emptySquareEffectPower: number,
+      emptySquareAbsorptionPower: number
+    },
+    movement: {
+      includeCurrentSquareAsCandidate: boolean,
+      minMovementSuitability: number,
+      currentSquareStayMultiplier: number,
+      revisitPenaltyMultiplier: number
+    },
+    visitors: {
+      finalGroupSatisfactionFloor: number,
+      satisfactionSaturationPower: number,
+      satisfactionSaturationK: number
+    },
+    vendors: {
+      vectorMatching: { negativeSuitabilityFloor: number, zeroVectorSimilarity: number },
+      visits: { satisfactionSaturationPower: number, satisfactionSaturationK: number }
+    }
+  }

@@ -15,6 +15,7 @@
   <script src="components/universalsettings/speakers-component.js"></script>
   <script src="components/universalsettings/vendor-offers-settings-component.js"></script>
   <script src="components/universalsettings/ticket-sales-settings-component.js"></script>
+  <script src="components/universalsettings/movement-satisfaction-settings.js"></script>
 </head>
 <style>
 /* ===============================
@@ -1411,34 +1412,7 @@ body.theme-dark .icon-trigger .empty-icon {
 <div id="speakers-mount"></div>
 <div id="vendor-offers-settings-mount"></div>
 <div id="ticket-sales-settings-mount"></div>
-
-    <section class="panel">
-      #?#
-      <h2>Gameplay Calibrations</h2>
-      <p class="text-muted">Universal control parameters (can be expanded later).</p>
-      <label class="field">
-        <span>Suitability saturation K (optional)</span>
-        <input type="number" id="base-suitability-k" min="0">
-      </label>
-      <span>######################################## SEPARATOR #########################################</span>
-      <h2>Renting Booths Logic</h2>
-      <p class="st-panel-desc">Hire-able sales teams shown on the marketing panel.</p>
-      <h3>Booth Price Adjustment</h2>
-      <p class="text-muted">Random adjustment applied to the booth’s base price when calculating the vendor’s initial offer.</p>
-      <div class="" style="display: flex; gap: 5px;">
-        <label class="field">
-          <span style="display:block; font-weight: 500;" class="">From</span>
-          <input type="number" id="priceAdjustment-from" min="0">
-        </label>
-        <label class="field">
-          <span style="display:block; font-weight: 500;" class="">To</span>
-          <input type="number" id="priceAdjustment-to" min="0">
-        </label>
-      </div>
-      <span>######################################## SEPARATOR #########################################</span>
-      <h2>Ticket Sales Logic</h2>
-    </section>
-
+<div id="movement-satisfaction-settings-mount"></div>
 
 
   </main>
@@ -1624,9 +1598,7 @@ body.theme-dark .icon-trigger .empty-icon {
       renderMarketingTable();
       if (!localGlobal.salesTeams) localGlobal.salesTeams = [];     // ← add
       renderSalesTeamsTable(localGlobal.salesTeams);  
-      document.getElementById("base-suitability-k").value =
-        (localGlobal.baseRules && localGlobal.baseRules.suitabilitySaturationK) || "";
-
+     
       if (!localGlobal.sponsors) localGlobal.sponsors = [];
       sponsorsUI = SponsorsComponent.mount('#sponsors-mount', localGlobal.sponsors);
 
@@ -1642,6 +1614,7 @@ body.theme-dark .icon-trigger .empty-icon {
         }
       }*/
      if (!localGlobal.baseRules.ticketSalesRules) localGlobal.baseRules.ticketSalesRules = {};
+     if (!localGlobal.baseRules.movementsAndSatisfactionRules) localGlobal.baseRules.movementsAndSatisfactionRules = {};
 
       vendorOffersSettingsUI = VendorOffersSettingsComponent.mount(
           '#vendor-offers-settings-mount',
@@ -1653,6 +1626,11 @@ body.theme-dark .icon-trigger .empty-icon {
         '#ticket-sales-settings-mount',
         localGlobal.baseRules.ticketSalesRules
     );
+
+    movementsAndSatisfactionUI = MovementSatisfactionSettingsComponent.mount(
+      '#movement-satisfaction-settings-mount',
+      localGlobal.baseRules.movementsAndSatisfactionRules
+    )
 
       console.log("GLOBAL: ", localGlobal);
     }
@@ -1707,9 +1685,9 @@ mrows.forEach(tr => {
 localGlobal.marketingChannels = channels;
 localGlobal.salesTeams = gatherSalesTeams();
       localGlobal.baseRules = {
-        suitabilitySaturationK: parseFloat(document.getElementById("base-suitability-k").value) || 0,
         vendorProposalRules: vendorOffersSettingsUI.getData(),
         ticketSalesRules: ticketSalesSettingsUI.getData(),
+        movementsAndSatisfactionRules: movementsAndSatisfactionUI.getData(),
       };
 
       console.log("localGlobal: ", localGlobal)
