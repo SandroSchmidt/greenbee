@@ -606,7 +606,9 @@ interface MovementsSatisfactionConfig{
     visitors: {
       finalGroupSatisfactionFloor: number,
       satisfactionSaturationPower: number,
-      satisfactionSaturationK: number
+      satisfactionSaturationK: number,
+      premiumWifiMultiplier: number,
+      brandingPackageMultiplier: number,
     },
     vendors: {
       vectorMatching: { negativeSuitabilityFloor: number, zeroVectorSimilarity: number },

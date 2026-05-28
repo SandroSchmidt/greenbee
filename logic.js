@@ -1531,7 +1531,7 @@ function normalizeVec3(value, fallback = [0, 0, 0]) {
 /* -------------------------- VISITORS SATISFACTION LOGIC --------------------------------- */
 /* ---------------------------------------------------------------------------------------- */
 
-function getVisitorsSatisfaction(peopleTracker, rules, groupCount = 3) {
+function getVisitorsSatisfaction(peopleTracker, rules, bonuses, groupCount = 3) {
   const satisfactionByGroup = Array.from({ length: groupCount }, () => []);
   const visitorRules = rules.visitors;
 
@@ -1568,6 +1568,24 @@ function getVisitorsSatisfaction(peopleTracker, rules, groupCount = 3) {
 
   console.log("SATISFACTION BY GROUP: ", satisfactionByGroup);
   console.log("Average satisfaction by group: ", averageSatisfactionByGroup);
+
+  if(bonuses.premiumWifi){
+    const multiplier = visitorRules?.premiumWifiMultiplier ?? 1.0;
+    for(let i=0; i<averageSatisfactionByGroup.length; i++){
+      averageSatisfactionByGroup[i] = averageSatisfactionByGroup[i]*multiplier;
+    }
+  }
+
+   console.log("Average satisfaction by group after wifi applied: ", averageSatisfactionByGroup);
+
+   if(bonuses.brandingPackage){
+    const multiplier = visitorRules?.brandingPackageMultiplier ?? 1.0;
+    for(let i=0; i<averageSatisfactionByGroup.length; i++){
+      averageSatisfactionByGroup[i] = averageSatisfactionByGroup[i]*multiplier;
+    }
+   }
+
+   console.log("Average satisfaction by group after branding pack applied: ", averageSatisfactionByGroup);
 
   return averageSatisfactionByGroup;
 }
@@ -1803,7 +1821,11 @@ function eventSimulation(gameState, worldSettings, globalSettings, options = {})
 
   console.log("Tile visits: ", tileVisits);
 
-  const visitorsSatisfaction = getVisitorsSatisfaction(peopleTracker, rules);
+  const bonuses = {
+    brandingPackage: gameState.brandingPackage,
+    premiumWifi: gameState.premiumWifi,
+  }
+  const visitorsSatisfaction = getVisitorsSatisfaction(peopleTracker, rules, bonuses);
   const vendorsSatisfaction = getVendorsSatisfaction(tileVisits, gameState, rules);
 
   return {

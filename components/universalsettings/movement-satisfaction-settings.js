@@ -47,7 +47,9 @@
     visitors: {
       finalGroupSatisfactionFloor: 0,
       satisfactionSaturationPower: 1,
-      satisfactionSaturationK: 1
+      satisfactionSaturationK: 1,
+      brandingPackageMultiplier: 1.0,
+      premiumWifiMultiplier: 1.0,
     },
     vendors: {
       vectorMatching: { negativeSuitabilityFloor: 0, zeroVectorSimilarity: 0 },
@@ -105,8 +107,12 @@
         { path: 'visitors.satisfactionSaturationPower', label: 'Satisfaction saturation power', min: 0, step: 0.1,
           description: 'Power used in the signed visitor satisfaction saturation curve. Higher values make both positive and negative satisfaction grow more slowly from small suitability values.' },
         { path: 'visitors.satisfactionSaturationK', label: 'Satisfaction saturation K', min: 0, step: 0.1,
-          description: 'Saturation K used in the signed visitor satisfaction curve. Higher values require stronger positive or negative suitability to create a strong satisfaction effect; lower values make satisfaction react faster.' }
-      ]
+          description: 'Saturation K used in the signed visitor satisfaction curve. Higher values require stronger positive or negative suitability to create a strong satisfaction effect; lower values make satisfaction react faster.' },
+        { path: 'visitors.premiumWifiMultiplier', label: 'Premium Wifi multiplier', min: 0, step: 0.1,
+          description: 'Bonus satisfaction if player has secured premium wifi for the event. I.e. 1.05 means 5% added to final satisfaction result for each group.' },
+        { path: 'visitors.brandingPackageMultiplier', label: 'Branding package multiplier', min: 0, step: 0.1,
+          description: 'Bonus satisfaction if player has branding package. I.e. 1.05 means 5% added to final satisfaction result for each group.' }
+        ]
     },
     {
       id: 'vendors', advanced: true, label: 'VENDORS', custom: 'vendors',
