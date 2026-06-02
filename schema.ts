@@ -435,6 +435,24 @@ export interface DeskSponsorItem extends DeskActionableItem {
   type: "sponsor";
 }
 
+export interface DeskProposalItem extends DeskActionableItem {
+  type: "proposal";
+}
+
+export interface DeskBrandingItem extends DeskActionableItem {
+  type: "branding";
+  fee?: number;
+}
+
+export interface DeskWifiItem extends DeskActionableItem {
+  type: "wifi";
+  fee?: number;
+}
+
+export interface DeskSponsorItem extends DeskActionableItem {
+  type: "sponsor";
+}
+
 export type ProposalStatus = "pending" | "accepted" | "declined" | "expired";
 
 export interface DeskProposalTerm {
