@@ -34,4 +34,4 @@ const SPEAKERS_LIST = [
   },
 ];
 
-window.SPEAKERS_LIST = SPEAKERS_LIST;
+//window.SPEAKERS_LIST = SPEAKERS_LIST;

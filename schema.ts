@@ -51,7 +51,80 @@ export interface GlobalSettings {
   objects: Record<ObjectKey, GameObjectDefinition>;
 
   marketingChannels: Record<MarketingChannelKey, MarketingChannelDefinition>;
-  baseRules: BaseRules;
+  baseRules: {
+    vendorProposalRules: VendorOffersConfig,
+    ticketSalesRules: TicketSalesConfig,
+    movementsAndSatisfactionRules: MovementsSatisfactionConfig,
+  };
+
+  salesTeams: SalesTeam[];
+  sponsors: Sponsor[];
+  speakers: Performer[];
+}
+
+interface Performer {
+    id: string,
+    name: string,
+    topic: string,
+    initials: string,
+    color: string,
+    appeal: string[],
+    suitability: Vec3,
+    fee: number,
+    icon: string
+}
+
+interface SalesTeamEffect {
+  active: boolean;
+  value: {from: number, to:number};
+}
+
+interface SalesTeamEffects {
+  ticket_price_reasonableness: SalesTeamEffect;
+  marketing_impact: SalesTeamEffect;
+  vendor_offer_boost: SalesTeamEffect;
+}
+
+interface SalesTeam {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  tagline: string;
+  bio: string;
+  stats: string[];
+  icon: string;
+  fee: number;
+  effects: SalesTeamEffects;
+}
+
+interface SponsorRequirementSet {
+  sales_team_required: boolean;
+  min_ticket_sales_percentage: number;
+  min_ticket_sales_efficiency_last_turns: number[];
+  min_suitability_per_group: number[];
+  min_infrastructural_investment: number;
+  min_vendors: number;
+  min_appointed_speakers: number;
+}
+
+interface SponsorOffer {
+  installments: number;
+  amount: number;
+  suitability_effect: number[];
+  marketing_effect: number[];
+  ticket_reasonableness_boost: number;
+}
+
+interface Sponsor {
+  id: string;
+  name: string;
+  initials: string;
+  color: string;
+  tagline: string;
+  icon: string;
+  requirement_sets: SponsorRequirementSet[];
+  possible_offers: SponsorOffer[];
 }
 
 export type Vec3Labels = [string, string, string];
@@ -76,9 +149,6 @@ export interface MarketingChannelDefinition {
   icon?: string;
 }
 
-export interface BaseRules {
-  suitabilitySaturationK: number;
-}
 
 /**
  * /worlds/{worldId}/worldsettings
@@ -320,6 +390,8 @@ export type DeskItem = DeskReportItem | DeskProposalItem | DeskNewsItem | DeskBr
 export interface DeskItemBase {
   id: string;
   sender: string;
+  senderRole?: string;
+  senderIconUrl?: string;
   turn?: number;
   timestamp?: string;
   title: string;
@@ -331,6 +403,7 @@ export interface DeskItemBase {
 
 export interface DeskReportItem extends DeskItemBase {
   type: "report";
+  severity?: "info" | "warning" | "alert";
 }
 
 export interface DeskNewsItem extends DeskItemBase {
@@ -341,6 +414,25 @@ export interface DeskActionableItem extends DeskItemBase {
   status?: ProposalStatus;
   expiresInTurns?: number;
   terms?: DeskProposalTerm[];
+  feeLabel?: string;
+}
+
+export interface DeskProposalItem extends DeskActionableItem {
+  type: "proposal";
+}
+
+export interface DeskBrandingItem extends DeskActionableItem {
+  type: "branding";
+  fee?: number;
+}
+
+export interface DeskWifiItem extends DeskActionableItem {
+  type: "wifi";
+  fee?: number;
+}
+
+export interface DeskSponsorItem extends DeskActionableItem {
+  type: "sponsor";
 }
 
 export interface DeskProposalItem extends DeskActionableItem {
@@ -375,3 +467,169 @@ export type LoadGlobalSettingsResult = GlobalSettings;
 export type LoadWorldSettingsResult = WorldSettings;
 export type LoadPlayerListResult = Record<PlayerId, PlayerRecord>;
 export type LoadGameStateResult = PersistedGameState | null;
+
+// ###############################################################
+// ################   VENDOR OFFER SETTINGS   ####################
+// ###############################################################
+
+export interface VendorOffersConfig {
+  maxOffersPerTile: number;
+  maxTotalOffers: number;
+  roundPriceTo: number;
+
+  offerCount: OfferCountConfig;
+  offerPrice: OfferPriceConfig;
+  proximity: ProximityConfig;
+  marketing: MarketingConfig;
+  vendorSuitability: VendorSuitabilityConfig;
+}
+
+export interface OfferCountConfig {
+  randomBaseMin: number;
+  randomBaseMax: number;
+  demandMultiplier: number;
+  salesTeamExtraOffersFrom: number;
+  salesTeamExtraOffersTo: number;
+  weights: OfferCountWeights;
+}
+
+export interface OfferCountWeights {
+  ticketSales: number;
+  salesEfficiency: number;
+  marketing: number;
+  proximity: number;
+}
+
+export interface OfferPriceConfig {
+  baseBoothsPriceAdjustmentFrom: number;
+  baseBoothsPriceAdjustmentTo: number;
+
+  ticketSalesMinMultiplier: number;
+  ticketSalesBonusRange: number;
+
+  salesEfficiencyMinMultiplier: number;
+  salesEfficiencyBonusRange: number;
+
+  marketingMinMultiplier: number;
+  marketingBonusRange: number;
+
+  salesTeamMultiplierFrom: number;
+  salesTeamMultiplierTo: number;
+
+  marketNoiseFrom: number;
+  marketNoiseTo: number;
+}
+
+export interface ProximityConfig {
+  minMultiplier: number;
+  maxMultiplier: number;
+  penalties: ProximityModifier[];
+  bonuses: ProximityModifier[];
+  genericObjectBonusStrength: number;
+  genericObjectSaturationK: number;
+}
+
+export interface ProximityModifier {
+  object: string;
+  value: number;
+}
+
+export interface MarketingConfig {
+  saturationK: number;
+  websiteBoostFromPercent: number;
+  websiteBoostToPercent: number;
+}
+
+export interface VendorSuitabilityConfig {
+  regularFrom: number;
+  regularTo: number;
+  premiumFrom: number;
+  premiumTo: number;
+}
+
+// ###########################################################
+// ################# TICKET SALES RULES ######################
+// ###########################################################
+
+export interface TicketSalesConfig {
+  infrastructure: InfrastructureDemandConfig;
+  priceReasonableness: PriceReasonablenessConfig;
+  marketing: MarketingDemandConfig;
+  demand: DemandConfig;
+}
+
+export interface InfrastructureDemandConfig {
+  populationDivisorMinMultiplier: number;
+  populationDivisorMaxMultiplier: number;
+
+  earlySupportMaxMultiplier: number;
+  earlySupportDurationTurns: number;
+
+  minInfrastructureDivisor: number;
+}
+
+export interface PriceReasonablenessConfig {
+  minOptimalPrice: number;
+  freeTicketFactor: number;
+  maxFactor: number;
+  idealFactor: number;
+  priceSteepness: number;
+
+  previousPriceFactorRecencyDecay: number;
+  previousPriceFactorMaxClamp: number;
+
+  historySensitivity: number;
+  historyAdjustmentMin: number;
+  historyAdjustmentMax: number;
+
+  salesSensitivity: number;
+  salesMomentumNeutralPoint: number;
+
+  brandingMultiplier: number;
+  premiumWifiMultiplier: number;
+}
+
+export interface MarketingDemandConfig {
+  saturationK: number;
+}
+
+export interface DemandConfig {
+  maxDemand: number;
+  minTurnsLeft: number;
+
+  soldOutSalesEfficiency: number;
+  minSalesEfficiency: number;
+  maxSalesEfficiency: number;
+}
+
+
+
+interface MovementsSatisfactionConfig{
+    simulation: {
+      entryGateCount: number,
+      simulationSteps: number,
+      fallbackGateTile: string,
+    },
+    suitabilityNet: {
+      emptySquareSuitability: Vec3,
+      emptySquareEffectPower: number,
+      emptySquareAbsorptionPower: number
+    },
+    movement: {
+      includeCurrentSquareAsCandidate: boolean,
+      minMovementSuitability: number,
+      currentSquareStayMultiplier: number,
+      revisitPenaltyMultiplier: number
+    },
+    visitors: {
+      finalGroupSatisfactionFloor: number,
+      satisfactionSaturationPower: number,
+      satisfactionSaturationK: number,
+      premiumWifiMultiplier: number,
+      brandingPackageMultiplier: number,
+    },
+    vendors: {
+      vectorMatching: { negativeSuitabilityFloor: number, zeroVectorSimilarity: number },
+      visits: { satisfactionSaturationPower: number, satisfactionSaturationK: number }
+    }
+  }
